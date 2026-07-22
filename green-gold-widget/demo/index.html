@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Green Gold Widget · Demo</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background: #eef1f4;
+        color: #1f2933;
+        margin: 0;
+        padding: 40px 16px;
+      }
+      .wrap { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 20px; }
+      p.note { color: #556070; font-size: 14px; }
+      .checkout {
+        margin-top: 24px;
+        background: #fff;
+        border: 1px solid #e3e8ee;
+        border-radius: 16px;
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+      }
+      .summary { font-size: 14px; color: #556070; }
+      .lang-links a { color: #1a7f5a; margin-right: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Örnek Otel — Ödeme Adımı (Demo)</h1>
+      <p class="note">
+        Bu, otelin checkout sayfasını taklit eden bir demo. Aşağıdaki yeşil kart
+        gerçek <code>green-gold-widget</code> custom element'idir ve gerçek
+        backend'e (<code>http://localhost:3000</code>) event gönderir.
+      </p>
+      <p class="lang-links">
+        Dil:
+        <a href="#" onclick="setLang('tr');return false;">Türkçe</a>
+        <a href="#" onclick="setLang('en');return false;">English</a>
+      </p>
+
+      <div class="checkout">
+        <div class="summary">
+          Rezervasyon: 2 yetişkin · 3 gece · Deniz manzaralı oda
+        </div>
+
+        <!-- data-key = HTL-PILOT public_widget_key (Adım 1) -->
+        <green-gold-widget
+          id="w"
+          data-key="c3e5169f-7cf7-4d35-ba55-9567f6184ab9"
+          data-nights="3"
+          data-lang="tr"
+          data-api="http://localhost:3000"
+        ></green-gold-widget>
+
+        <div class="summary">
+          Toplam oda ücreti: €360,00 · Vergiler dahil
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // data-lang observed olduğu için setAttribute anında re-render eder.
+      function setLang(l) {
+        document.getElementById('w').setAttribute('data-lang', l);
+      }
+    </script>
+    <!-- Built bundle. Önce `npm run build` çalıştır. -->
+    <script src="../dist/green-gold-widget.v1.js"></script>
+  </body>
+</html>

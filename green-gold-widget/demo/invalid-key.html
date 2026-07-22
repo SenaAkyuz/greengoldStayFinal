@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Green Gold Widget · Geçersiz Key Testi</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 40px; color: #1f2933; }
+      .ok { color: #1a7f5a; font-weight: 600; }
+    </style>
+  </head>
+  <body>
+    <h1>Geçersiz data-key testi</h1>
+    <p>
+      Aşağıda geçersiz bir anahtar var. Widget <strong>hiç render olmamalı</strong>,
+      ama bu sayfa sorunsuz çalışmaya devam etmeli.
+    </p>
+    <p class="ok" id="alive">✓ Sayfa hâlâ çalışıyor (bu satır görünüyorsa host bozulmadı).</p>
+
+    <green-gold-widget
+      data-key="gecersiz-anahtar-12345"
+      data-nights="3"
+      data-api="http://localhost:3000"
+    ></green-gold-widget>
+
+    <script>
+      // Host sayfa JS'i çalışmaya devam ediyor mu?
+      document.getElementById('alive').textContent +=
+        ' (JS tarih: ' + new Date().toISOString().slice(0, 10) + ')';
+    </script>
+    <script src="../dist/green-gold-widget.v1.js"></script>
+  </body>
+</html>

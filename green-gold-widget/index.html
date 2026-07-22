@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>green-gold-widget · dev</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        background: #f4f6f8;
+        margin: 0;
+        padding: 48px 16px;
+        display: flex;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Dev harness: `npm run dev` ile canlı düzenleme. Gerçek pilot key. -->
+    <green-gold-widget
+      data-key="c3e5169f-7cf7-4d35-ba55-9567f6184ab9"
+      data-nights="3"
+      data-lang="tr"
+      data-api="http://localhost:3000"
+    ></green-gold-widget>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Green Gold Widget · Hostile CSS Testi</title>
+    <style>
+      /* AGRESİF global CSS — Shadow DOM izolasyon kanıtı.
+         Widget bunlardan ETKİLENMEMELİ. */
+      * {
+        color: red !important;
+        font-size: 30px !important;
+        box-sizing: content-box !important;
+        font-family: 'Comic Sans MS', cursive !important;
+        letter-spacing: 3px !important;
+      }
+      body {
+        background: repeating-linear-gradient(45deg, #ffdddd, #ffdddd 20px, #ffeeee 20px, #ffeeee 40px);
+        margin: 0;
+        padding: 40px;
+      }
+      input, button, label, div, span, h1, h3, p {
+        border: 4px dashed magenta !important;
+        background: yellow !important;
+        text-transform: uppercase !important;
+      }
+      button { transform: rotate(-3deg) !important; }
+    </style>
+  </head>
+  <body>
+    <h1>Düşmanca CSS Sayfası</h1>
+    <p>
+      Bu sayfadaki her element kırmızı, 30px, Comic Sans, sarı zeminli, magenta
+      kenarlıklı. Aşağıdaki widget bunlardan HİÇBİRİNDEN etkilenmemeli — çünkü
+      tüm markup + CSS Shadow DOM içinde izole. Widget beyaz zemin, koyu metin,
+      yeşil aksanla normal görünmeli.
+    </p>
+
+    <green-gold-widget
+      data-key="c3e5169f-7cf7-4d35-ba55-9567f6184ab9"
+      data-nights="2"
+      data-lang="tr"
+      data-api="http://localhost:3000"
+    ></green-gold-widget>
+
+    <script src="../dist/green-gold-widget.v1.js"></script>
+  </body>
+</html>
