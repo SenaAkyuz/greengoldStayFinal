@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { signOut } from '../actions';
 
-type ActivePage = 'overview' | 'carbon' | 'funnel';
+type ActivePage = 'overview' | 'carbon' | 'funnel' | 'settings';
 
 const NAV: { key: ActivePage; label: string; href: string }[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/' },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel' },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon' },
+  { key: 'settings', label: 'Ayarlar', href: '/ayarlar' },
 ];
 
 export function AppHeader({

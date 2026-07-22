@@ -74,8 +74,25 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     return this;
   }
 
+  private pendingUpdate: Row | null = null;
+
+  update(patch: Row): this {
+    this.pendingUpdate = patch;
+    return this;
+  }
+
   private resolveRows(): Row[] {
     if (this.insertedRows) return this.insertedRows;
+
+    // update: eq filtreleriyle eşleşen satırları yerinde güncelle, onları dön.
+    if (this.pendingUpdate) {
+      const target = (this.store[this.table] ?? []).filter((r) =>
+        this.eqFilters.every((f) => r[f.col] === f.val),
+      );
+      for (const r of target) Object.assign(r, this.pendingUpdate);
+      return target;
+    }
+
     let rows = [...(this.store[this.table] ?? [])];
     for (const f of this.eqFilters) {
       rows = rows.filter((r) => r[f.col] === f.val);

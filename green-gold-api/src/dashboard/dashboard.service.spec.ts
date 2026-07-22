@@ -93,10 +93,51 @@ describe('DashboardService — tenant izolasyonu (a)', () => {
     expect(a.public_widget_key).toBe('key-A');
   });
 
+  it('updateHotel yalnızca token otelini günceller (tenant)', async () => {
+    const { service, fake } = makeService(dataset);
+    const updated = await service.updateHotel('A', {
+      contribution_amount_per_night: 5,
+    });
+    expect(updated.amount_per_night).toBe(5);
+    const rowA = fake.dataset.hotels!.find((h) => h.id === 'A');
+    const rowB = fake.dataset.hotels!.find((h) => h.id === 'B');
+    expect(Number(rowA!.contribution_amount_per_night)).toBe(5);
+    expect(Number(rowB!.contribution_amount_per_night)).toBe(3); // B dokunulmadı
+  });
+
   it('funnel otel bazlı izole', async () => {
     const { service } = makeService(dataset);
     const b = await service.getFunnel('B', RANGE);
     expect(b.stages.clicked).toBe(2);
+  });
+});
+
+describe('DashboardService.getHotel / updateHotel', () => {
+  it('getHotel timezone + commission_rate döner', async () => {
+    const { service } = makeService({
+      hotels: [hotel('A', { timezone: 'America/Los_Angeles', commission_rate: 15 })],
+    });
+    const h = await service.getHotel('A');
+    expect(h.timezone).toBe('America/Los_Angeles');
+    expect(h.commission_rate).toBe(15);
+  });
+
+  it('updateHotel yalnızca gelen alanları yazar + updated_at tazeler', async () => {
+    const { service, fake } = makeService({ hotels: [hotel('A')] });
+    const res = await service.updateHotel('A', { name: 'Deniz Otel', city: 'İzmir' });
+    expect(res.hotel_name).toBe('Deniz Otel');
+    expect(res.city).toBe('İzmir');
+    const row = fake.dataset.hotels!.find((h) => h.id === 'A')!;
+    expect(row.name).toBe('Deniz Otel');
+    expect(row.updated_at).toBeDefined();
+    // korumalı alanlar dokunulmadı
+    expect(Number(row.estimated_co2_per_night_kg)).toBe(8.3);
+  });
+
+  it('updateHotel boş gövde -> no-op, mevcut oteli döner', async () => {
+    const { service } = makeService({ hotels: [hotel('A')] });
+    const res = await service.updateHotel('A', {});
+    expect(res.hotel_name).toBe('Otel A');
   });
 });
 

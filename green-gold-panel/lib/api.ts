@@ -15,10 +15,19 @@ export interface HotelInfo {
   hotel_name: string;
   city: string | null;
   status: string;
+  timezone: string;
   currency: string;
   amount_per_night: number;
   estimated_co2_per_night_kg: number;
+  commission_rate: number;
   public_widget_key: string;
+}
+
+export interface HotelUpdate {
+  name?: string;
+  city?: string;
+  timezone?: string;
+  contribution_amount_per_night?: number;
 }
 
 export interface CarbonSummary {
@@ -91,6 +100,30 @@ export function getFunnel(token: string, range?: string) {
 
 export function getHotel(token: string) {
   return apiGet<HotelInfo>('/dashboard/hotel', token);
+}
+
+export async function updateHotel(
+  token: string,
+  patch: HotelUpdate,
+): Promise<{ data: HotelInfo | null; error: string | null }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/dashboard/hotel`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patch),
+      cache: 'no-store',
+    });
+    const json = (await res.json()) as Envelope<HotelInfo>;
+    if (!res.ok || !json.success || json.data === null) {
+      return { data: null, error: json.error?.message ?? `HTTP ${res.status}` };
+    }
+    return { data: json.data, error: null };
+  } catch {
+    return { data: null, error: 'API sunucusuna ulaşılamadı.' };
+  }
 }
 
 export function getApiBaseUrl() {

@@ -1,7 +1,16 @@
-import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '../common/auth.guard';
 import type { AuthenticatedRequest } from '../common/auth.guard';
 import { DashboardService } from './dashboard.service';
+import { UpdateHotelDto } from './dto/update-hotel.dto';
 
 @Controller('dashboard')
 @UseGuards(AuthGuard)
@@ -12,6 +21,16 @@ export class DashboardController {
   @Get('hotel')
   async hotel(@Req() req: AuthenticatedRequest) {
     return this.dashboardService.getHotel(req.auth.hotelId);
+  }
+
+  // PATCH /dashboard/hotel (auth'lı) — otelin düzenlenebilir alanlarını günceller.
+  // hotel_id yalnızca token'dan; gövdedeki korumalı alanlar ValidationPipe ile 400.
+  @Patch('hotel')
+  async updateHotel(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: UpdateHotelDto,
+  ) {
+    return this.dashboardService.updateHotel(req.auth.hotelId, dto);
   }
 
   // GET /dashboard/widget-events-summary?range=&from=&to= (auth'lı, otel bazlı)

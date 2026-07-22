@@ -7,6 +7,7 @@ import {
   type FunnelRates,
   type FunnelStages,
 } from './interaction-funnel';
+import { UpdateHotelDto } from './dto/update-hotel.dto';
 
 export interface WidgetEventsSummary {
   period: { from: string; to: string };
@@ -20,9 +21,11 @@ export interface HotelInfo {
   hotel_name: string;
   city: string | null;
   status: string;
+  timezone: string;
   currency: string;
   amount_per_night: number;
   estimated_co2_per_night_kg: number;
+  commission_rate: number;
   public_widget_key: string;
 }
 
@@ -77,7 +80,7 @@ export class DashboardService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, status, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, public_widget_key',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key',
       )
       .eq('id', hotelId)
       .single();
@@ -86,15 +89,61 @@ export class DashboardService {
       throw new BadRequestException('Otel bulunamadı.');
     }
 
+    return this.toHotelInfo(hotel);
+  }
+
+  private toHotelInfo(hotel: Record<string, unknown>): HotelInfo {
     return {
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       status: hotel.status as string,
+      timezone: (hotel.timezone as string) || 'Europe/Istanbul',
       currency: (hotel.default_currency as string) ?? 'EUR',
       amount_per_night: Number(hotel.contribution_amount_per_night),
       estimated_co2_per_night_kg: Number(hotel.estimated_co2_per_night_kg),
+      commission_rate: Number(hotel.commission_rate),
       public_widget_key: hotel.public_widget_key as string,
     };
+  }
+
+  /**
+   * Otelin panel-düzenlenebilir alanlarını günceller. hotelId YALNIZCA token'dan
+   * (tenant izolasyonu). DTO whitelist'i sayesinde korumalı alanlar buraya ulaşamaz.
+   * Yalnızca gelen alanlar yazılır; updated_at tazelenir. Güncellenmiş otel dönülür.
+   */
+  async updateHotel(
+    hotelId: string,
+    dto: UpdateHotelDto,
+  ): Promise<HotelInfo> {
+    const patch: Record<string, unknown> = {};
+    if (dto.name !== undefined) patch.name = dto.name;
+    if (dto.city !== undefined) patch.city = dto.city;
+    if (dto.timezone !== undefined) patch.timezone = dto.timezone;
+    if (dto.contribution_amount_per_night !== undefined) {
+      patch.contribution_amount_per_night = dto.contribution_amount_per_night;
+    }
+
+    // Hiç alan gelmediyse yalnızca mevcut oteli dön (no-op).
+    if (Object.keys(patch).length === 0) {
+      return this.getHotel(hotelId);
+    }
+
+    patch.updated_at = new Date().toISOString();
+
+    const { data: hotel, error } = await this.supabase.db
+      .from('hotels')
+      .update(patch)
+      .eq('id', hotelId)
+      .select(
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key',
+      )
+      .single();
+
+    if (error || !hotel) {
+      throw new BadRequestException(error?.message ?? 'Otel güncellenemedi.');
+    }
+
+    return this.toHotelInfo(hotel);
   }
 
   /**
