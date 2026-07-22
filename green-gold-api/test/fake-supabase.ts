@@ -33,9 +33,12 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
   private orderBy: { col: string; ascending: boolean }[] = [];
   private insertedRows: Row[] | null = null;
 
+  private insertError: { code: string; message: string } | null = null;
+
   constructor(
     private readonly table: string,
     private readonly store: FakeDataset,
+    private readonly uniqueBy?: string[],
   ) {}
 
   select(_cols?: string): this {
@@ -64,6 +67,26 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
 
   insert(row: Row | Row[]): this {
     const rows = Array.isArray(row) ? row : [row];
+    const existing = this.store[this.table] ?? [];
+
+    // Unique constraint taklidi: uniqueBy anahtarları null İÇERMEYEN satırlar
+    // çakışırsa 23505 (Postgres NULL-distinct + partial index semantiği).
+    if (this.uniqueBy) {
+      for (const r of rows) {
+        const keys = this.uniqueBy;
+        const anyNull = keys.some((k) => r[k] === null || r[k] === undefined);
+        if (!anyNull) {
+          const clash = existing.some((e) =>
+            keys.every((k) => e[k] === r[k]),
+          );
+          if (clash) {
+            this.insertError = { code: '23505', message: 'duplicate key' };
+            return this;
+          }
+        }
+      }
+    }
+
     const full = rows.map((r) => ({
       id: nextId(),
       created_at: new Date().toISOString(),
@@ -117,6 +140,7 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
 
   /** supabase .single(): 0 satır -> error, aksi halde ilk satır. */
   async single(): Promise<FakeResult<Row>> {
+    if (this.insertError) return { data: null, error: this.insertError };
     const rows = this.resolveRows();
     if (rows.length === 0) {
       return { data: null, error: { message: 'Row not found' } };
@@ -131,10 +155,9 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
       | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
-    const result: FakeResult<Row[]> = {
-      data: this.resolveRows(),
-      error: null,
-    };
+    const result: FakeResult<Row[]> = this.insertError
+      ? { data: null, error: this.insertError }
+      : { data: this.resolveRows(), error: null };
     return Promise.resolve(result).then(onfulfilled, onrejected);
   }
 }
@@ -147,13 +170,21 @@ export interface FakeSupabase {
   ) => Promise<{ data: { user: { id: string } | null }; error: unknown }>;
 }
 
+export interface FakeOptions {
+  /** Tablo başına unique anahtar kolonları (idempotency/23505 taklidi). */
+  uniqueBy?: Record<string, string[]>;
+}
+
 /** Sahte SupabaseService (servislere `as any` ile enjekte edilir). */
-export function makeFakeSupabase(dataset: FakeDataset = {}): FakeSupabase {
+export function makeFakeSupabase(
+  dataset: FakeDataset = {},
+  options: FakeOptions = {},
+): FakeSupabase {
   return {
     dataset,
     db: {
       from(table: string) {
-        return new FakeQueryBuilder(table, dataset);
+        return new FakeQueryBuilder(table, dataset, options.uniqueBy?.[table]);
       },
     },
     getUserFromToken: (_token: string) =>

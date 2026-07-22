@@ -98,25 +98,42 @@ export class WidgetService {
       );
     }
 
-    // 4. widget_events'e insert
+    // 4. widget_events'e insert (idempotent).
+    const sessionRef = dto.session_ref ?? null;
     const { data: inserted, error: insertError } = await this.supabase.db
       .from('widget_events')
       .insert({
         hotel_id: hotel.id,
         event_type: dto.event_type,
-        session_ref: dto.session_ref ?? null,
+        session_ref: sessionRef,
         metadata: dto.metadata ?? null,
       })
       .select('id')
       .single();
 
-    if (insertError || !inserted) {
+    if (insertError) {
+      // Idempotency: aynı (hotel_id, session_ref, event_type) zaten kayıtlıysa
+      // (unique index, session_ref not null) -> çift kayıt üretme, BAŞARI dön.
+      const code = (insertError as { code?: string }).code;
+      if (code === '23505' && sessionRef) {
+        const { data: existing } = await this.supabase.db
+          .from('widget_events')
+          .select('id')
+          .eq('hotel_id', hotel.id)
+          .eq('session_ref', sessionRef)
+          .eq('event_type', dto.event_type)
+          .single();
+        return { id: (existing?.id as string) ?? 'duplicate' };
+      }
       throw new BadRequestException(
-        insertError?.message ?? 'Event kaydedilemedi.',
+        insertError.message ?? 'Event kaydedilemedi.',
       );
     }
 
-    // TODO (Faz 2): rate limiting, origin allow-list, key rotation.
+    if (!inserted) {
+      throw new BadRequestException('Event kaydedilemedi.');
+    }
+
     return { id: inserted.id as string };
   }
 }

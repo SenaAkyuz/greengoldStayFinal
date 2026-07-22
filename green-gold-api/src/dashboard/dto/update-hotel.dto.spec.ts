@@ -75,4 +75,45 @@ describe('UpdateHotelDto', () => {
     expect(errs.length).toBeGreaterThan(0);
     expect(errs[0].property).toBe('hotel_id');
   });
+
+  describe('allowed_origins', () => {
+    it('geçerli https origin listesi kabul', async () => {
+      expect(
+        await errorsFor({ allowed_origins: ['https://ok.example'] }),
+      ).toHaveLength(0);
+    });
+
+    it('boş liste kabul (temizleme)', async () => {
+      expect(await errorsFor({ allowed_origins: [] })).toHaveLength(0);
+    });
+
+    it('wildcard reddedilir', async () => {
+      expect(
+        (await errorsFor({ allowed_origins: ['*'] })).length,
+      ).toBeGreaterThan(0);
+      expect(
+        (await errorsFor({ allowed_origins: ['https://*.example.com'] })).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('geçersiz/URL-olmayan reddedilir', async () => {
+      expect(
+        (await errorsFor({ allowed_origins: ['notaurl'] })).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('path içeren origin reddedilir', async () => {
+      expect(
+        (await errorsFor({ allowed_origins: ['https://ok.example/path'] }))
+          .length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('10\'dan fazla origin reddedilir', async () => {
+      const many = Array.from({ length: 11 }, (_, i) => `https://o${i}.example`);
+      expect(
+        (await errorsFor({ allowed_origins: many })).length,
+      ).toBeGreaterThan(0);
+    });
+  });
 });

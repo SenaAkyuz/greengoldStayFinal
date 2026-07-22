@@ -87,4 +87,29 @@ describe('WidgetService.recordEvent', () => {
     expect(fake.dataset.widget_events).toHaveLength(1);
     expect(fake.dataset.widget_events![0].hotel_id).toBe('hotel-A');
   });
+
+  it('idempotency: aynı (hotel,session,type) iki kez -> tek satır, ikisi de başarı', async () => {
+    const fake = makeFakeSupabase(
+      { hotels: [hotelRow()], widget_events: [] },
+      { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
+    );
+    const service = new WidgetService(fake as never);
+    const r1 = await service.recordEvent('key-active', validDto);
+    const r2 = await service.recordEvent('key-active', validDto); // aynı session+type
+    expect(r1.id).toBeTruthy();
+    expect(r2.id).toBeTruthy(); // çakışmada da başarı
+    expect(fake.dataset.widget_events).toHaveLength(1); // TEK kayıt
+  });
+
+  it('session_ref null -> idempotency yok, her insert ayrı satır', async () => {
+    const fake = makeFakeSupabase(
+      { hotels: [hotelRow()], widget_events: [] },
+      { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
+    );
+    const service = new WidgetService(fake as never);
+    const noSession = { event_type: 'widget_goruntulendi' as const };
+    await service.recordEvent('key-active', noSession);
+    await service.recordEvent('key-active', noSession);
+    expect(fake.dataset.widget_events).toHaveLength(2); // null session -> dedup edilmez
+  });
 });

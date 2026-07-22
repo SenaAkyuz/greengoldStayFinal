@@ -27,6 +27,7 @@ export interface HotelInfo {
   estimated_co2_per_night_kg: number;
   commission_rate: number;
   public_widget_key: string;
+  allowed_origins: string[];
 }
 
 export interface CarbonSummary {
@@ -80,7 +81,7 @@ export class DashboardService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins',
       )
       .eq('id', hotelId)
       .single();
@@ -103,6 +104,7 @@ export class DashboardService {
       estimated_co2_per_night_kg: Number(hotel.estimated_co2_per_night_kg),
       commission_rate: Number(hotel.commission_rate),
       public_widget_key: hotel.public_widget_key as string,
+      allowed_origins: (hotel.allowed_origins as string[] | null) ?? [],
     };
   }
 
@@ -122,6 +124,9 @@ export class DashboardService {
     if (dto.contribution_amount_per_night !== undefined) {
       patch.contribution_amount_per_night = dto.contribution_amount_per_night;
     }
+    if (dto.allowed_origins !== undefined) {
+      patch.allowed_origins = dto.allowed_origins;
+    }
 
     // Hiç alan gelmediyse yalnızca mevcut oteli dön (no-op).
     if (Object.keys(patch).length === 0) {
@@ -135,7 +140,7 @@ export class DashboardService {
       .update(patch)
       .eq('id', hotelId)
       .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins',
       )
       .single();
 

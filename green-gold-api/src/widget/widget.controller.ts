@@ -1,7 +1,19 @@
-import { Body, Controller, Get, Headers, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { CreateWidgetEventDto } from './dto/create-widget-event.dto';
 import { WidgetService } from './widget.service';
+import { WidgetKeyRateGuard } from '../common/widget-key-rate.guard';
 
+// /widget/* public yüzey: IP başına 60/dk (ThrottlerGuard) + key başına 300/dk.
+@UseGuards(ThrottlerGuard, WidgetKeyRateGuard)
 @Controller('widget')
 export class WidgetController {
   constructor(private readonly widgetService: WidgetService) {}

@@ -34,6 +34,11 @@ export async function saveSettings(
     name: str('name'),
     city: str('city'),
     timezone: str('timezone'),
+    // Tüm origin'ler (boş liste = temizle). Doğrulama backend'de (400 yansıtılır).
+    allowed_origins: formData
+      .getAll('allowed_origins')
+      .map((v) => v.toString().trim())
+      .filter((v) => v !== ''),
   };
   const amountRaw = str('contribution_amount_per_night');
   if (amountRaw !== '') {

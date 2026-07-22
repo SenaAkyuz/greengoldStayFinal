@@ -1,5 +1,7 @@
 import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsNumber,
   IsOptional,
   IsString,
@@ -9,6 +11,7 @@ import {
   MinLength,
 } from 'class-validator';
 import { IsIanaTimeZone } from '../../common/is-iana-timezone.validator';
+import { IsOriginArray } from '../../common/is-origin.validator';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;
@@ -46,4 +49,11 @@ export class UpdateHotelDto {
   @Min(0)
   @Max(1000)
   contribution_amount_per_night?: number;
+
+  // Widget'ın POST edebileceği origin'ler. Geçersiz/wildcard/https-değil -> 400.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @IsOriginArray()
+  allowed_origins?: string[];
 }

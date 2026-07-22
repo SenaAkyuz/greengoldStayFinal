@@ -21,6 +21,7 @@ export interface HotelInfo {
   estimated_co2_per_night_kg: number;
   commission_rate: number;
   public_widget_key: string;
+  allowed_origins: string[];
 }
 
 export interface HotelUpdate {
@@ -28,6 +29,7 @@ export interface HotelUpdate {
   city?: string;
   timezone?: string;
   contribution_amount_per_night?: number;
+  allowed_origins?: string[];
 }
 
 export interface CarbonSummary {

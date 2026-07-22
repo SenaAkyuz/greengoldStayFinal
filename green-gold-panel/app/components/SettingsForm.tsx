@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import type { HotelInfo } from '@/lib/api';
 import { saveSettings, type SettingsState } from '../ayarlar/actions';
 
@@ -22,6 +22,16 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
     saveSettings,
     initialState,
   );
+  const [origins, setOrigins] = useState<string[]>(hotel.allowed_origins ?? []);
+  const [originDraft, setOriginDraft] = useState('');
+
+  const addOrigin = () => {
+    const v = originDraft.trim().replace(/\/+$/, '');
+    if (v && !origins.includes(v)) setOrigins([...origins, v]);
+    setOriginDraft('');
+  };
+  const removeOrigin = (o: string) =>
+    setOrigins(origins.filter((x) => x !== o));
 
   return (
     <form action={formAction} className="mt-6 space-y-8">
@@ -95,6 +105,69 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
               <span className="text-sm text-neutral-500">{hotel.currency}</span>
             </div>
           </Field>
+        </div>
+      </section>
+
+      {/* İzin verilen origin'ler */}
+      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-semibold text-neutral-900">
+          İzin verilen alan adları (origin)
+        </h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Widget yalnızca bu domain&apos;lerden çalışır. Canlıya almadan önce
+          otelin sitesini ekleyin (ör. <code>https://oteliniz.com</code>).
+        </p>
+
+        {/* Hidden input'lar: origins formData ile gider (boşsa temizlenir). */}
+        {origins.map((o) => (
+          <input key={o} type="hidden" name="allowed_origins" value={o} />
+        ))}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          {origins.length === 0 && (
+            <span className="text-sm text-neutral-400">
+              Henüz origin yok — widget hiçbir sitede çalışmaz.
+            </span>
+          )}
+          {origins.map((o) => (
+            <span
+              key={o}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-sm text-emerald-800"
+            >
+              <span className="font-mono text-xs">{o}</span>
+              <button
+                type="button"
+                onClick={() => removeOrigin(o)}
+                aria-label={`${o} kaldır`}
+                className="text-emerald-600 hover:text-emerald-900"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="text"
+            value={originDraft}
+            onChange={(e) => setOriginDraft(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                addOrigin();
+              }
+            }}
+            placeholder="https://oteliniz.com"
+            className={inputCls}
+          />
+          <button
+            type="button"
+            onClick={addOrigin}
+            className="shrink-0 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+          >
+            Ekle
+          </button>
         </div>
       </section>
 
