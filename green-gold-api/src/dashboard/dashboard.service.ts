@@ -1,6 +1,12 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { resolveRange } from './date-range.util';
+import { resolveRange, type RangeParams } from './date-range.util';
+import {
+  distinctSessionStages,
+  funnelRates,
+  type FunnelRates,
+  type FunnelStages,
+} from './interaction-funnel';
 
 export interface WidgetEventsSummary {
   period: { from: string; to: string };
@@ -28,6 +34,12 @@ export interface CarbonSummary {
   tree_equivalent: number;
   co2_per_night_kg: number;
   is_estimated: boolean;
+}
+
+export interface InteractionFunnel {
+  period: { from: string; to: string };
+  stages: FunnelStages;
+  rates: FunnelRates;
 }
 
 // ~21 kg CO₂ / ağaç / yıl kaba değeri (yaklaşık — panel "yaklaşık" etiketiyle gösterir).
@@ -92,10 +104,9 @@ export class DashboardService {
    */
   async getWidgetEventsSummary(
     hotelId: string,
-    from?: string,
-    to?: string,
+    params: RangeParams = {},
   ): Promise<WidgetEventsSummary> {
-    // Otelin timezone'unu al (varsayılan aralık ve gün sınırları için).
+    // Otelin timezone'unu al (aralık otel tz'inde çözülür — #8).
     const { data: hotel, error: hotelError } = await this.supabase.db
       .from('hotels')
       .select('timezone')
@@ -110,7 +121,7 @@ export class DashboardService {
 
     let range;
     try {
-      range = resolveRange(from, to, tz);
+      range = resolveRange(params, tz);
     } catch (e) {
       throw new BadRequestException((e as Error).message);
     }
@@ -118,7 +129,7 @@ export class DashboardService {
     // hotel_id ile filtreli (tenant izolasyonu) + tarih aralığı [start, end).
     const { data: events, error: eventsError } = await this.supabase.db
       .from('widget_events')
-      .select('event_type')
+      .select('id, session_ref, event_type')
       .eq('hotel_id', hotelId)
       .gte('created_at', range.startUtc)
       .lt('created_at', range.endUtcExclusive);
@@ -127,10 +138,13 @@ export class DashboardService {
       throw new BadRequestException(eventsError.message);
     }
 
+    const rows = events ?? [];
+
+    // Ham sayaçlar (toplam etkileşim) — olduğu gibi kalır.
     let views = 0;
     let selections = 0;
     let addClicks = 0;
-    for (const row of events ?? []) {
+    for (const row of rows) {
       switch (row.event_type) {
         case 'widget_goruntulendi':
           views++;
@@ -144,8 +158,10 @@ export class DashboardService {
       }
     }
 
-    const conversionRatePct =
-      views > 0 ? Math.round((selections / views) * 10000) / 100 : 0;
+    // Dönüşüm SESSION bazlı: funnel'daki view_to_select_pct ile birebir aynı
+    // (ortak helper — iki uç tek kaynaktan beslenir).
+    const stages = distinctSessionStages(rows as never);
+    const conversionRatePct = funnelRates(stages).view_to_select_pct;
 
     return {
       period: { from: range.fromLabel, to: range.toLabel },
@@ -153,6 +169,52 @@ export class DashboardService {
       selections,
       add_clicks: addClicks,
       conversion_rate_pct: conversionRatePct,
+    };
+  }
+
+  /**
+   * Session bazlı ETKİLEŞİM hunisi (görüntülenme → seçim → katkı butonu).
+   * Gerçekleşen katkı/tahsilat DEĞİL. Summary ile aynı helper'ları kullanır.
+   */
+  async getFunnel(
+    hotelId: string,
+    params: RangeParams = {},
+  ): Promise<InteractionFunnel> {
+    const { data: hotel, error: hotelError } = await this.supabase.db
+      .from('hotels')
+      .select('timezone')
+      .eq('id', hotelId)
+      .single();
+
+    if (hotelError || !hotel) {
+      throw new BadRequestException('Otel bulunamadı.');
+    }
+
+    const tz = (hotel.timezone as string) || 'Europe/Istanbul';
+
+    let range;
+    try {
+      range = resolveRange(params, tz);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+
+    const { data: events, error: eventsError } = await this.supabase.db
+      .from('widget_events')
+      .select('id, session_ref, event_type')
+      .eq('hotel_id', hotelId)
+      .gte('created_at', range.startUtc)
+      .lt('created_at', range.endUtcExclusive);
+
+    if (eventsError) {
+      throw new BadRequestException(eventsError.message);
+    }
+
+    const stages = distinctSessionStages((events ?? []) as never);
+    return {
+      period: { from: range.fromLabel, to: range.toLabel },
+      stages,
+      rates: funnelRates(stages),
     };
   }
 
@@ -166,8 +228,7 @@ export class DashboardService {
    */
   async getCarbonSummary(
     hotelId: string,
-    from?: string,
-    to?: string,
+    params: RangeParams = {},
   ): Promise<CarbonSummary> {
     const { data: hotel, error: hotelError } = await this.supabase.db
       .from('hotels')
@@ -184,7 +245,7 @@ export class DashboardService {
 
     let range;
     try {
-      range = resolveRange(from, to, tz);
+      range = resolveRange(params, tz);
     } catch (e) {
       throw new BadRequestException((e as Error).message);
     }

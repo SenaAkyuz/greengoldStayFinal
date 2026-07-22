@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHotel, getCarbonSummary } from '@/lib/api';
-import { normalizeRange, rangeToDates } from '@/lib/range';
+import { normalizeRange } from '@/lib/range';
 import { AppHeader } from '../components/AppHeader';
 import { RangePills } from '../components/RangePills';
 
@@ -25,10 +25,9 @@ export default async function CarbonPage({
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
-  const { from, to } = rangeToDates(range);
 
   const [carbonRes, hotelRes] = await Promise.all([
-    getCarbonSummary(token, from, to),
+    getCarbonSummary(token, range),
     getHotel(token),
   ]);
 

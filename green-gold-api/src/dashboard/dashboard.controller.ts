@@ -14,27 +14,48 @@ export class DashboardController {
     return this.dashboardService.getHotel(req.auth.hotelId);
   }
 
-  // GET /dashboard/widget-events-summary?from=YYYY-MM-DD&to=YYYY-MM-DD (auth'lı, otel bazlı)
+  // GET /dashboard/widget-events-summary?range=&from=&to= (auth'lı, otel bazlı)
   @Get('widget-events-summary')
   async widgetEventsSummary(
     @Req() req: AuthenticatedRequest,
+    @Query('range') range?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    return this.dashboardService.getWidgetEventsSummary(
-      req.auth.hotelId,
+    return this.dashboardService.getWidgetEventsSummary(req.auth.hotelId, {
+      range,
       from,
       to,
-    );
+    });
   }
 
-  // GET /dashboard/carbon-summary?from=&to= (auth'lı) — tahmini CO₂, session-dedup
+  // GET /dashboard/carbon-summary?range=&from=&to= (auth'lı) — tahmini CO₂, session-dedup
   @Get('carbon-summary')
   async carbonSummary(
     @Req() req: AuthenticatedRequest,
+    @Query('range') range?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
   ) {
-    return this.dashboardService.getCarbonSummary(req.auth.hotelId, from, to);
+    return this.dashboardService.getCarbonSummary(req.auth.hotelId, {
+      range,
+      from,
+      to,
+    });
+  }
+
+  // GET /dashboard/funnel?range=&from=&to= (auth'lı) — session bazlı etkileşim hunisi
+  @Get('funnel')
+  async funnel(
+    @Req() req: AuthenticatedRequest,
+    @Query('range') range?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.dashboardService.getFunnel(req.auth.hotelId, {
+      range,
+      from,
+      to,
+    });
   }
 }

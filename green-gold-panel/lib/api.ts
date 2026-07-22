@@ -31,6 +31,16 @@ export interface CarbonSummary {
   is_estimated: boolean;
 }
 
+export interface InteractionFunnel {
+  period: { from: string; to: string };
+  stages: { viewed: number; selected: number; clicked: number };
+  rates: {
+    view_to_select_pct: number;
+    select_to_button_pct: number;
+    view_to_button_pct: number;
+  };
+}
+
 interface Envelope<T> {
   success: boolean;
   data: T | null;
@@ -56,27 +66,27 @@ async function apiGet<T>(
   }
 }
 
-export function getWidgetEventsSummary(
-  token: string,
-  from?: string,
-  to?: string,
-) {
-  const qs =
-    from && to
-      ? `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
-      : '';
+// Panel yalnızca `range` (month|7d|30d) geçer; tarih çözümü backend'de (otel tz).
+function rangeQs(range?: string) {
+  return range ? `?range=${encodeURIComponent(range)}` : '';
+}
+
+export function getWidgetEventsSummary(token: string, range?: string) {
   return apiGet<WidgetEventsSummary>(
-    `/dashboard/widget-events-summary${qs}`,
+    `/dashboard/widget-events-summary${rangeQs(range)}`,
     token,
   );
 }
 
-export function getCarbonSummary(token: string, from?: string, to?: string) {
-  const qs =
-    from && to
-      ? `?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
-      : '';
-  return apiGet<CarbonSummary>(`/dashboard/carbon-summary${qs}`, token);
+export function getCarbonSummary(token: string, range?: string) {
+  return apiGet<CarbonSummary>(
+    `/dashboard/carbon-summary${rangeQs(range)}`,
+    token,
+  );
+}
+
+export function getFunnel(token: string, range?: string) {
+  return apiGet<InteractionFunnel>(`/dashboard/funnel${rangeQs(range)}`, token);
 }
 
 export function getHotel(token: string) {

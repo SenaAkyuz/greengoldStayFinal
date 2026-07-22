@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { signOut } from '../actions';
 
-type ActivePage = 'overview' | 'carbon';
+type ActivePage = 'overview' | 'carbon' | 'funnel';
 
 const NAV: { key: ActivePage; label: string; href: string }[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/' },
+  { key: 'funnel', label: 'Dönüşüm', href: '/funnel' },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon' },
 ];
 

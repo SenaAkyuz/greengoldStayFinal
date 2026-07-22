@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHotel, getWidgetEventsSummary, getApiBaseUrl } from '@/lib/api';
-import { normalizeRange, rangeToDates } from '@/lib/range';
+import { normalizeRange } from '@/lib/range';
 import { AppHeader } from './components/AppHeader';
 import { MetricCard } from './components/MetricCard';
 import { RangePills } from './components/RangePills';
@@ -27,10 +27,9 @@ export default async function OverviewPage({
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
-  const { from, to } = rangeToDates(range);
 
   const [summaryRes, hotelRes] = await Promise.all([
-    getWidgetEventsSummary(token, from, to),
+    getWidgetEventsSummary(token, range),
     getHotel(token),
   ]);
 
