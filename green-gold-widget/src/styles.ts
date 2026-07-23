@@ -24,6 +24,16 @@ export const STYLES = `
   font-size: 14px;
 }
 
+.card.preview { position: relative; }
+.preview-badge {
+  position: absolute; top: 10px; right: 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #3d4b5c; background: #eef1f5; border: 1px solid #dbe1e8;
+  padding: 2px 8px; border-radius: 999px;
+  white-space: nowrap;
+}
+
 .header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .leaf {
   flex: 0 0 auto;

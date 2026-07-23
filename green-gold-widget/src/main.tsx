@@ -37,6 +37,8 @@ class GreenGoldWidget extends HTMLElement {
   private sessionRef = '';
   private key = '';
   private apiBase = DEFAULT_API;
+  /** Önizleme modu: hiç event POST'lanmaz (panel açan yönetici analitiği şişirmesin). */
+  private preview = false;
   /** Bu session'da hangi event tipleri gönderildi — her tip en fazla bir kez. */
   private sentEvents = new Set<string>();
 
@@ -46,6 +48,7 @@ class GreenGoldWidget extends HTMLElement {
     if (!this.key) return;
 
     this.apiBase = this.getAttribute('data-api') ?? DEFAULT_API;
+    this.preview = this.getAttribute('data-preview') === 'true';
     // sessionRef ve gönderilen-event seti örnek ömrü boyunca KALICI:
     // element DOM'dan çıkıp tekrar eklenince aynı session sürer.
     if (!this.sessionRef) this.sessionRef = randomSessionRef();
@@ -81,6 +84,8 @@ class GreenGoldWidget extends HTMLElement {
     type: 'widget_goruntulendi' | 'checkbox_secildi' | 'katki_ekle_butonuna_basildi',
     metadata: Record<string, unknown>,
   ): void {
+    // Önizleme: etkileşim çalışır, callback'ler tetiklenir; ama analitik yok.
+    if (this.preview) return;
     if (this.sentEvents.has(type)) return;
     this.sentEvents.add(type);
     sendEvent(this.apiBase, this.key, type, this.sessionRef, metadata);
@@ -120,6 +125,7 @@ class GreenGoldWidget extends HTMLElement {
           })
         }
         onAdd={(amountTotal) => this.handleAdd(amountTotal)}
+        preview={this.preview}
       />,
       this.mount,
     );

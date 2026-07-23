@@ -10,6 +10,8 @@ interface Props {
   onSelect: (amountTotal: number) => void;
   /** "Katkıyı ekle" butonuna basılınca çağrılır. */
   onAdd: (amountTotal: number) => void;
+  /** Önizleme modu: etkileşim çalışır ama küçük bir "Önizleme" etiketi gösterilir. */
+  preview?: boolean;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -62,7 +64,7 @@ function CheckIcon() {
   );
 }
 
-export function Widget({ config, nights, lang, onSelect, onAdd }: Props) {
+export function Widget({ config, nights, lang, onSelect, onAdd, preview }: Props) {
   const t = I18N[lang];
   const [checked, setChecked] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -84,7 +86,8 @@ export function Widget({ config, nights, lang, onSelect, onAdd }: Props) {
   };
 
   return (
-    <div class="card" part="card">
+    <div class={preview ? 'card preview' : 'card'} part="card">
+      {preview && <span class="preview-badge">{t.previewBadge}</span>}
       <div class="header">
         <span class="leaf">
           <LeafIcon />

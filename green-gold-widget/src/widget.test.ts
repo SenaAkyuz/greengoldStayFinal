@@ -100,6 +100,31 @@ describe('green-gold-widget', () => {
     expect(selects).toHaveLength(1);
   });
 
+  it('(b2) önizleme modu: tüm etkileşimler çalışır ama HİÇ event POST edilmez', async () => {
+    installFetch();
+    const el = await mountWidget({ ...baseAttrs(), 'data-preview': 'true' });
+
+    // Render oldu + "Önizleme" etiketi var.
+    expect(el.shadowRoot!.querySelector('.card')).toBeTruthy();
+    expect(el.shadowRoot!.querySelector('.preview-badge')).toBeTruthy();
+
+    // Checkbox + buton: etkileşim tam çalışıyor.
+    const input = el.shadowRoot!.querySelector('input[type=checkbox]') as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+
+    let dispatched = false;
+    document.addEventListener('greengold:contribution-selected', () => { dispatched = true; }, { once: true });
+    const btn = el.shadowRoot!.querySelector('button') as HTMLButtonElement;
+    btn.click();
+    await flush();
+
+    // Callback/CustomEvent çalışır ama analitik event'i sıfır.
+    expect(dispatched).toBe(true);
+    expect(eventCalls).toHaveLength(0);
+  });
+
   it('(c) geçersiz key: render yok, host sayfa yaşıyor', async () => {
     installFetch({ invalidKey: true });
     const el = await mountWidget(baseAttrs());

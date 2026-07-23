@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getHotel, getWidgetEventsSummary, getApiBaseUrl } from '@/lib/api';
+import Link from 'next/link';
+import { getHotel, getWidgetEventsSummary } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
 import { AppShell } from './components/AppShell';
 import { MetricCard } from './components/MetricCard';
 import { RangePills } from './components/RangePills';
-import { IntegrationCard } from './components/IntegrationCard';
 
 export default async function OverviewPage({
   searchParams,
@@ -36,12 +36,6 @@ export default async function OverviewPage({
   const hotel = hotelRes.data;
   const summary = summaryRes.data;
   const loadError = summaryRes.error ?? hotelRes.error;
-
-  const embedCode = hotel
-    ? `<script src="https://cdn.greengold.example/green-gold-widget.v1.js"></script>
-<green-gold-widget data-key="${hotel.public_widget_key}" data-nights="1" data-lang="tr"
-    data-api="${getApiBaseUrl()}"></green-gold-widget>`
-    : '';
 
   const conversion =
     summary && summary.views > 0
@@ -103,17 +97,34 @@ export default async function OverviewPage({
 
             {isEmpty && (
               <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                Henüz veri yok — widget&apos;ınızı sitenize ekleyin. Aşağıdaki
-                entegrasyon kodunu kullanabilirsiniz.
+                Henüz veri yok — widget&apos;ınızı sitenize ekleyin.{' '}
+                <Link href="/entegrasyon" className="font-semibold underline">
+                  Entegrasyon
+                </Link>{' '}
+                sekmesindeki kodu kullanabilirsiniz.
               </div>
             )}
           </>
         )}
 
         {hotel && (
-          <div className="mt-8">
-            <IntegrationCard embedCode={embedCode} />
-          </div>
+          <section className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-900">
+                Entegrasyon
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Embed kodu ve izinli domain durumu artık Entegrasyon
+                sekmesinde.
+              </p>
+            </div>
+            <Link
+              href="/entegrasyon"
+              className="shrink-0 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              Entegrasyon sayfasına git
+            </Link>
+          </section>
         )}
       </main>
     </AppShell>

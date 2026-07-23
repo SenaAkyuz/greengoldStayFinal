@@ -11,6 +11,7 @@ interface Strings {
   addButton: string;
   confirmation: string;
   co2Note: string;
+  previewBadge: string;
 }
 
 export const I18N: Record<Lang, Strings> = {
@@ -27,6 +28,7 @@ export const I18N: Record<Lang, Strings> = {
     addButton: 'Katkıyı ekle',
     confirmation: 'Katkı tercihinizi aldık, teşekkürler.',
     co2Note: 'Rakamlar tahminidir, kesin ölçüm değildir.',
+    previewBadge: 'Önizleme',
   },
   en: {
     heading: 'Make your stay carbon-neutral',
@@ -41,5 +43,6 @@ export const I18N: Record<Lang, Strings> = {
     addButton: 'Add contribution',
     confirmation: "Thanks — we've noted your contribution preference.",
     co2Note: 'Figures are estimates, not exact measurements.',
+    previewBadge: 'Preview',
   },
 };

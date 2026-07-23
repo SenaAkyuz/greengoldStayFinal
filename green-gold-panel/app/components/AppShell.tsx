@@ -6,8 +6,10 @@ import { signOut } from '../actions';
 
 export type ActivePage =
   | 'overview'
+  | 'guest-demo'
   | 'carbon'
   | 'funnel'
+  | 'integration'
   | 'settings';
 
 type NavItem = {
@@ -22,8 +24,10 @@ type NavItem = {
 // Sertifikalar / Raporlar / Entegrasyon sonraki alt adımlarda eklenecek.
 const NAV: NavItem[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/', icon: <GridIcon /> },
+  { key: 'guest-demo', label: 'Misafir Demo', href: '/misafir-demo', icon: <EyeIcon /> },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
+  { key: 'integration', label: 'Entegrasyon', href: '/entegrasyon', icon: <CodeIcon /> },
   { key: 'settings', label: 'Ayarlar', href: '/ayarlar', icon: <GearIcon /> },
 ];
 
@@ -207,6 +211,34 @@ function GearIcon() {
         d="M19.4 12a7.4 7.4 0 0 0-.1-1.3l2-1.5-2-3.4-2.3.9a7.3 7.3 0 0 0-2.2-1.3L14.4 2h-4l-.4 2.4a7.3 7.3 0 0 0-2.2 1.3l-2.3-.9-2 3.4 2 1.5a7.4 7.4 0 0 0 0 2.6l-2 1.5 2 3.4 2.3-.9a7.3 7.3 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.3 7.3 0 0 0 2.2-1.3l2.3.9 2-3.4-2-1.5c.07-.43.1-.86.1-1.3z"
         stroke="currentColor"
         strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function CodeIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 5l-2 14"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
         strokeLinejoin="round"
       />
     </svg>
