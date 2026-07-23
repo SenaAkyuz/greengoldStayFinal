@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHotel } from '@/lib/api';
-import { AppHeader } from '../components/AppHeader';
+import { AppShell } from '../components/AppShell';
 import { SettingsForm } from '../components/SettingsForm';
 
 export default async function SettingsPage() {
@@ -22,14 +22,12 @@ export default async function SettingsPage() {
   const hotel = hotelRes.data;
 
   return (
-    <div className="min-h-full bg-neutral-50">
-      <AppHeader
-        hotelName={hotel?.hotel_name}
-        city={hotel?.city}
-        active="settings"
-      />
-
-      <main className="mx-auto max-w-5xl px-5 py-8">
+    <AppShell
+      hotelName={hotel?.hotel_name}
+      city={hotel?.city}
+      active="settings"
+    >
+      <main className="mx-auto w-full max-w-5xl px-5 py-8">
         <div>
           <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
             Ayarlar
@@ -48,6 +46,6 @@ export default async function SettingsPage() {
 
         {hotel && <SettingsForm hotel={hotel} />}
       </main>
-    </div>
+    </AppShell>
   );
 }

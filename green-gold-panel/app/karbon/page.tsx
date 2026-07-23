@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHotel, getCarbonSummary } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
-import { AppHeader } from '../components/AppHeader';
+import { AppShell } from '../components/AppShell';
 import { RangePills } from '../components/RangePills';
 
 export default async function CarbonPage({
@@ -48,14 +48,12 @@ export default async function CarbonPage({
     carbon.estimated_co2_kg === 0;
 
   return (
-    <div className="min-h-full bg-neutral-50">
-      <AppHeader
-        hotelName={hotel?.hotel_name}
-        city={hotel?.city}
-        active="carbon"
-      />
-
-      <main className="mx-auto max-w-5xl px-5 py-8">
+    <AppShell
+      hotelName={hotel?.hotel_name}
+      city={hotel?.city}
+      active="carbon"
+    >
+      <main className="mx-auto w-full max-w-5xl px-5 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
@@ -131,7 +129,7 @@ export default async function CarbonPage({
           </>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }
 

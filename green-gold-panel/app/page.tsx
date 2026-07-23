@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getHotel, getWidgetEventsSummary, getApiBaseUrl } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
-import { AppHeader } from './components/AppHeader';
+import { AppShell } from './components/AppShell';
 import { MetricCard } from './components/MetricCard';
 import { RangePills } from './components/RangePills';
 import { IntegrationCard } from './components/IntegrationCard';
@@ -57,14 +57,12 @@ export default async function OverviewPage({
   const nf = (n: number) => n.toLocaleString('tr-TR');
 
   return (
-    <div className="min-h-full bg-neutral-50">
-      <AppHeader
-        hotelName={hotel?.hotel_name}
-        city={hotel?.city}
-        active="overview"
-      />
-
-      <main className="mx-auto max-w-5xl px-5 py-8">
+    <AppShell
+      hotelName={hotel?.hotel_name}
+      city={hotel?.city}
+      active="overview"
+    >
+      <main className="mx-auto w-full max-w-5xl px-5 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
@@ -118,6 +116,6 @@ export default async function OverviewPage({
           </div>
         )}
       </main>
-    </div>
+    </AppShell>
   );
 }
