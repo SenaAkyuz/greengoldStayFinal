@@ -73,6 +73,20 @@ function parseYmd(value: string): { y: number; m: number; d: number } {
   return { y: yy, m: mm, d: dd };
 }
 
+/** Verilen instant'ın otel tz'indeki YYYY-MM-DD gününü döndürür (günlük gruplama). */
+export function ymdInTz(instant: Date, tz: string): string {
+  const dtf = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = dtf.formatToParts(instant);
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
 /** "now"un otelin timezone'undaki YYYY-MM-DD değerlerini verir. */
 function currentYmdInTz(tz: string): { y: number; m: number; d: number } {
   const dtf = new Intl.DateTimeFormat('en-CA', {

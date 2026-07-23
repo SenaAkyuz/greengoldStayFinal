@@ -5,8 +5,10 @@ import {
   Patch,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { AuthGuard } from '../common/auth.guard';
 import type { AuthenticatedRequest } from '../common/auth.guard';
 import { DashboardService } from './dashboard.service';
@@ -76,5 +78,42 @@ export class DashboardController {
       from,
       to,
     });
+  }
+
+  // GET /dashboard/report?range=&from=&to= (auth'lı) — özet+funnel+karbon tek yanıt
+  @Get('report')
+  async report(
+    @Req() req: AuthenticatedRequest,
+    @Query('range') range?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.dashboardService.getReport(req.auth.hotelId, {
+      range,
+      from,
+      to,
+    });
+  }
+
+  // GET /dashboard/export.csv?range=&from=&to= (auth'lı) — tenant-scoped CSV indirme.
+  // @Res kullanıldığı için ortak zarf (interceptor) devreye girmez; ham CSV döner.
+  @Get('export.csv')
+  async exportCsv(
+    @Req() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Query('range') range?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ): Promise<void> {
+    const { filename, csv } = await this.dashboardService.exportCsv(
+      req.auth.hotelId,
+      { range, from, to },
+    );
+    res.set({
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+    // BOM: Excel'in UTF-8 (Türkçe karakter) doğru okuması için.
+    res.send('﻿' + csv);
   }
 }

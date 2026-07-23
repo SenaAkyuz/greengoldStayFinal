@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { resolveRange, type RangeParams } from './date-range.util';
+import { resolveRange, ymdInTz, type RangeParams } from './date-range.util';
+import { toCsv, slugify } from './csv.util';
 import {
   distinctSessionStages,
   funnelRates,
@@ -48,6 +49,13 @@ export interface InteractionFunnel {
   period: { from: string; to: string };
   stages: FunnelStages;
   rates: FunnelRates;
+}
+
+export interface DashboardReport {
+  period: { from: string; to: string };
+  summary: WidgetEventsSummary;
+  funnel: InteractionFunnel;
+  carbon: CarbonSummary;
 }
 
 // ~21 kg CO₂ / ağaç / yıl kaba değeri (yaklaşık — panel "yaklaşık" etiketiyle gösterir).
@@ -375,5 +383,125 @@ export class DashboardService {
       co2_per_night_kg: co2PerNight,
       is_estimated: true,
     };
+  }
+
+  /**
+   * Özet + funnel + karbon TEK yanıtta. Mevcut servisleri birleştirir (aynı
+   * hesaplar → panelle tutarlı). Tenant izolasyonu her alt çağrıda hotelId ile.
+   */
+  async getReport(
+    hotelId: string,
+    params: RangeParams = {},
+  ): Promise<DashboardReport> {
+    const [summary, funnel, carbon] = await Promise.all([
+      this.getWidgetEventsSummary(hotelId, params),
+      this.getFunnel(hotelId, params),
+      this.getCarbonSummary(hotelId, params),
+    ]);
+    return { period: summary.period, summary, funnel, carbon };
+  }
+
+  /**
+   * Tenant-scoped CSV export. Gün bazlı etkileşim özeti + toplam özet satırları.
+   * CSV injection'a karşı hücreler csv.util ile kaçışlanır. hotelId YALNIZCA
+   * token'dan (controller). Döndürülen csv ham metin; controller header + BOM ekler.
+   */
+  async exportCsv(
+    hotelId: string,
+    params: RangeParams = {},
+  ): Promise<{ filename: string; csv: string }> {
+    const { data: hotel, error: hotelError } = await this.supabase.db
+      .from('hotels')
+      .select('name, timezone')
+      .eq('id', hotelId)
+      .single();
+
+    if (hotelError || !hotel) {
+      throw new BadRequestException('Otel bulunamadı.');
+    }
+
+    const tz = (hotel.timezone as string) || 'Europe/Istanbul';
+
+    let range;
+    try {
+      range = resolveRange(params, tz);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+
+    const { data: events, error: eventsError } = await this.supabase.db
+      .from('widget_events')
+      .select('session_ref, event_type, created_at')
+      .eq('hotel_id', hotelId)
+      .gte('created_at', range.startUtc)
+      .lt('created_at', range.endUtcExclusive);
+
+    if (eventsError) {
+      throw new BadRequestException(eventsError.message);
+    }
+
+    // Gün bazlı gruplama (otel tz).
+    interface DayBucket {
+      views: number;
+      selections: number;
+      clicks: number;
+      sessions: Set<string>;
+    }
+    const byDay = new Map<string, DayBucket>();
+    for (const row of events ?? []) {
+      const day = ymdInTz(new Date(row.created_at as string), tz);
+      let b = byDay.get(day);
+      if (!b) {
+        b = { views: 0, selections: 0, clicks: 0, sessions: new Set() };
+        byDay.set(day, b);
+      }
+      switch (row.event_type) {
+        case 'widget_goruntulendi':
+          b.views++;
+          break;
+        case 'checkbox_secildi':
+          b.selections++;
+          break;
+        case 'katki_ekle_butonuna_basildi':
+          b.clicks++;
+          break;
+      }
+      const sref = row.session_ref as string | null;
+      if (sref) b.sessions.add(sref);
+    }
+    const days = [...byDay.keys()].sort();
+
+    // Toplamlar: mevcut servislerden (tutarlılık).
+    const [summary, carbon] = await Promise.all([
+      this.getWidgetEventsSummary(hotelId, params),
+      this.getCarbonSummary(hotelId, params),
+    ]);
+
+    const rows: (string | number)[][] = [];
+    rows.push([`Green Gold — ${hotel.name as string}`]);
+    rows.push(['Dönem', range.fromLabel, range.toLabel]);
+    rows.push([]);
+    rows.push(['Günlük etkileşim']);
+    rows.push(['Tarih', 'Görüntülenme', 'Seçim', 'Katkı butonu', 'Tekil session']);
+    for (const day of days) {
+      const b = byDay.get(day)!;
+      rows.push([day, b.views, b.selections, b.clicks, b.sessions.size]);
+    }
+    rows.push([]);
+    rows.push(['Özet']);
+    rows.push(['Görüntülenme', summary.views]);
+    rows.push(['Seçim', summary.selections]);
+    rows.push(['Katkı butonu tıklaması', summary.add_clicks]);
+    rows.push(['Dönüşüm %', summary.conversion_rate_pct]);
+    rows.push(['Tahmini CO₂ (kg)', carbon.estimated_co2_kg]);
+    rows.push(['Ağaç-yılı eşdeğeri', carbon.tree_equivalent]);
+    rows.push([
+      'Katkı niyeti (tekil katkı butonu oturumu)',
+      carbon.contributions_count,
+    ]);
+
+    const csv = toCsv(rows);
+    const filename = `green-gold-${slugify(hotel.name as string)}-${range.fromLabel}_${range.toLabel}.csv`;
+    return { filename, csv };
   }
 }

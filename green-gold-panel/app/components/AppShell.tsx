@@ -9,6 +9,7 @@ export type ActivePage =
   | 'guest-demo'
   | 'carbon'
   | 'funnel'
+  | 'reports'
   | 'integration'
   | 'settings';
 
@@ -27,6 +28,7 @@ const NAV: NavItem[] = [
   { key: 'guest-demo', label: 'Misafir Demo', href: '/misafir-demo', icon: <EyeIcon /> },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
+  { key: 'reports', label: 'Raporlar', href: '/raporlar', icon: <ReportIcon /> },
   { key: 'integration', label: 'Entegrasyon', href: '/entegrasyon', icon: <CodeIcon /> },
   { key: 'settings', label: 'Ayarlar', href: '/ayarlar', icon: <GearIcon /> },
 ];
@@ -241,6 +243,21 @@ function CodeIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
+    </svg>
+  );
+}
+
+function ReportIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 3h7l5 5v13H7z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M13 3v6h6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M10 13h6M10 17h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
 }

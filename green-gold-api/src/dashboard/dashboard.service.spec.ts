@@ -199,6 +199,49 @@ describe('DashboardService.getCarbonSummary — dedup & doğruluk (g)', () => {
   });
 });
 
+describe('DashboardService — report & CSV export (11E)', () => {
+  const dataset: FakeDataset = {
+    hotels: [hotel('A', { name: '=Otel A' }), hotel('B')],
+    widget_events: [
+      event('A', 'widget_goruntulendi', 'sA1', '2026-07-10T09:00:00.000Z'),
+      event('A', 'checkbox_secildi', 'sA1', '2026-07-10T09:01:00.000Z'),
+      pressEvent('A', 'sA1', 3, '2026-07-10T09:02:00.000Z'),
+      event('A', 'widget_goruntulendi', 'sA2', '2026-07-11T09:00:00.000Z'),
+      // B (başka tenant) — A'nın CSV'sinde GÖRÜNMEMELİ
+      event('B', 'widget_goruntulendi', 'sB1', '2026-07-10T09:00:00.000Z'),
+      pressEvent('B', 'sB1', 9, '2026-07-10T09:02:00.000Z'),
+    ],
+  };
+
+  it('getReport: özet + funnel + karbon tek yanıtta, tutarlı', async () => {
+    const { service } = makeService(dataset);
+    const r = await service.getReport('A', RANGE);
+    expect(r.summary.views).toBe(2);
+    expect(r.funnel.stages.viewed).toBe(2);
+    expect(r.carbon.contributions_count).toBe(1);
+    expect(r.summary.conversion_rate_pct).toBe(r.funnel.rates.view_to_select_pct);
+  });
+
+  it('exportCsv: tenant-scoped, günlük satırlar + özet + injection kaçışı', async () => {
+    const { service } = makeService(dataset);
+    const { filename, csv } = await service.exportCsv('A', RANGE);
+
+    expect(filename).toMatch(/^green-gold-.*\.csv$/);
+    expect(csv).toContain('Günlük etkileşim');
+    expect(csv).toContain('2026-07-10,1,1,1,1');
+    expect(csv).toContain('Katkı niyeti (tekil katkı butonu oturumu),1');
+    // B tenant'ının 9 gecelik katkısı A'nın CSV'sinde yok
+    expect(csv).not.toContain('Otel B');
+    expect(csv).not.toContain(',9,');
+  });
+
+  it('exportCsv: title hücresi formülle başlamaz -> güvenli', async () => {
+    const { service } = makeService(dataset);
+    const { csv } = await service.exportCsv('A', RANGE);
+    expect(csv.split('\r\n')[0]).toBe('Green Gold — =Otel A');
+  });
+});
+
 describe('DashboardService — katsayı placeholder & marka (11C)', () => {
   it('override NULL -> tek dokümante placeholder (8.30); hotel_type ETKİLEMEZ', async () => {
     const dataset: FakeDataset = {

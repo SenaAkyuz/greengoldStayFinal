@@ -105,6 +105,17 @@ export function getFunnel(token: string, range?: string) {
   return apiGet<InteractionFunnel>(`/dashboard/funnel${rangeQs(range)}`, token);
 }
 
+export interface DashboardReport {
+  period: { from: string; to: string };
+  summary: WidgetEventsSummary;
+  funnel: InteractionFunnel;
+  carbon: CarbonSummary;
+}
+
+export function getReport(token: string, range?: string) {
+  return apiGet<DashboardReport>(`/dashboard/report${rangeQs(range)}`, token);
+}
+
 export function getHotel(token: string) {
   return apiGet<HotelInfo>('/dashboard/hotel', token);
 }
