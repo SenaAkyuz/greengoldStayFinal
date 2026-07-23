@@ -7,8 +7,11 @@ import { signOut } from '../actions';
 export type ActivePage =
   | 'overview'
   | 'guest-demo'
+  | 'reservations'
+  | 'payments'
   | 'carbon'
   | 'funnel'
+  | 'certificates'
   | 'reports'
   | 'integration'
   | 'settings';
@@ -26,8 +29,11 @@ type NavItem = {
 const NAV: NavItem[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/', icon: <GridIcon /> },
   { key: 'guest-demo', label: 'Misafir Demo', href: '/misafir-demo', icon: <EyeIcon /> },
+  { key: 'reservations', label: 'Rezervasyonlar', href: '/rezervasyonlar', icon: <CalendarIcon /> },
+  { key: 'payments', label: 'Tahsilatlar', href: '/tahsilatlar', icon: <CardIcon /> },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
+  { key: 'certificates', label: 'Sertifikalar', href: '/sertifikalar', icon: <AwardIcon /> },
   { key: 'reports', label: 'Raporlar', href: '/raporlar', icon: <ReportIcon /> },
   { key: 'integration', label: 'Entegrasyon', href: '/entegrasyon', icon: <CodeIcon /> },
   { key: 'settings', label: 'Ayarlar', href: '/ayarlar', icon: <GearIcon /> },
@@ -241,6 +247,39 @@ function CodeIcon() {
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M7 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AwardIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="9" r="5" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M9 13.5L8 21l4-2 4 2-1-7.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
         strokeLinejoin="round"
       />
     </svg>
