@@ -19,6 +19,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get('reset') === 'success';
+  const welcome = searchParams.get('welcome') === '1';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +71,16 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
               >
                 Şifreniz güncellendi, yeni şifrenizle giriş yapabilirsiniz.
+              </div>
+            )}
+
+            {welcome && (
+              <div
+                role="status"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+              >
+                Hesabınız etkinleştirildi. Belirlediğiniz şifreyle giriş
+                yapabilirsiniz.
               </div>
             )}
 

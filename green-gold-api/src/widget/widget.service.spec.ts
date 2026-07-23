@@ -178,7 +178,10 @@ describe('WidgetService.recordEvent', () => {
       { hotels: [hotelRow()], widget_events: [] },
       { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
     );
-    const service = new WidgetService(fake as never);
+    const service = new WidgetService(
+      fake as never,
+      new DashboardService(fake as never),
+    );
     const r1 = await service.recordEvent('key-active', validDto);
     const r2 = await service.recordEvent('key-active', validDto); // aynı session+type
     expect(r1.id).toBeTruthy();
@@ -191,7 +194,10 @@ describe('WidgetService.recordEvent', () => {
       { hotels: [hotelRow()], widget_events: [] },
       { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
     );
-    const service = new WidgetService(fake as never);
+    const service = new WidgetService(
+      fake as never,
+      new DashboardService(fake as never),
+    );
     const noSession = { event_type: 'widget_goruntulendi' as const };
     await service.recordEvent('key-active', noSession);
     await service.recordEvent('key-active', noSession);
