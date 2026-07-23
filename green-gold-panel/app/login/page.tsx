@@ -1,11 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetSuccess = searchParams.get('reset') === 'success';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +62,15 @@ export default function LoginPage() {
           </p>
 
           <form onSubmit={onSubmit} className="space-y-4">
+            {resetSuccess && (
+              <div
+                role="status"
+                className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+              >
+                Şifreniz güncellendi, yeni şifrenizle giriş yapabilirsiniz.
+              </div>
+            )}
+
             {error && (
               <div
                 role="alert"
@@ -79,12 +99,20 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="password"
-                className="mb-1.5 block text-sm font-medium text-neutral-700"
-              >
-                Şifre
-              </label>
+              <div className="mb-1.5 flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-neutral-700"
+                >
+                  Şifre
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800"
+                >
+                  Şifremi unuttum
+                </Link>
+              </div>
               <input
                 id="password"
                 type="password"
