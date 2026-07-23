@@ -48,6 +48,34 @@ describe('WidgetService.getConfig', () => {
     expect(cfg.hotel_name).toBe('Pilot Otel');
     expect(cfg.is_estimated).toBe(true);
   });
+
+  it('override NULL -> config dokümante placeholder (8.30); hotel_type tanımlayıcı (11C)', async () => {
+    const { service } = makeService({
+      hotels: [
+        hotelRow({ estimated_co2_per_night_kg: null, hotel_type: 'resort' }),
+      ],
+    });
+    const cfg = await service.getConfig('key-active');
+    expect(cfg.estimated_co2_per_night_kg).toBe(8.3); // tip'ten bağımsız placeholder
+    expect(cfg.hotel_type).toBe('resort');
+  });
+
+  it('config marka alanlarını döner; geçersiz brand_color -> null (11C)', async () => {
+    const okHotel = makeService({
+      hotels: [
+        hotelRow({ logo_url: 'https://cdn.example/l.png', brand_color: '#1a7f5a' }),
+      ],
+    });
+    const cfg = await okHotel.service.getConfig('key-active');
+    expect(cfg.logo_url).toBe('https://cdn.example/l.png');
+    expect(cfg.brand_color).toBe('#1a7f5a');
+
+    const badHotel = makeService({
+      hotels: [hotelRow({ brand_color: 'red; }' })],
+    });
+    const cfg2 = await badHotel.service.getConfig('key-active');
+    expect(cfg2.brand_color).toBeNull();
+  });
 });
 
 describe('WidgetService.recordEvent', () => {

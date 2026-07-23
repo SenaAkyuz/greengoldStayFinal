@@ -24,6 +24,19 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
   );
   const [origins, setOrigins] = useState<string[]>(hotel.allowed_origins ?? []);
   const [originDraft, setOriginDraft] = useState('');
+  const [logoUrl, setLogoUrl] = useState(hotel.logo_url ?? '');
+  const [brandColor, setBrandColor] = useState(hotel.brand_color ?? '');
+
+  const HEX6 = /^#[0-9a-fA-F]{6}$/;
+  const validColor = HEX6.test(brandColor) ? brandColor : '';
+  const accent = validColor || '#1a7f5a';
+  const validLogo = /^https:\/\//.test(logoUrl) ? logoUrl : '';
+  const hotelTypeLabel =
+    hotel.hotel_type === 'premium'
+      ? 'Premium'
+      : hotel.hotel_type === 'resort'
+        ? 'Resort'
+        : 'Şehir (city)';
 
   const addOrigin = () => {
     const v = originDraft.trim().replace(/\/+$/, '');
@@ -171,6 +184,98 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
         </div>
       </section>
 
+      {/* Marka (otel düzenleyebilir) */}
+      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+        <h2 className="text-sm font-semibold text-neutral-900">Marka</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Logo ve aksan rengi widget’ta görünür. Logo yalnızca{' '}
+          <code>https</code> adres olabilir; renk 6 haneli hex (#RRGGBB).
+        </p>
+
+        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <Field
+            label="Logo URL (https)"
+            htmlFor="logo_url"
+            hint="Boş bırakılırsa varsayılan yaprak simgesi kullanılır."
+          >
+            <input
+              id="logo_url"
+              type="url"
+              inputMode="url"
+              maxLength={500}
+              placeholder="https://oteliniz.com/logo.png"
+              value={logoUrl}
+              onChange={(e) => setLogoUrl(e.currentTarget.value)}
+              className={inputCls}
+            />
+          </Field>
+
+          <Field label="Marka rengi" htmlFor="brand_color_text">
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                aria-label="Renk seçici"
+                value={accent}
+                onChange={(e) => setBrandColor(e.currentTarget.value)}
+                className="h-9 w-10 shrink-0 cursor-pointer rounded-lg border border-neutral-300 bg-white p-0.5"
+              />
+              <input
+                id="brand_color_text"
+                type="text"
+                maxLength={7}
+                placeholder="#1a7f5a"
+                value={brandColor}
+                onChange={(e) => setBrandColor(e.currentTarget.value)}
+                className={inputCls}
+              />
+              {brandColor && (
+                <button
+                  type="button"
+                  onClick={() => setBrandColor('')}
+                  className="shrink-0 rounded-lg border border-neutral-300 px-2.5 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                >
+                  Temizle
+                </button>
+              )}
+            </div>
+            {brandColor && !validColor && (
+              <span className="mt-1 block text-xs text-amber-600">
+                Geçersiz renk — #RRGGBB biçiminde olmalı.
+              </span>
+            )}
+          </Field>
+        </div>
+
+        {/* boşsa gönderme: action boş değeri atlar, backend'e geçersiz gitmez */}
+        <input type="hidden" name="logo_url" value={validLogo} />
+        <input type="hidden" name="brand_color" value={validColor} />
+
+        {/* Canlı küçük önizleme */}
+        <div className="mt-5">
+          <span className="text-xs font-medium text-neutral-500">Önizleme</span>
+          <div className="mt-2 inline-flex items-center gap-2.5 rounded-xl border border-neutral-200 bg-white px-3 py-2">
+            <span
+              className="grid h-8 w-8 place-items-center overflow-hidden rounded-lg text-white"
+              style={{ backgroundColor: accent }}
+            >
+              {validLogo ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={validLogo}
+                  alt=""
+                  className="h-full w-full object-contain"
+                />
+              ) : (
+                <LeafGlyph />
+              )}
+            </span>
+            <span className="text-sm font-semibold" style={{ color: accent }}>
+              Katkıyı ekle
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* Read-only / korumalı */}
       <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
         <h2 className="text-sm font-semibold text-neutral-900">
@@ -191,9 +296,14 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
             note="Green Gold sözleşmesi; buradan değiştirilemez."
           />
           <ReadOnlyField
+            label="Otel tipi"
+            value={hotelTypeLabel}
+            note="Tanımlayıcı alan (şehir/premium ayrımı); Green Gold belirler."
+          />
+          <ReadOnlyField
             label="Tahmini CO₂ katsayısı"
             value={`${hotel.estimated_co2_per_night_kg.toLocaleString('tr-TR')} kg/gece`}
-            note="Metodoloji parametresi; Green Gold tarafından belirlenir (tahmini)."
+            note="GEÇİCİ PLACEHOLDER — Green Gold metodoloji onayı olmadan gerçek otele sunulmamalı."
           />
           <ReadOnlyField
             label="Widget anahtarı"
@@ -229,6 +339,26 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
 
 const inputCls =
   'w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20';
+
+function LeafGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 20c0-8 6-14 16-14 0 10-6 14-14 14"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 16c3-3 6-4.5 9-5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
 
 function Field({
   label,

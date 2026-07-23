@@ -8,6 +8,7 @@ import {
   type FunnelStages,
 } from './interaction-funnel';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
+import { effectiveCo2PerNight, normalizeHotelType } from '../common/hotel-type';
 
 export interface WidgetEventsSummary {
   period: { from: string; to: string };
@@ -28,6 +29,9 @@ export interface HotelInfo {
   commission_rate: number;
   public_widget_key: string;
   allowed_origins: string[];
+  hotel_type: string;
+  logo_url: string | null;
+  brand_color: string | null;
 }
 
 export interface CarbonSummary {
@@ -81,7 +85,7 @@ export class DashboardService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color',
       )
       .eq('id', hotelId)
       .single();
@@ -94,6 +98,7 @@ export class DashboardService {
   }
 
   private toHotelInfo(hotel: Record<string, unknown>): HotelInfo {
+    const brandColor = hotel.brand_color as string | null;
     return {
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
@@ -101,10 +106,16 @@ export class DashboardService {
       timezone: (hotel.timezone as string) || 'Europe/Istanbul',
       currency: (hotel.default_currency as string) ?? 'EUR',
       amount_per_night: Number(hotel.contribution_amount_per_night),
-      estimated_co2_per_night_kg: Number(hotel.estimated_co2_per_night_kg),
+      // Efektif katsayı: override yoksa dokümante placeholder (hotel_type girmez).
+      estimated_co2_per_night_kg: effectiveCo2PerNight(
+        hotel.estimated_co2_per_night_kg as number | null,
+      ),
       commission_rate: Number(hotel.commission_rate),
       public_widget_key: hotel.public_widget_key as string,
       allowed_origins: (hotel.allowed_origins as string[] | null) ?? [],
+      hotel_type: normalizeHotelType(hotel.hotel_type),
+      logo_url: (hotel.logo_url as string | null) ?? null,
+      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
     };
   }
 
@@ -127,6 +138,8 @@ export class DashboardService {
     if (dto.allowed_origins !== undefined) {
       patch.allowed_origins = dto.allowed_origins;
     }
+    if (dto.logo_url !== undefined) patch.logo_url = dto.logo_url;
+    if (dto.brand_color !== undefined) patch.brand_color = dto.brand_color;
 
     // Hiç alan gelmediyse yalnızca mevcut oteli dön (no-op).
     if (Object.keys(patch).length === 0) {
@@ -140,7 +153,7 @@ export class DashboardService {
       .update(patch)
       .eq('id', hotelId)
       .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color',
       )
       .single();
 
@@ -295,7 +308,10 @@ export class DashboardService {
     }
 
     const tz = (hotel.timezone as string) || 'Europe/Istanbul';
-    const co2PerNight = Number(hotel.estimated_co2_per_night_kg);
+    // Override yoksa dokümante placeholder (hotel_type hesaba girmez).
+    const co2PerNight = effectiveCo2PerNight(
+      hotel.estimated_co2_per_night_kg as number | null,
+    );
 
     let range;
     try {

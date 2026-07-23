@@ -22,6 +22,9 @@ export interface HotelInfo {
   commission_rate: number;
   public_widget_key: string;
   allowed_origins: string[];
+  hotel_type: string;
+  logo_url: string | null;
+  brand_color: string | null;
 }
 
 export interface HotelUpdate {
@@ -30,6 +33,8 @@ export interface HotelUpdate {
   timezone?: string;
   contribution_amount_per_night?: number;
   allowed_origins?: string[];
+  logo_url?: string | null;
+  brand_color?: string | null;
 }
 
 export interface CarbonSummary {

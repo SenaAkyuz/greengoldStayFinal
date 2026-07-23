@@ -116,4 +116,50 @@ describe('UpdateHotelDto', () => {
       ).toBeGreaterThan(0);
     });
   });
+
+  describe('logo_url (11C)', () => {
+    it('geçerli https URL kabul', async () => {
+      expect(
+        await errorsFor({ logo_url: 'https://cdn.example/logo.png' }),
+      ).toHaveLength(0);
+    });
+
+    it('http reddedilir (yalnızca https)', async () => {
+      expect(
+        (await errorsFor({ logo_url: 'http://cdn.example/logo.png' })).length,
+      ).toBeGreaterThan(0);
+    });
+
+    it('data: ve javascript: reddedilir', async () => {
+      expect(
+        (await errorsFor({ logo_url: 'data:image/png;base64,AAAA' })).length,
+      ).toBeGreaterThan(0);
+      expect(
+        (await errorsFor({ logo_url: 'javascript:alert(1)' })).length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  describe('brand_color (11C)', () => {
+    it('geçerli #RRGGBB kabul', async () => {
+      expect(await errorsFor({ brand_color: '#1a7f5a' })).toHaveLength(0);
+    });
+
+    it('hex olmayan / kısa / injection reddedilir', async () => {
+      expect((await errorsFor({ brand_color: 'red' })).length).toBeGreaterThan(0);
+      expect((await errorsFor({ brand_color: '#abc' })).length).toBeGreaterThan(0);
+      expect(
+        (await errorsFor({ brand_color: '#12345g' })).length,
+      ).toBeGreaterThan(0);
+      expect(
+        (await errorsFor({ brand_color: 'red;}body{background:url(x)' })).length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  it('korumalı alan hotel_type -> 400 (otel değiştiremez)', async () => {
+    expect(
+      (await errorsFor({ hotel_type: 'resort' })).length,
+    ).toBeGreaterThan(0);
+  });
 });

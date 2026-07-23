@@ -49,6 +49,13 @@ export async function saveSettings(
     patch.contribution_amount_per_night = amount;
   }
 
+  // Marka: boş -> null (temizle), dolu -> değer. Değer client'ta ön-doğrulanır;
+  // asıl doğrulama backend'de (geçersiz -> 400 yansıtılır).
+  const logo = str('logo_url');
+  patch.logo_url = logo === '' ? null : logo;
+  const color = str('brand_color');
+  patch.brand_color = color === '' ? null : color;
+
   const { error } = await updateHotel(token, patch);
   if (error) {
     return { status: 'error', message: error };

@@ -16,6 +16,20 @@ interface Props {
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
+const HEX6 = /^#[0-9a-fA-F]{6}$/;
+// Yalnızca katı hex'i CSS değişkenine yaz — ham string style'a ASLA enjekte edilmez.
+function accentStyle(color: string | null | undefined): string | undefined {
+  return color && HEX6.test(color) ? `--gg-accent:${color}` : undefined;
+}
+function safeHttpsLogo(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 function formatMoney(value: number, currency: string, lang: Lang): string {
   const locale = lang === 'tr' ? 'tr-TR' : 'en-GB';
   try {
@@ -72,6 +86,8 @@ export function Widget({ config, nights, lang, onSelect, onAdd, preview }: Props
   const amountTotal = round2(nights * config.amount_per_night);
   const co2Total = round2(nights * config.estimated_co2_per_night_kg);
   const money = (v: number) => formatMoney(v, config.currency, lang);
+  const accent = accentStyle(config.brand_color);
+  const logo = safeHttpsLogo(config.logo_url);
 
   const handleToggle = (e: Event) => {
     const next = (e.currentTarget as HTMLInputElement).checked;
@@ -86,11 +102,15 @@ export function Widget({ config, nights, lang, onSelect, onAdd, preview }: Props
   };
 
   return (
-    <div class={preview ? 'card preview' : 'card'} part="card">
+    <div class={preview ? 'card preview' : 'card'} part="card" style={accent}>
       {preview && <span class="preview-badge">{t.previewBadge}</span>}
       <div class="header">
         <span class="leaf">
-          <LeafIcon />
+          {logo ? (
+            <img class="logo" src={logo} alt="" />
+          ) : (
+            <LeafIcon />
+          )}
         </span>
         <h3 class="heading">{t.heading}</h3>
       </div>

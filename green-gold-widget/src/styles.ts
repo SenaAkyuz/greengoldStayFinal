@@ -7,6 +7,8 @@ export const STYLES = `
   all: initial;
   display: block;
   contain: content;
+  /* Marka aksan rengi — otel brand_color'ı (doğrulanmış hex) kartta override eder. */
+  --gg-accent: #1a7f5a;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.45;
   color: #1f2933;
@@ -41,9 +43,11 @@ export const STYLES = `
   display: grid; place-items: center;
   background: #e7f4ee;
   border-radius: 9px;
-  color: #1a7f5a;
+  color: var(--gg-accent);
+  overflow: hidden;
 }
 .leaf svg { width: 18px; height: 18px; display: block; }
+.logo { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .heading { font-size: 15px; font-weight: 650; margin: 0; color: #10231b; }
 .subheading { margin: 0 0 14px; font-size: 12.5px; color: #556070; }
@@ -59,7 +63,7 @@ export const STYLES = `
 .row input[type=checkbox] {
   flex: 0 0 auto;
   width: 18px; height: 18px; margin-top: 1px;
-  accent-color: #1a7f5a;
+  accent-color: var(--gg-accent);
   cursor: pointer;
 }
 .row-body { flex: 1 1 auto; }
@@ -85,12 +89,12 @@ export const STYLES = `
 .btn {
   margin-top: 14px; width: 100%;
   font-size: 14px; font-weight: 650; font-family: inherit;
-  color: #ffffff; background: #1a7f5a;
+  color: #ffffff; background: var(--gg-accent);
   border: 0; border-radius: 10px;
   padding: 11px 14px; cursor: pointer;
   transition: background .15s ease, opacity .15s ease;
 }
-.btn:hover:not(:disabled) { background: #166e4e; }
+.btn:hover:not(:disabled) { filter: brightness(0.92); }
 .btn:focus-visible { outline: 3px solid #a7d8c4; outline-offset: 2px; }
 .btn:disabled { background: #cbd5df; color: #eef2f6; cursor: not-allowed; }
 
@@ -103,7 +107,7 @@ export const STYLES = `
   background: #e7f4ee; border: 1px solid #bfe3d1;
   color: #10231b; font-size: 13px;
 }
-.confirm svg { flex: 0 0 auto; width: 18px; height: 18px; color: #1a7f5a; margin-top: 1px; }
+.confirm svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--gg-accent); margin-top: 1px; }
 
 @media (prefers-reduced-motion: reduce) {
   .row, .btn { transition: none; }

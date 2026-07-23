@@ -11,6 +11,7 @@ import {
   WIDGET_EVENT_TYPES,
   WidgetEventType,
 } from './dto/create-widget-event.dto';
+import { effectiveCo2PerNight, normalizeHotelType } from '../common/hotel-type';
 
 export interface WidgetConfig {
   hotel_name: string;
@@ -19,6 +20,9 @@ export interface WidgetConfig {
   amount_per_night: number;
   estimated_co2_per_night_kg: number;
   is_estimated: boolean;
+  logo_url: string | null;
+  brand_color: string | null;
+  hotel_type: string;
 }
 
 @Injectable()
@@ -38,7 +42,7 @@ export class WidgetService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, status',
+        'name, city, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, hotel_type, logo_url, brand_color, status',
       )
       .eq('public_widget_key', key)
       .single();
@@ -51,14 +55,23 @@ export class WidgetService {
       throw new ForbiddenException('Widget aktif değil.');
     }
 
+    const brandColor = hotel.brand_color as string | null;
+
     return {
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       currency: (hotel.default_currency as string) ?? 'EUR',
       amount_per_night: Number(hotel.contribution_amount_per_night),
-      estimated_co2_per_night_kg: Number(hotel.estimated_co2_per_night_kg),
+      // Override yoksa dokümante placeholder (hotel_type hesaba girmez).
+      estimated_co2_per_night_kg: effectiveCo2PerNight(
+        hotel.estimated_co2_per_night_kg as number | null,
+      ),
       // Faz 1'de her zaman true (pazarlama dürüstlüğü — karar #6).
       is_estimated: true,
+      logo_url: (hotel.logo_url as string | null) ?? null,
+      // Defans: yalnızca katı hex geçir (DB'ye zaten doğrulanmış yazılıyor).
+      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
+      hotel_type: normalizeHotelType(hotel.hotel_type),
     };
   }
 

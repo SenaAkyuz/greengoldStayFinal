@@ -199,6 +199,74 @@ describe('DashboardService.getCarbonSummary — dedup & doğruluk (g)', () => {
   });
 });
 
+describe('DashboardService — katsayı placeholder & marka (11C)', () => {
+  it('override NULL -> tek dokümante placeholder (8.30); hotel_type ETKİLEMEZ', async () => {
+    const dataset: FakeDataset = {
+      hotels: [
+        hotel('A', { estimated_co2_per_night_kg: null, hotel_type: 'resort' }),
+      ],
+      widget_events: [pressEvent('A', 'sess-1', 2, '2026-07-10T09:00:00.000Z')],
+    };
+    const { service } = makeService(dataset);
+    const r = await service.getCarbonSummary('A', RANGE);
+    expect(r.co2_per_night_kg).toBe(8.3); // tip ne olursa olsun placeholder
+    expect(r.total_selected_nights).toBe(2);
+    expect(r.estimated_co2_kg).toBe(Math.round(2 * 8.3 * 100) / 100);
+  });
+
+  it('override dolu -> placeholder yerine otel değeri kullanılır', async () => {
+    const dataset: FakeDataset = {
+      hotels: [
+        hotel('A', { estimated_co2_per_night_kg: 5, hotel_type: 'premium' }),
+      ],
+      widget_events: [pressEvent('A', 'sess-1', 2, '2026-07-10T09:00:00.000Z')],
+    };
+    const { service } = makeService(dataset);
+    const r = await service.getCarbonSummary('A', RANGE);
+    expect(r.co2_per_night_kg).toBe(5);
+    expect(r.estimated_co2_kg).toBe(10);
+  });
+
+  it('getHotel: hotel_type (tanımlayıcı) + marka alanları döner; katsayı placeholder', async () => {
+    const { service } = makeService({
+      hotels: [
+        hotel('A', {
+          estimated_co2_per_night_kg: null,
+          hotel_type: 'premium',
+          logo_url: 'https://cdn.example/logo.png',
+          brand_color: '#aabbcc',
+        }),
+      ],
+    });
+    const h = await service.getHotel('A');
+    expect(h.hotel_type).toBe('premium'); // yalnızca tanımlayıcı
+    expect(h.estimated_co2_per_night_kg).toBe(8.3); // placeholder, tip'ten bağımsız
+    expect(h.logo_url).toBe('https://cdn.example/logo.png');
+    expect(h.brand_color).toBe('#aabbcc');
+  });
+
+  it('getHotel: DB\'deki geçersiz brand_color -> null (defans)', async () => {
+    const { service } = makeService({
+      hotels: [hotel('A', { brand_color: 'red' })],
+    });
+    const h = await service.getHotel('A');
+    expect(h.brand_color).toBeNull();
+  });
+
+  it('updateHotel: logo_url + brand_color yazılır', async () => {
+    const { service, fake } = makeService({ hotels: [hotel('A')] });
+    const res = await service.updateHotel('A', {
+      logo_url: 'https://cdn.example/l.png',
+      brand_color: '#123456',
+    });
+    expect(res.logo_url).toBe('https://cdn.example/l.png');
+    expect(res.brand_color).toBe('#123456');
+    const row = fake.dataset.hotels!.find((h) => h.id === 'A')!;
+    expect(row.logo_url).toBe('https://cdn.example/l.png');
+    expect(row.brand_color).toBe('#123456');
+  });
+});
+
 describe('DashboardService — etkileşim hunisi & tutarlılık', () => {
   // 3 viewed session, 2 selected, 1 clicked.
   const dataset: FakeDataset = {
