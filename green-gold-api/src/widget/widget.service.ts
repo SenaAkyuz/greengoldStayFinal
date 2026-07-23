@@ -12,6 +12,7 @@ import {
   WidgetEventType,
 } from './dto/create-widget-event.dto';
 import { effectiveCo2PerNight, normalizeHotelType } from '../common/hotel-type';
+import { DashboardService } from '../dashboard/dashboard.service';
 
 export interface WidgetConfig {
   hotel_name: string;
@@ -25,9 +26,25 @@ export interface WidgetConfig {
   hotel_type: string;
 }
 
+/**
+ * Misafire gösterilen PUBLIC aylık tahmini etki — SADECE toplu (aggregate).
+ * Misafir/kişisel veri yok. Sayılar carbon-summary ile birebir tutarlıdır
+ * (aynı servis çağrılır).
+ */
+export interface WidgetImpact {
+  month: string; // 'YYYY-MM'
+  estimated_co2_kg: number;
+  tree_equivalent: number;
+  contributions_count: number;
+  is_estimated: boolean;
+}
+
 @Injectable()
 export class WidgetService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly dashboard: DashboardService,
+  ) {}
 
   /**
    * Widget'ın gösterebileceği PUBLIC konfigürasyon. Hassas hiçbir alan dönmez.
@@ -72,6 +89,46 @@ export class WidgetService {
       // Defans: yalnızca katı hex geçir (DB'ye zaten doğrulanmış yazılıyor).
       brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
       hotel_type: normalizeHotelType(hotel.hotel_type),
+    };
+  }
+
+  /**
+   * Otelin BU AYKİ (otel tz) tahmini toplu etkisi. carbon-summary'nin public,
+   * sadeleştirilmiş hali — aynı DashboardService.getCarbonSummary çağrılır ki
+   * sayılar panelle birebir tutarlı olsun.
+   *   - key yoksa/bulunamazsa -> 404
+   *   - otel aktif değilse -> 403
+   */
+  async getImpact(key: string | undefined): Promise<WidgetImpact> {
+    if (!key) {
+      throw new NotFoundException('Widget anahtarı gerekli.');
+    }
+
+    const { data: hotel, error } = await this.supabase.db
+      .from('hotels')
+      .select('id, status')
+      .eq('public_widget_key', key)
+      .single();
+
+    if (error || !hotel) {
+      throw new NotFoundException('Widget bulunamadı.');
+    }
+
+    if (hotel.status !== 'active') {
+      throw new ForbiddenException('Widget aktif değil.');
+    }
+
+    // Bu ay (otel tz'inde). Panel carbon-summary ile AYNI mantık.
+    const carbon = await this.dashboard.getCarbonSummary(hotel.id as string, {
+      range: 'month',
+    });
+
+    return {
+      month: carbon.period.from.slice(0, 7), // 'YYYY-MM'
+      estimated_co2_kg: carbon.estimated_co2_kg,
+      tree_equivalent: carbon.tree_equivalent,
+      contributions_count: carbon.contributions_count,
+      is_estimated: true,
     };
   }
 

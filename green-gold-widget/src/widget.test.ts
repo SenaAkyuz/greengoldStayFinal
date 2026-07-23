@@ -21,9 +21,19 @@ interface EventBody {
 
 let eventCalls: EventBody[] = [];
 
-function installFetch(opts: { invalidKey?: boolean } = {}) {
+function installFetch(
+  opts: { invalidKey?: boolean; impact?: Record<string, unknown> | null } = {},
+) {
   const fn = vi.fn(async (url: string | URL, init?: RequestInit) => {
     const u = String(url);
+    // Not: /widget/config kontrolü impact'ten ÖNCE gelmemeli — ikisi de "config"
+    // içermez, ayrı path'ler; impact'i önce eşleştir.
+    if (u.includes('/widget/impact')) {
+      if (opts.impact) {
+        return { ok: true, status: 200, json: async () => ({ success: true, data: opts.impact }) } as Response;
+      }
+      return { ok: false, status: 404, json: async () => ({ success: false, data: null }) } as Response;
+    }
     if (u.includes('/widget/config')) {
       if (opts.invalidKey) {
         return { ok: false, status: 404, json: async () => ({ success: false, data: null }) } as Response;
@@ -38,6 +48,14 @@ function installFetch(opts: { invalidKey?: boolean } = {}) {
   });
   vi.stubGlobal('fetch', fn);
 }
+
+const IMPACT = {
+  month: '2026-07',
+  estimated_co2_kg: 16.6,
+  tree_equivalent: 0.8,
+  contributions_count: 4,
+  is_estimated: true,
+};
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -132,6 +150,32 @@ describe('green-gold-widget', () => {
     expect(document.body.contains(el)).toBe(true);
     // Geçersiz key event üretmez.
     expect(eventCalls).toHaveLength(0);
+  });
+
+  it('(e) canlı sayaç: impact > 0 -> satır + "Tahmini" rozeti', async () => {
+    installFetch({ impact: IMPACT });
+    const el = await mountWidget(baseAttrs());
+    await flush(); // impact fetch + rerender
+
+    const impact = el.shadowRoot!.querySelector('.impact');
+    expect(impact).toBeTruthy();
+    expect(impact!.textContent).toContain('16,6'); // tr-TR biçimi
+    expect(impact!.querySelector('.badge')).toBeTruthy();
+  });
+
+  it('(f) impact yok/0 -> satır gizli (boş övünme yok)', async () => {
+    installFetch({ impact: { ...IMPACT, estimated_co2_kg: 0 } });
+    const el = await mountWidget(baseAttrs());
+    await flush();
+    expect(el.shadowRoot!.querySelector('.impact')).toBeNull();
+  });
+
+  it('(g) preview modda da canlı sayaç görünür ama event yok', async () => {
+    installFetch({ impact: IMPACT });
+    const el = await mountWidget({ ...baseAttrs(), 'data-preview': 'true' });
+    await flush();
+    expect(el.shadowRoot!.querySelector('.impact')).toBeTruthy();
+    expect(eventCalls).toHaveLength(0); // impact bir GET, analitik event DEĞİL
   });
 
   it('(d) butona basınca greengold:contribution-selected yayınlanır (#4)', async () => {

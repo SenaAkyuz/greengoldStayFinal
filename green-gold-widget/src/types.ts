@@ -10,6 +10,14 @@ export interface WidgetConfig {
   hotel_type?: string;
 }
 
+export interface WidgetImpact {
+  month: string;
+  estimated_co2_kg: number;
+  tree_equivalent: number;
+  contributions_count: number;
+  is_estimated: boolean;
+}
+
 export type Lang = 'tr' | 'en';
 
 export type WidgetEventType =

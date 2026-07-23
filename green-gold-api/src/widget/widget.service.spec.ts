@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { WidgetService } from './widget.service';
+import { DashboardService } from '../dashboard/dashboard.service';
 import { makeFakeSupabase, type FakeDataset } from '../../test/fake-supabase';
 
 function hotelRow(over: Record<string, unknown> = {}) {
@@ -16,13 +17,15 @@ function hotelRow(over: Record<string, unknown> = {}) {
     estimated_co2_per_night_kg: 8.3,
     status: 'active',
     public_widget_key: 'key-active',
+    timezone: 'Europe/Istanbul',
     ...over,
   };
 }
 
 function makeService(dataset: FakeDataset) {
   const fake = makeFakeSupabase(dataset);
-  return { service: new WidgetService(fake as never), fake };
+  const dashboard = new DashboardService(fake as never);
+  return { service: new WidgetService(fake as never, dashboard), fake, dashboard };
 }
 
 describe('WidgetService.getConfig', () => {
@@ -75,6 +78,60 @@ describe('WidgetService.getConfig', () => {
     });
     const cfg2 = await badHotel.service.getConfig('key-active');
     expect(cfg2.brand_color).toBeNull();
+  });
+});
+
+describe('WidgetService.getImpact (11D)', () => {
+  const nowIso = new Date().toISOString();
+
+  it('bilinmeyen key -> 404', async () => {
+    const { service } = makeService({ hotels: [hotelRow()] });
+    await expect(service.getImpact('yok')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('suspended otel -> 403', async () => {
+    const { service } = makeService({
+      hotels: [hotelRow({ status: 'suspended', public_widget_key: 'key-susp' })],
+    });
+    await expect(service.getImpact('key-susp')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+  });
+
+  it('sayılar carbon-summary ile birebir tutarlı', async () => {
+    const dataset: FakeDataset = {
+      hotels: [hotelRow()],
+      widget_events: [
+        {
+          id: 'e1',
+          hotel_id: 'hotel-A',
+          event_type: 'katki_ekle_butonuna_basildi',
+          session_ref: 's1',
+          metadata: { nights: 2 },
+          created_at: nowIso,
+        },
+      ],
+    };
+    const { service, dashboard } = makeService(dataset);
+    const impact = await service.getImpact('key-active');
+    const carbon = await dashboard.getCarbonSummary('hotel-A', {
+      range: 'month',
+    });
+    expect(impact.estimated_co2_kg).toBe(carbon.estimated_co2_kg);
+    expect(impact.tree_equivalent).toBe(carbon.tree_equivalent);
+    expect(impact.contributions_count).toBe(carbon.contributions_count);
+    expect(impact.contributions_count).toBe(1);
+    expect(impact.is_estimated).toBe(true);
+    expect(impact.month).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it('event yoksa 0 -> widget satırı gizlenecek', async () => {
+    const { service } = makeService({ hotels: [hotelRow()], widget_events: [] });
+    const impact = await service.getImpact('key-active');
+    expect(impact.estimated_co2_kg).toBe(0);
+    expect(impact.contributions_count).toBe(0);
   });
 });
 

@@ -1,5 +1,5 @@
 import { useState } from 'preact/hooks';
-import type { Lang, WidgetConfig } from './types';
+import type { Lang, WidgetConfig, WidgetImpact } from './types';
 import { I18N } from './i18n';
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   onAdd: (amountTotal: number) => void;
   /** Önizleme modu: etkileşim çalışır ama küçük bir "Önizleme" etiketi gösterilir. */
   preview?: boolean;
+  /** Aylık toplu tahmini etki (canlı sayaç). Yoksa/0 ise satır gösterilmez. */
+  impact?: WidgetImpact | null;
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -78,8 +80,19 @@ function CheckIcon() {
   );
 }
 
-export function Widget({ config, nights, lang, onSelect, onAdd, preview }: Props) {
+export function Widget({
+  config,
+  nights,
+  lang,
+  onSelect,
+  onAdd,
+  preview,
+  impact,
+}: Props) {
   const t = I18N[lang];
+  const numLocale = lang === 'tr' ? 'tr-TR' : 'en-GB';
+  const fmtNum = (n: number) => n.toLocaleString(numLocale);
+  const showImpact = !!impact && impact.estimated_co2_kg > 0;
   const [checked, setChecked] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
@@ -166,6 +179,18 @@ export function Widget({ config, nights, lang, onSelect, onAdd, preview }: Props
           <CheckIcon />
           <span>{t.confirmation}</span>
         </div>
+      )}
+
+      {showImpact && impact && (
+        <p class="impact">
+          <span>
+            {t.impactLine(
+              fmtNum(impact.estimated_co2_kg),
+              fmtNum(impact.tree_equivalent),
+            )}
+          </span>
+          <span class="badge">{t.estimatedBadge}</span>
+        </p>
       )}
     </div>
   );

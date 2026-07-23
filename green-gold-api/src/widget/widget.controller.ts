@@ -24,6 +24,12 @@ export class WidgetController {
     return this.widgetService.getConfig(key);
   }
 
+  // GET /widget/impact?key=<public_widget_key> — public. Aylık toplu tahmini etki.
+  @Get('impact')
+  async getImpact(@Query('key') key?: string) {
+    return this.widgetService.getImpact(key);
+  }
+
   // POST /widget/events — public. Header: X-Widget-Key: <public_widget_key>
   @Post('events')
   async createEvent(

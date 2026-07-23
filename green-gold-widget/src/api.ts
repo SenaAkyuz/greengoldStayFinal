@@ -1,4 +1,4 @@
-import type { WidgetConfig, WidgetEventType } from './types';
+import type { WidgetConfig, WidgetEventType, WidgetImpact } from './types';
 
 /** Public config'i çeker. Hata/geçersiz key -> null (widget sessizce render etmez). */
 export async function fetchConfig(
@@ -13,6 +13,30 @@ export async function fetchConfig(
     const json = (await res.json()) as {
       success: boolean;
       data: WidgetConfig | null;
+    };
+    if (!json.success || !json.data) return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Aylık toplu tahmini etki (public). Hata/erişim yoksa -> null:
+ * canlı sayaç satırı sessizce gizlenir (host sayfayı asla bozma).
+ */
+export async function fetchImpact(
+  apiBase: string,
+  key: string,
+): Promise<WidgetImpact | null> {
+  try {
+    const res = await fetch(
+      `${apiBase}/widget/impact?key=${encodeURIComponent(key)}`,
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as {
+      success: boolean;
+      data: WidgetImpact | null;
     };
     if (!json.success || !json.data) return null;
     return json.data;

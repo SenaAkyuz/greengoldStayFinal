@@ -1,8 +1,8 @@
 import { render } from 'preact';
 import { Widget } from './widget';
 import { STYLES } from './styles';
-import { fetchConfig, sendEvent } from './api';
-import type { Lang, WidgetConfig } from './types';
+import { fetchConfig, fetchImpact, sendEvent } from './api';
+import type { Lang, WidgetConfig, WidgetImpact } from './types';
 
 const DEFAULT_API = 'http://localhost:3000';
 const TAG = 'green-gold-widget';
@@ -34,6 +34,7 @@ class GreenGoldWidget extends HTMLElement {
 
   private mount?: HTMLDivElement;
   private config: WidgetConfig | null = null;
+  private impact: WidgetImpact | null = null;
   private sessionRef = '';
   private key = '';
   private apiBase = DEFAULT_API;
@@ -77,6 +78,19 @@ class GreenGoldWidget extends HTMLElement {
 
     // widget_goruntulendi session başına yalnızca BİR kez.
     this.sendOnce('widget_goruntulendi', { nights: this.nights() });
+
+    // Canlı sayaç (aylık toplu tahmini etki). Config gibi okunur (event DEĞİL),
+    // preview modda da çekilir. Başarısızsa satır sessizce gizli kalır.
+    void this.loadImpact();
+  }
+
+  private async loadImpact(): Promise<void> {
+    if (this.impact) return; // örnek ömrü boyunca bir kez yeter
+    const impact = await fetchImpact(this.apiBase, this.key);
+    if (impact) {
+      this.impact = impact;
+      this.rerender();
+    }
   }
 
   /** Aynı event tipini session başına en fazla bir kez gönderir. */
@@ -126,6 +140,7 @@ class GreenGoldWidget extends HTMLElement {
         }
         onAdd={(amountTotal) => this.handleAdd(amountTotal)}
         preview={this.preview}
+        impact={this.impact}
       />,
       this.mount,
     );

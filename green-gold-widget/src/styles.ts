@@ -86,6 +86,14 @@ export const STYLES = `
 }
 .co2-note { font-size: 11px; color: #8a94a3; margin: 2px 0 0; }
 
+.impact {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid #eef1f5;
+  font-size: 11.5px; color: #556070;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+
 .btn {
   margin-top: 14px; width: 100%;
   font-size: 14px; font-weight: 650; font-family: inherit;

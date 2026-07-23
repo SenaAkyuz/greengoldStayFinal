@@ -12,6 +12,7 @@ interface Strings {
   confirmation: string;
   co2Note: string;
   previewBadge: string;
+  impactLine: (co2: string, trees: string) => string;
 }
 
 export const I18N: Record<Lang, Strings> = {
@@ -29,6 +30,8 @@ export const I18N: Record<Lang, Strings> = {
     confirmation: 'Katkı tercihinizi aldık, teşekkürler.',
     co2Note: 'Rakamlar tahminidir, kesin ölçüm değildir.',
     previewBadge: 'Önizleme',
+    impactLine: (co2, trees) =>
+      `Bu ay bu otelde tahmini ≈ ${co2} kg CO₂ (≈ ${trees} ağaç-yılı)`,
   },
   en: {
     heading: 'Make your stay carbon-neutral',
@@ -44,5 +47,7 @@ export const I18N: Record<Lang, Strings> = {
     confirmation: "Thanks — we've noted your contribution preference.",
     co2Note: 'Figures are estimates, not exact measurements.',
     previewBadge: 'Preview',
+    impactLine: (co2, trees) =>
+      `This month, estimated ≈ ${co2} kg CO₂ at this hotel (≈ ${trees} tree-years)`,
   },
 };
