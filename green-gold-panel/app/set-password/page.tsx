@@ -20,22 +20,27 @@ function SetPasswordInner() {
   const searchParams = useSearchParams();
   const hasCallbackError = searchParams.get('error') === 'invalid_or_expired';
 
-  const [sessionOk, setSessionOk] = useState<boolean | null>(null);
+  // Async token doğrulaması yalnızca callback hatası yokken çalışır.
+  const [tokenValid, setTokenValid] = useState<boolean | null>(null);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (hasCallbackError) {
-      setSessionOk(false);
-      return;
-    }
+    if (hasCallbackError) return; // hata render'da bilinir — token'ı doğrulama.
+    let active = true;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      setSessionOk(!!data.user);
+      if (active) setTokenValid(!!data.user);
     });
+    return () => {
+      active = false;
+    };
   }, [hasCallbackError]);
+
+  // Görüntülenen durum: callback hatası varsa kesin geçersiz; yoksa async sonuç.
+  const sessionOk = hasCallbackError ? false : tokenValid;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

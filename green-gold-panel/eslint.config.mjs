@@ -12,7 +12,19 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Widget bundle build çıktısıdır (dist -> public'e kopyalanır), kaynak değil.
+    "public/green-gold-widget*.js",
   ]),
+  {
+    rules: {
+      // Amaçlı kullanılmayan argümanlar `_` ile başlar (ör. useActionState
+      // imzasindaki _prev/_formData). Bu konvansiyonu no-unused-vars'a tanıt.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
