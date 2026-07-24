@@ -17,8 +17,12 @@ if (
   !existsSync(widgetDir) ||
   !existsSync(resolve(widgetDir, 'node_modules'))
 ) {
-  console.log(
-    '[prebuild] widget kaynağı/bağımlılıkları yok (izole build?) — check:widget atlandı.',
+  // Sessiz atlama YOK: Vercel'in izole panel build'inde widget kaynağı bulunmaz,
+  // yani bayat-widget koruması burada devre dışıdır. Asıl zorunlu kontrol CI'dadır
+  // (.github/workflows/ci.yml — monorepo kökünden hash karşılaştırır).
+  console.warn(
+    '[prebuild] ⚠ UYARI: widget kaynağı/bağımlılıkları yok (izole build?) — ' +
+      'bayat-widget kontrolü ATLANDI. Bu koruma CI’da (GitHub Actions) ZORUNLUDUR.',
   );
   process.exit(0);
 }

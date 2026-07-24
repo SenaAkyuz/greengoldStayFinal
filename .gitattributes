@@ -1,0 +1,4 @@
+# Widget bundle byte-for-byte build çıktısıdır — satır sonu (LF/CRLF) dönüşümü
+# YAPMA. Böylece hash tabanlı bayat-widget kontrolü (check:widget / CI) platformlar
+# arası (Windows dev ↔ Linux CI) tutarlı kalır.
+green-gold-panel/public/green-gold-widget*.js -text

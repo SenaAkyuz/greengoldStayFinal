@@ -1,13 +1,16 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-// Public: oturum gerekmez (giriş, şifre kurtarma, recovery callback).
+// Public: oturum gerekmez (giriş, şifre kurtarma, recovery callback, public demo).
 const PUBLIC_PREFIXES = [
   '/login',
   '/forgot-password',
   '/reset-password',
   '/set-password',
   '/auth/callback',
+  // Public widget önizlemesi — oturumsuz açılır. GUEST-ONLY DEĞİL: girişli
+  // kullanıcı da görebilmeli. Yalnızca public GET /widget/config kullanır.
+  '/demo',
 ];
 
 // Guest-only: girişliyken panele geri at. Kurtarma sayfaları BURADA OLMAMALI —

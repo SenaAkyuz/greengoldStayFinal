@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # --- Widget: build + testler ---
+      - name: Widget install
+        working-directory: green-gold-widget
+        run: npm ci
+
+      - name: Widget tests (vitest)
+        working-directory: green-gold-widget
+        run: npm test
+
+      # ZORUNLU bayat-widget koruması: widget'ı build eder ve çıktının hash'ini
+      # green-gold-panel/public/green-gold-widget.v1.js ile karşılaştırır. Farklıysa
+      # FAIL. (Lokal prebuild izole build'de atlar; asıl zorunlu kontrol BURASI.)
+      - name: Widget senkron kontrolü (check:widget)
+        working-directory: green-gold-widget
+        run: npm run check:widget
+
+      # --- API: typecheck + testler ---
+      - name: API install
+        working-directory: green-gold-api
+        run: npm ci
+
+      - name: API typecheck
+        working-directory: green-gold-api
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: API tests (jest)
+        working-directory: green-gold-api
+        run: npm test
+
+      # --- Panel: typecheck + build ---
+      - name: Panel install
+        working-directory: green-gold-panel
+        run: npm ci
+
+      - name: Panel typecheck
+        working-directory: green-gold-panel
+        run: npx tsc --noEmit
+
+      - name: Panel build
+        working-directory: green-gold-panel
+        # Build sırasında modül-eval'de okunan public Supabase env'leri için dummy
+        # değerler (gerçek bağlantı gerekmez; auth runtime'da çalışır).
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-anon-key-for-build
+        run: npm run build

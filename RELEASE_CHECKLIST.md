@@ -14,12 +14,14 @@ cd green-gold-widget
 npm run build          # dist/green-gold-widget.v1.js üretir
 npm run copy:public    # dist -> green-gold-panel/public/ kopyalar
 npm run check:widget   # build + hash karşılaştırması: public kopya güncel mi?
+git add ../green-gold-panel/public/green-gold-widget.v1.js && git commit  # kopyayı commit'le
 ```
 
-- `check:widget` **hata verirse** panel/public kopyası bayattır → `copy:public` çalıştır.
-- Panel'in `prebuild` adımı da `check:widget`'ı çalıştırır (lokal/CI). Vercel'in
-  izole panel build'inde widget kaynağı bulunmadığından bu kontrol **sessizce atlanır**;
-  bu yüzden yayından önce bu checklist elle uygulanmalı.
+- `check:widget` **hata verirse** panel/public kopyası bayattır → `copy:public` çalıştır **ve commit'le**.
+- Panel'in `prebuild` adımı `check:widget`'ı yerelde çalıştırır; Vercel'in izole panel
+  build'inde widget kaynağı bulunmadığından **atlanır (uyarı basar)**.
+- **Asıl zorunlu kontrol CI'dadır:** `.github/workflows/ci.yml` monorepo kökünden
+  widget'ı build edip hash'i `panel/public` ile karşılaştırır; farklıysa **build FAIL**.
 
 ## Widget cache / sürümleme
 
@@ -39,6 +41,11 @@ npm run check:widget   # build + hash karşılaştırması: public kopya güncel
       `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_WIDGET_SRC` = gerçek widget URL'i).
 - [ ] Vercel root directory: API `green-gold-api`, panel `green-gold-panel`.
 - [ ] `npm run check:widget` OK (panel/public widget güncel).
+- [ ] **Prod'da (girişsiz, temiz oturum) — Vercel routing farklı olduğundan zorunlu:**
+  - [ ] `GET /green-gold-widget.v1.js` → **200**, `Content-Type: application/javascript`,
+        `Cache-Control: public, max-age=300, must-revalidate`, **`/login`'e yönlendirme YOK**.
+  - [ ] `GET /demo` → **200** (girişsiz), login'e sekmiyor; widget yükleniyor,
+        etkileşimler `widget_events`'e **yazmıyor** (preview modu).
 - [ ] Smoke test (13G): health, demo giriş, 403 demo yazma, widget yükleniyor +
       izinsiz origin 403, rate limit 429, CSV export, mobil.
 

@@ -65,9 +65,11 @@ npm run check:widget                # build + hash: panel/public kopyası günce
 ```
 
 > **Bayat widget koruması:** Widget, panelin `public/`'inden statik servis edilir;
-> oradaki kopya güncel build ile eşleşmelidir. `npm run check:widget` bunu sha256 ile
-> doğrular (panel `prebuild` adımında da çalışır; Vercel'in izole panel build'inde
-> güvenle atlanır). Yayın adımları: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
+> oradaki kopya güncel build ile eşleşmelidir. **Widget kaynağını değiştirdiyseniz:**
+> `npm run copy:public` çalıştırın **ve** güncellenen `green-gold-panel/public/green-gold-widget.v1.js`'i
+> **commit'leyin**. `npm run check:widget` senkronu sha256 ile doğrular; panel `prebuild`
+> yerelde çalışır ama Vercel'in izole build'inde atlanır — asıl **zorunlu** kontrol
+> **CI'dadır** (`.github/workflows/ci.yml`). Yayın adımları: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
 
 Ortam değişkenleri her paketin `.env.example` dosyasında açıklanmıştır (yalnızca
 placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitignore'dadır.
@@ -90,12 +92,32 @@ placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitign
 
 ---
 
+## İki demo kavramı (karıştırma)
+
+| | **Demo Panel Girişi** | **Public Widget Demo** |
+|---|---|---|
+| Nerede | `/login` → "Demo panelini görüntüle" | `/demo` sayfası |
+| Auth | Arka planda **gerçek oturum** açar (`demo_viewer`) | **Oturum YOK** (public) |
+| Veri | Demo tenant'ının panel verisi | Yalnızca public `GET /widget/config` |
+| Amaç | Ziyaretçiye şifresiz panel gezintisi | Widget'ın misafirde görünümü |
+
+- **Mimari sınır:** Panelin `/dashboard/*` verisi **asla** oturumsuz açılmaz (tenant
+  izolasyonu). Ziyaretçinin şifresiz panel erişimi **demo giriş butonuyla** karşılanır.
+- `/demo` yalnızca widget önizlemesidir (`data-preview="true"` → event üretmez) ve
+  `NEXT_PUBLIC_DEMO_WIDGET_KEY` (public demo key) + public `/widget/config` kullanır.
+- `/misafir-demo` (girişli, otelin **kendi** key'iyle) ayrıca durur — otel yöneticisi
+  kendi widget'ını görür.
+
+---
+
 ## Deploy (özet)
 
 - **Panel** ve **API** ayrı Vercel projeleridir (monorepo root directory sırasıyla
   `green-gold-panel` ve `green-gold-api`).
-- **Widget**, panelin domain'inden statik dosya olarak servis edilir (`v1` sürümlü,
-  uzun cache; içerik değişince `v2`).
+- **Widget**, panelin domain'inden statik dosya olarak servis edilir (`v1` sürümlü).
+  **Pilot cache:** `max-age=300, must-revalidate` (kısa — içerik değişince hızlı
+  yayılır). Widget dondurulunca `immutable + 1y`'e geçilir; içerik o aşamadan sonra
+  değişirse `v2` olarak yayınlanır. Ayrıntı: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
 - **Rate limit** çok-instance ortamda bellek-içi sayaçla çalışmaz — dağıtık koruma için
   paylaşımlı store (Upstash Redis) gerekir; env yoksa best-effort fallback + uyarı logu.
 - Gerçek anahtarlar Vercel/Supabase ortam değişkenlerinde tutulur.
