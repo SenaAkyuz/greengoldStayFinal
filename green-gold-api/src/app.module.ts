@@ -8,12 +8,18 @@ import { WidgetModule } from './widget/widget.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AuthGuard } from './common/auth.guard';
 import { DemoReadOnlyGuard } from './common/demo-readonly.guard';
+import { DistributedThrottlerStorage } from './common/distributed-throttler.storage';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     // IP başına 60 istek / dakika (yalnızca /widget/* controller'ında uygulanır).
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
+    // storage: paylaşılan RateLimitStore (Upstash Redis bağlıysa dağıtık; yoksa
+    // bellek-içi fallback + uyarı) — Vercel'de instance'lar arası tutarlılık için.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 60 }],
+      storage: new DistributedThrottlerStorage(),
+    }),
     SupabaseModule,
     HealthModule,
     WidgetModule,
