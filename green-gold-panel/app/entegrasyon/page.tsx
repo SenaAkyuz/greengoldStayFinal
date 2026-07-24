@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getHotel, getApiBaseUrl } from '@/lib/api';
+import { getHotel, getApiBaseUrl, getWidgetEmbedSrc } from '@/lib/api';
 import { AppShell } from '../components/AppShell';
 import { IntegrationCard } from '../components/IntegrationCard';
 
@@ -22,7 +22,7 @@ export default async function IntegrationPage() {
   const hotel = hotelRes.data;
 
   const embedCode = hotel
-    ? `<script src="https://cdn.greengold.example/green-gold-widget.v1.js"></script>
+    ? `<script src="${getWidgetEmbedSrc()}"></script>
 <green-gold-widget data-key="${hotel.public_widget_key}" data-nights="1" data-lang="tr"
     data-api="${getApiBaseUrl()}"></green-gold-widget>`
     : '';

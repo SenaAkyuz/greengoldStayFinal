@@ -149,3 +149,17 @@ export async function updateHotel(
 export function getApiBaseUrl() {
   return API_BASE_URL;
 }
+
+/**
+ * Embed kodundaki <script src>. Otelin DIŞ sitesinde çalışacağı için MUTLAK URL
+ * olmalı (göreli /green-gold-widget.v1.js otelin domain'ine bakar, yanlış).
+ * Öncelik NEXT_PUBLIC_WIDGET_SRC; yoksa panel origin'inden türet; ikisi de yoksa
+ * config eksik olduğunu belli eden placeholder. Hardcode CDN adresi YOK.
+ */
+export function getWidgetEmbedSrc() {
+  const explicit = process.env.NEXT_PUBLIC_WIDGET_SRC;
+  if (explicit) return explicit;
+  const site = process.env.NEXT_PUBLIC_SITE_URL;
+  if (site) return `${site.replace(/\/+$/, '')}/green-gold-widget.v1.js`;
+  return 'https://<panel-domain>/green-gold-widget.v1.js';
+}
