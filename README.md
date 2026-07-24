@@ -59,8 +59,15 @@ npm run dev                         # http://localhost:3001
 cd ../green-gold-widget
 npm install
 npm run build                       # dist/green-gold-widget.v1.js üretir
+npm run copy:public                 # dist -> green-gold-panel/public/ kopyalar
+npm run check:widget                # build + hash: panel/public kopyası güncel mi?
 # Bundle panelde public/green-gold-widget.v1.js olarak servis edilir.
 ```
+
+> **Bayat widget koruması:** Widget, panelin `public/`'inden statik servis edilir;
+> oradaki kopya güncel build ile eşleşmelidir. `npm run check:widget` bunu sha256 ile
+> doğrular (panel `prebuild` adımında da çalışır; Vercel'in izole panel build'inde
+> güvenle atlanır). Yayın adımları: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
 
 Ortam değişkenleri her paketin `.env.example` dosyasında açıklanmıştır (yalnızca
 placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitignore'dadır.
