@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from '../actions';
 
@@ -54,6 +54,21 @@ export function AppShell({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // Mobil drawer açıkken: Esc ile kapat + arka plan scroll'unu kilitle.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [menuOpen]);
+
   return (
     <div className="flex min-h-full bg-[#f5f7f3]">
       {/* Masaüstü sidebar */}
@@ -67,13 +82,13 @@ export function AppShell({
 
       {/* Mobil açılır menü */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
           <div
             className="absolute inset-0 bg-neutral-900/40"
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 flex w-[278px] flex-col bg-[#064b3d] text-white shadow-2xl">
+          <div className="gg-safe-top absolute inset-y-0 left-0 flex w-[min(278px,85vw)] max-w-[278px] flex-col bg-[#064b3d] text-white shadow-2xl">
             <BrandBlock />
             <HotelBlock hotelName={hotelName} city={city} />
             <NavList active={active} onNavigate={() => setMenuOpen(false)} />
@@ -86,14 +101,14 @@ export function AppShell({
       {/* İçerik alanı */}
       <div className="flex min-h-screen flex-1 flex-col">
         {/* İnce üst bar */}
-        <header className="sticky top-0 z-30 flex h-[74px] items-center justify-between gap-3 border-b border-[#dce4dc] bg-[#f8faf7]/94 px-4 backdrop-blur sm:px-7">
+        <header className="gg-safe-top sticky top-0 z-30 flex h-[74px] items-center justify-between gap-3 border-b border-[#dce4dc] bg-[#f8faf7]/94 px-4 backdrop-blur sm:px-7">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-label="Menüyü aç"
               aria-expanded={menuOpen}
-              className="grid h-9 w-9 place-items-center rounded-lg border border-neutral-300 text-neutral-700 md:hidden"
+              className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-300 text-neutral-700 md:hidden"
             >
               <MenuIcon />
             </button>

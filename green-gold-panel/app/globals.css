@@ -85,6 +85,24 @@ body {
 
 @media (max-width: 767px) {
   .gg-page {
-    padding: 24px 18px 40px;
+    /* Yatay padding'e safe-area (iPhone yatay çentik/köşe) eklenir. */
+    padding: 24px max(18px, env(safe-area-inset-left)) 40px
+      max(18px, env(safe-area-inset-right));
   }
+
+  /* iOS Safari, font-size < 16px olan bir alana odaklanınca sayfayı zoom'lar.
+     Tüm form kontrollerini mobilde ≥16px tutarak bu istenmeyen zoom'u önleriz. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Sticky üst bar + açılır menü, çentik altındaki güvenli alanı hesaba katsın. */
+.gg-safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.gg-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }

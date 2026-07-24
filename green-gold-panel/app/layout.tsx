@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Green Gold · Otel Paneli",
   description: "Widget etkileşim özeti ve entegrasyon",
+};
+
+// viewport-fit=cover → iPhone çentik/safe-area env() değerleri aktifleşir.
+// userScalable kapatılmaz (a11y): iOS oto-zoom'u input font-size:16px ile önlenir.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#064b3d",
 };
 
 export default function RootLayout({
