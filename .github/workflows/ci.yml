@@ -14,7 +14,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          # Dev ortamıyla hizalı: Node 24 -> npm 11. package-lock'lar npm 11 ile
+          # üretildi; Node 22'nin npm 10'u optional/nested dep ağacını farklı
+          # hesaplayıp `npm ci`yi "Missing ..." ile düşürüyordu.
+          node-version: '24'
 
       # --- Widget: build + testler ---
       - name: Widget install
