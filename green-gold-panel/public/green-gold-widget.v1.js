@@ -4,58 +4,60 @@
   display: block;
   contain: content;
   /* Marka aksan rengi — otel brand_color'ı (doğrulanmış hex) kartta override eder. */
-  --gg-accent: #1a7f5a;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  --gg-accent: #075442;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.45;
   color: #1f2933;
 }
 *, *::before, *::after { box-sizing: border-box; }
 
 .card {
-  max-width: 360px;
-  background: #ffffff;
-  border: 1px solid #e3e8ee;
-  border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 14px rgba(16, 24, 40, 0.06);
-  padding: 18px 18px 16px;
-  color: #1f2933;
+  width: 100%;
+  min-width: min(100%, 320px);
+  max-width: 680px;
+  background: #f4f8f4;
+  border: 1px solid color-mix(in srgb, var(--gg-accent) 64%, #dce5de);
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gg-accent) 8%, transparent), 0 10px 30px rgba(14, 59, 47, 0.07);
+  padding: 16px;
+  color: #17372d;
   font-size: 14px;
 }
 
 .card.preview { position: relative; }
 .preview-badge {
-  position: absolute; top: 10px; right: 10px;
+  position: absolute; top: 12px; right: 12px;
   font-size: 10px; font-weight: 700; letter-spacing: .03em;
   text-transform: uppercase;
-  color: #3d4b5c; background: #eef1f5; border: 1px solid #dbe1e8;
+  color: #22604f; background: #e7f1e9; border: 1px solid #cfe1d3;
   padding: 2px 8px; border-radius: 999px;
   white-space: nowrap;
 }
 
-.header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.header { display: flex; align-items: center; gap: 11px; margin-bottom: 4px; padding-right: 72px; }
 .leaf {
   flex: 0 0 auto;
-  width: 32px; height: 32px;
+  width: 38px; height: 38px;
   display: grid; place-items: center;
-  background: #e7f4ee;
-  border-radius: 9px;
+  background: var(--gg-accent);
+  border-radius: 999px;
   color: var(--gg-accent);
   overflow: hidden;
 }
-.leaf svg { width: 18px; height: 18px; display: block; }
+.leaf svg { width: 19px; height: 19px; display: block; color: #d7ef64; }
 .logo { width: 100%; height: 100%; object-fit: contain; display: block; }
 
-.heading { font-size: 15px; font-weight: 650; margin: 0; color: #10231b; }
-.subheading { margin: 0 0 14px; font-size: 12.5px; color: #556070; }
+.heading { font-family: Georgia, "Times New Roman", serif; font-size: 18px; font-weight: 500; margin: 0; color: #102b22; }
+.subheading { margin: 0 0 14px 49px; font-size: 11.5px; color: #65776f; }
 
 .row {
   display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px; border-radius: 10px;
-  border: 1px solid #eef1f5; background: #fbfcfd;
+  padding: 13px; border-radius: 10px;
+  border: 1px solid #d9e4dc; background: #ffffff;
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease;
 }
-.row:hover { border-color: #cfe6db; background: #f7fbf9; }
+.row:hover { border-color: color-mix(in srgb, var(--gg-accent) 55%, #d9e4dc); background: #fbfdfb; }
 .row input[type=checkbox] {
   flex: 0 0 auto;
   width: 18px; height: 18px; margin-top: 1px;
@@ -63,10 +65,10 @@
   cursor: pointer;
 }
 .row-body { flex: 1 1 auto; }
-.row-label { font-weight: 600; font-size: 13.5px; color: #1f2933; }
-.row-sub { font-size: 12px; color: #6b7684; margin-top: 2px; }
+.row-label { font-weight: 700; font-size: 13px; color: #17372d; }
+.row-sub { font-size: 11.5px; color: #6d7c75; margin-top: 3px; }
 
-.details { margin-top: 12px; display: grid; gap: 8px; }
+.details { margin-top: 12px; display: grid; gap: 8px; padding: 12px 13px; border-radius: 10px; background: rgba(255,255,255,.7); border: 1px solid #dce6df; }
 .line { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .line-label { font-size: 12.5px; color: #556070; }
 .line-value { font-size: 13.5px; font-weight: 650; color: #10231b; }
@@ -94,7 +96,7 @@
   margin-top: 14px; width: 100%;
   font-size: 14px; font-weight: 650; font-family: inherit;
   color: #ffffff; background: var(--gg-accent);
-  border: 0; border-radius: 10px;
+  border: 0; border-radius: 8px;
   padding: 11px 14px; cursor: pointer;
   transition: background .15s ease, opacity .15s ease;
 }
@@ -108,12 +110,18 @@
   margin-top: 14px;
   display: flex; align-items: flex-start; gap: 10px;
   padding: 12px; border-radius: 10px;
-  background: #e7f4ee; border: 1px solid #bfe3d1;
+  background: #e5f2e8; border: 1px solid #bed9c5;
   color: #10231b; font-size: 13px;
 }
 .confirm svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--gg-accent); margin-top: 1px; }
 
 @media (prefers-reduced-motion: reduce) {
   .row, .btn { transition: none; }
+}
+
+@media (max-width: 460px) {
+  .card { padding: 14px; }
+  .subheading { margin-left: 0; }
+  .header { padding-right: 64px; }
 }
 `;async function Te(e,t){try{let n=await fetch(`${e}/widget/config?key=${encodeURIComponent(t)}`);if(!n.ok)return null;let r=await n.json();return!r.success||!r.data?null:r.data}catch{return null}}async function Ee(e,t){try{let n=await fetch(`${e}/widget/impact?key=${encodeURIComponent(t)}`);if(!n.ok)return null;let r=await n.json();return!r.success||!r.data?null:r.data}catch{return null}}function De(e,t,n,r,i){try{fetch(`${e}/widget/events`,{method:`POST`,headers:{"Content-Type":`application/json`,"X-Widget-Key":t},body:JSON.stringify({event_type:n,session_ref:r,metadata:i}),keepalive:!0}).catch(()=>{})}catch{}}var Oe=`http://localhost:3000`,ke=`green-gold-widget`;function Ae(e){let t=Number(e);return Number.isFinite(t)&&t>=1?Math.floor(t):1}function je(e){return e===`en`?`en`:`tr`}function Me(){return typeof crypto<`u`&&`randomUUID`in crypto?crypto.randomUUID():`xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`.replace(/[xy]/g,e=>{let t=Math.random()*16|0;return(e===`x`?t:t&3|8).toString(16)})}var Ne=class extends HTMLElement{static get observedAttributes(){return[`data-nights`,`data-lang`]}mount;config=null;impact=null;sessionRef=``;key=``;apiBase=Oe;preview=!1;sentEvents=new Set;async connectedCallback(){if(this.key=this.getAttribute(`data-key`)??``,this.key){if(this.apiBase=this.getAttribute(`data-api`)??Oe,this.preview=this.getAttribute(`data-preview`)===`true`,this.sessionRef||=Me(),this.shadowRoot)this.mount||=this.shadowRoot.querySelector(`div`)??void 0;else{let e=this.attachShadow({mode:`open`}),t=document.createElement(`style`);t.textContent=we,this.mount=document.createElement(`div`),e.append(t,this.mount)}if(!this.config){let e=await Te(this.apiBase,this.key);if(!e)return;this.config=e}this.rerender(),this.sendOnce(`widget_goruntulendi`,{nights:this.nights()}),this.loadImpact()}}async loadImpact(){if(this.impact)return;let e=await Ee(this.apiBase,this.key);e&&(this.impact=e,this.rerender())}sendOnce(e,t){this.preview||this.sentEvents.has(e)||(this.sentEvents.add(e),De(this.apiBase,this.key,e,this.sessionRef,t))}attributeChangedCallback(e){(e===`data-nights`||e===`data-lang`)&&this.config&&this.mount&&this.rerender()}disconnectedCallback(){this.mount&&ie(null,this.mount)}nights(){return Ae(this.getAttribute(`data-nights`))}rerender(){if(!this.config||!this.mount)return;let e=je(this.getAttribute(`data-lang`));ie($(Ce,{config:this.config,nights:this.nights(),lang:e,onSelect:e=>this.sendOnce(`checkbox_secildi`,{nights:this.nights(),amount_total:e}),onAdd:e=>this.handleAdd(e),preview:this.preview,impact:this.impact}),this.mount)}handleAdd(e){this.sendOnce(`katki_ekle_butonuna_basildi`,{nights:this.nights(),amount_total:e}),this.dispatchEvent(new CustomEvent(`greengold:contribution-selected`,{bubbles:!0,composed:!0,detail:{session_ref:this.sessionRef,nights:this.nights(),amount_total:e,currency:this.config?.currency??null}}))}};customElements.get(ke)||customElements.define(ke,Ne)})();

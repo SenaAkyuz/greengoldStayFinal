@@ -64,14 +64,16 @@ export default async function FunnelPage({
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="funnel"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <main className="gg-page">
+        <div className="gg-page-header">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            <div className="gg-kicker">Misafir etkileşimleri</div>
+            <h1 className="gg-title">
               Dönüşüm
             </h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
+            <p className="gg-subtitle">
               Session bazlı etkileşim hunisi
               {funnel?.period
                 ? ` · ${funnel.period.from} – ${funnel.period.to}`
@@ -91,11 +93,11 @@ export default async function FunnelPage({
         {funnel && (
           <>
             {/* Vurgulu: Görüntülenme → Katkı butonu */}
-            <section className="mt-6 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm">
+            <section className="gg-card mt-7 bg-gradient-to-br from-[#eaf4ec] to-white p-7">
               <div className="text-sm font-medium text-emerald-800">
                 Görüntülenme → Katkı butonu
               </div>
-              <div className="mt-1 text-4xl font-semibold tracking-tight text-emerald-900 tabular-nums">
+              <div className="mt-2 font-[Georgia] text-5xl font-medium tracking-tight text-[#0a493b] tabular-nums">
                 {pct(funnel.rates.view_to_button_pct)}
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600">
@@ -110,7 +112,7 @@ export default async function FunnelPage({
                 burada oluşacak.
               </div>
             ) : (
-              <section className="mt-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+              <section className="gg-card mt-6 p-6">
                 <div className="space-y-4">
                   {stages.map((stage, i) => (
                     <div key={stage.key}>
@@ -127,7 +129,7 @@ export default async function FunnelPage({
                       </div>
                       <div className="mt-1.5 h-8 w-full overflow-hidden rounded-lg bg-neutral-100">
                         <div
-                          className="h-full rounded-lg bg-emerald-600 transition-all"
+                            className="h-full rounded-lg bg-gradient-to-r from-[#075442] to-[#6da98d] transition-all"
                           style={{
                             width: `${Math.max((stage.count / maxCount) * 100, stage.count > 0 ? 4 : 0)}%`,
                             opacity: 1 - i * 0.18,

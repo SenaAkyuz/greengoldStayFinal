@@ -21,13 +21,14 @@ export default async function ReservationsPage() {
   const hotel = hotelRes.data;
 
   return (
-    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="reservations">
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
+    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="reservations" isDemo={hotel?.role === 'demo_viewer'}>
+      <main className="gg-page">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+          <div className="gg-kicker">Booking Engine bağlantısı</div>
+          <h1 className="gg-title">
             Rezervasyonlar
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Booking Engine ile onaylanmış gerçek rezervasyonlar
           </p>
         </div>

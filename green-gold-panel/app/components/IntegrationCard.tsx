@@ -25,7 +25,7 @@ export function IntegrationCard({
   const hasOrigins = origins.length > 0;
 
   return (
-    <section className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="gg-card p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold text-neutral-900">
@@ -37,13 +37,13 @@ export function IntegrationCard({
         </div>
         <button
           onClick={copy}
-          className="shrink-0 rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
+          className="shrink-0 rounded-lg border border-[#cfdad2] px-3 py-1.5 text-sm font-medium text-[#315d50] transition hover:bg-[#f1f6f2] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30"
         >
           {copied ? 'Kopyalandı ✓' : 'Kopyala'}
         </button>
       </div>
 
-      <pre className="mt-4 overflow-x-auto rounded-xl bg-neutral-900 p-4 text-xs leading-relaxed text-neutral-100">
+      <pre className="mt-4 overflow-x-auto rounded-xl bg-[#073c32] p-4 text-xs leading-relaxed text-[#e9f4ef]">
         <code>{embedCode}</code>
       </pre>
 

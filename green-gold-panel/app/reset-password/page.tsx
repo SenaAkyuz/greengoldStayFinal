@@ -64,7 +64,8 @@ function ResetPasswordInner() {
     }
 
     // Recovery oturumunu kapat: proxy girişli kullanıcıyı /login'den /'ye atıyor.
-    await supabase.auth.signOut();
+    // scope: 'local' — yalnızca bu tarayıcı (paylaşılan hesaplarda güvenli).
+    await supabase.auth.signOut({ scope: 'local' });
     router.push('/login?reset=success');
     router.refresh();
   }

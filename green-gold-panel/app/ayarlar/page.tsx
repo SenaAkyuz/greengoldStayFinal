@@ -26,13 +26,15 @@ export default async function SettingsPage() {
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="settings"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
+      <main className="gg-page">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+          <div className="gg-kicker">Otel yapılandırması</div>
+          <h1 className="gg-title">
             Ayarlar
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Otel bilgileri ve gece başı katkı tutarı
           </p>
         </div>

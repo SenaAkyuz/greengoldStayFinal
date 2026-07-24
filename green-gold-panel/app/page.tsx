@@ -55,14 +55,16 @@ export default async function OverviewPage({
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="overview"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <main className="gg-page">
+        <div className="gg-page-header">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            <div className="gg-kicker">Green Stay performansı</div>
+            <h1 className="gg-title">
               Genel Bakış
             </h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
+            <p className="gg-subtitle">
               Widget etkileşim özeti
               {summary?.period
                 ? ` · ${summary.period.from} – ${summary.period.to}`
@@ -108,7 +110,7 @@ export default async function OverviewPage({
         )}
 
         {hotel && (
-          <section className="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <section className="gg-card mt-8 flex flex-wrap items-center justify-between gap-3 p-6">
             <div>
               <h2 className="text-sm font-semibold text-neutral-900">
                 Entegrasyon
@@ -120,7 +122,7 @@ export default async function OverviewPage({
             </div>
             <Link
               href="/entegrasyon"
-              className="shrink-0 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              className="shrink-0 rounded-lg bg-[#075442] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34]"
             >
               Entegrasyon sayfasına git
             </Link>

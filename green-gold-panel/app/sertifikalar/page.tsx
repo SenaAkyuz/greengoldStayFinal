@@ -21,13 +21,14 @@ export default async function CertificatesPage() {
   const hotel = hotelRes.data;
 
   return (
-    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="certificates">
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
+    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="certificates" isDemo={hotel?.role === 'demo_viewer'}>
+      <main className="gg-page">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+          <div className="gg-kicker">Doğrulama bekleniyor</div>
+          <h1 className="gg-title">
             Sertifikalar
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Doğrulanmış katkılara dayalı sertifikalar
           </p>
         </div>

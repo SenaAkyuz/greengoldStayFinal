@@ -43,21 +43,26 @@ export function AppShell({
   hotelName,
   city,
   active,
+  isDemo = false,
   children,
 }: {
   hotelName?: string;
   city?: string | null;
   active: ActivePage;
+  isDemo?: boolean;
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-full bg-neutral-50">
+    <div className="flex min-h-full bg-[#f5f7f3]">
       {/* Masaüstü sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-neutral-200 bg-white md:flex">
+      <aside className="sticky top-0 hidden h-screen w-[278px] shrink-0 flex-col bg-[#064b3d] text-white md:flex">
         <BrandBlock />
+        <HotelBlock hotelName={hotelName} city={city} />
         <NavList active={active} />
+        <ConnectionStatus />
+        <SidebarLogout />
       </aside>
 
       {/* Mobil açılır menü */}
@@ -68,9 +73,12 @@ export function AppShell({
             onClick={() => setMenuOpen(false)}
             aria-hidden="true"
           />
-          <div className="absolute inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
+          <div className="absolute inset-y-0 left-0 flex w-[278px] flex-col bg-[#064b3d] text-white shadow-2xl">
             <BrandBlock />
+            <HotelBlock hotelName={hotelName} city={city} />
             <NavList active={active} onNavigate={() => setMenuOpen(false)} />
+            <ConnectionStatus />
+            <SidebarLogout />
           </div>
         </div>
       )}
@@ -78,7 +86,7 @@ export function AppShell({
       {/* İçerik alanı */}
       <div className="flex min-h-screen flex-1 flex-col">
         {/* İnce üst bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur sm:px-5">
+        <header className="sticky top-0 z-30 flex h-[74px] items-center justify-between gap-3 border-b border-[#dce4dc] bg-[#f8faf7]/94 px-4 backdrop-blur sm:px-7">
           <div className="flex min-w-0 items-center gap-2.5">
             <button
               type="button"
@@ -99,15 +107,29 @@ export function AppShell({
             </div>
           </div>
 
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="rounded-lg border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-emerald-600/30"
-            >
-              Çıkış
-            </button>
-          </form>
+          <div className="flex items-center gap-3">
+            {isDemo && (
+              <span className="hidden items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 sm:inline-flex">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                Demo modu — salt okunur
+              </span>
+            )}
+            <span className="grid h-10 w-10 place-items-center rounded-full border border-[#dbe4dd] bg-white text-xs font-bold text-[#075442] shadow-sm">
+              {(hotelName ?? 'GG').slice(0, 2).toUpperCase()}
+            </span>
+            <div className="hidden leading-tight sm:block">
+              <div className="text-sm font-semibold text-[#17372d]">Otel Yöneticisi</div>
+              <div className="text-xs text-[#718079]">Green Gold Portal</div>
+            </div>
+          </div>
         </header>
+
+        {isDemo && (
+          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-800 sm:px-7">
+            Bu veriler <strong>temsilidir</strong>; gerçek performans ölçümü
+            değildir.
+          </div>
+        )}
 
         {children}
       </div>
@@ -117,13 +139,40 @@ export function AppShell({
 
 function BrandBlock() {
   return (
-    <div className="flex items-center gap-2.5 border-b border-neutral-200 px-5 py-4">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-emerald-700 text-white">
-        <LeafIcon />
+    <div className="flex items-center gap-3 border-b border-white/10 px-5 py-6">
+      <span className="grid h-12 w-12 place-items-center rounded-full border border-[#c9eb47] text-xl font-semibold text-[#c9eb47]">
+        G
       </span>
       <div className="leading-tight">
-        <div className="text-sm font-semibold text-neutral-900">Green Gold</div>
-        <div className="text-xs text-neutral-500">Otel Paneli</div>
+        <div className="text-[18px] font-bold tracking-[0.16em] text-white">GREEN GOLD</div>
+        <div className="mt-1 text-[9px] tracking-[0.25em] text-[#9cc7ba]">HOTEL PORTAL</div>
+      </div>
+    </div>
+  );
+}
+
+function HotelBlock({
+  hotelName,
+  city,
+}: {
+  hotelName?: string;
+  city?: string | null;
+}) {
+  const initials = (hotelName ?? 'Otel')
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+
+  return (
+    <div className="mx-4 my-5 flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#c9eb47] text-sm font-extrabold text-[#064b3d]">
+        {initials}
+      </span>
+      <div className="min-w-0">
+        <div className="truncate text-sm font-semibold text-white">{hotelName ?? 'Otel Paneli'}</div>
+        <div className="mt-1 truncate text-[11px] text-[#9cc7ba]">{city ?? 'Otel hesabı'}</div>
       </div>
     </div>
   );
@@ -137,7 +186,7 @@ function NavList({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
       {NAV.map((item) => {
         const isActive = item.key === active;
         return (
@@ -147,14 +196,14 @@ function NavList({
             aria-current={isActive ? 'page' : undefined}
             onClick={onNavigate}
             className={
-              'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ' +
+              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition ' +
               (isActive
-                ? 'bg-emerald-50 text-emerald-800'
-                : 'text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900')
+                ? 'bg-[#19705c] text-white shadow-sm'
+                : 'text-[#c6ddd6] hover:bg-white/[0.06] hover:text-white')
             }
           >
             <span
-              className={isActive ? 'text-emerald-700' : 'text-neutral-400'}
+              className={isActive ? 'text-[#d8f064]' : 'text-[#8fc0b2]'}
               aria-hidden="true"
             >
               {item.icon}
@@ -164,6 +213,31 @@ function NavList({
         );
       })}
     </nav>
+  );
+}
+
+function ConnectionStatus() {
+  return (
+    <div className="mx-4 mb-3 rounded-xl border border-white/[0.06] bg-white/[0.07] px-4 py-3">
+      <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
+        <span className="h-2 w-2 rounded-full bg-[#c9eb47] shadow-[0_0_0_5px_rgba(201,235,71,.12)]" />
+        Sistem bağlantısı aktif
+      </div>
+      <div className="mt-1 pl-4 text-[10px] text-[#8fb9ae]">Güvenli bağlantı</div>
+    </div>
+  );
+}
+
+function SidebarLogout() {
+  return (
+    <form action={signOut} className="border-t border-white/10 px-4 py-4">
+      <button
+        type="submit"
+        className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-[#c6ddd6] transition hover:bg-white/[0.06] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#c9eb47]/40"
+      >
+        ↪ Güvenli çıkış
+      </button>
+    </form>
   );
 }
 

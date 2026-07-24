@@ -26,19 +26,30 @@ export default async function GuestDemoPage() {
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="guest-demo"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+      <main className="gg-page">
+        <div className="gg-page-header">
+          <div>
+          <div className="gg-kicker">Misafir deneyimi demosu</div>
+          <h1 className="gg-title">
             Misafir Demo
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Widget’ın misafire nasıl göründüğünün canlı önizlemesi
           </p>
+          </div>
+          <span className="rounded-full border border-[#cfe2d4] bg-[#edf6ee] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#17614f]">
+            • Demo modu
+          </span>
         </div>
 
-        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-600">
-          Bu bir önizlemedir; buradaki etkileşimler raporlara yansımaz.
+        <div className="gg-notice mt-7 flex items-center gap-3 px-5 py-4 text-sm">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#075442] font-semibold text-white">✓</span>
+          <div>
+            <div className="font-semibold">Güvenli önizleme modu</div>
+            <div className="mt-0.5 text-xs text-[#5e776f]">Bu ekrandaki etkileşimler raporlara yansımaz ve ödeme alınmaz.</div>
+          </div>
         </div>
 
         {hotelRes.error && (

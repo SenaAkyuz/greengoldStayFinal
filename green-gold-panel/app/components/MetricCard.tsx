@@ -8,12 +8,13 @@ export function MetricCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="text-sm font-medium text-neutral-500">{label}</div>
-      <div className="mt-2 text-3xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+    <div className="gg-card relative overflow-hidden p-5">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#0b6652] via-[#5c9f80] to-[#d7e9a0]" />
+      <div className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#718078]">{label}</div>
+      <div className="mt-3 font-[Georgia] text-[34px] font-medium tracking-tight text-[#102b22] tabular-nums">
         {value}
       </div>
-      {hint && <div className="mt-1 text-xs text-neutral-400">{hint}</div>}
+      {hint && <div className="mt-1.5 text-xs text-[#87928d]">{hint}</div>}
     </div>
   );
 }

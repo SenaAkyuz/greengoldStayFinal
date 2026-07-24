@@ -31,6 +31,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
   const validColor = HEX6.test(brandColor) ? brandColor : '';
   const accent = validColor || '#1a7f5a';
   const validLogo = /^https:\/\//.test(logoUrl) ? logoUrl : '';
+  const isDemo = hotel.role === 'demo_viewer';
   const hotelTypeLabel =
     hotel.hotel_type === 'premium'
       ? 'Premium'
@@ -48,8 +49,23 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
 
   return (
     <form action={formAction} className="mt-6 space-y-8">
+      {isDemo && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+        >
+          Demo modu — salt okunur. Ayarları görüntüleyebilirsiniz ama
+          değişiklikler kaydedilmez.
+        </div>
+      )}
+
+      {/* fieldset disabled: demo modunda tüm form kontrollerini tek yerden kapatır */}
+      <fieldset
+        disabled={isDemo}
+        className="space-y-8 border-0 p-0 disabled:opacity-70"
+      >
       {/* Düzenlenebilir */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <section className="gg-card p-6">
         <h2 className="text-sm font-semibold text-neutral-900">
           Otel bilgileri
         </h2>
@@ -122,7 +138,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
       </section>
 
       {/* İzin verilen origin'ler */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <section className="gg-card p-6">
         <h2 className="text-sm font-semibold text-neutral-900">
           İzin verilen alan adları (origin)
         </h2>
@@ -185,7 +201,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
       </section>
 
       {/* Marka (otel düzenleyebilir) */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <section className="gg-card p-6">
         <h2 className="text-sm font-semibold text-neutral-900">Marka</h2>
         <p className="mt-1 text-xs text-neutral-500">
           Logo ve aksan rengi widget’ta görünür. Logo yalnızca{' '}
@@ -277,7 +293,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
       </section>
 
       {/* Read-only / korumalı */}
-      <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+      <section className="gg-card p-6">
         <h2 className="text-sm font-semibold text-neutral-900">
           Sabit alanlar
         </h2>
@@ -318,7 +334,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 disabled:opacity-60"
+          className="rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30 disabled:opacity-60"
         >
           {isPending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
@@ -333,12 +349,13 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
           </span>
         )}
       </div>
+      </fieldset>
     </form>
   );
 }
 
 const inputCls =
-  'w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600/20';
+  'w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] focus:border-[#347866] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/20';
 
 function LeafGlyph() {
   return (

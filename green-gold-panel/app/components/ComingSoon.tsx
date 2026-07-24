@@ -11,16 +11,16 @@ export function ComingSoon({
   description: string;
 }) {
   return (
-    <div className="mt-6 flex justify-center">
-      <div className="flex max-w-md flex-col items-center rounded-2xl border border-dashed border-neutral-300 bg-white px-6 py-14 text-center">
-        <span className="grid h-11 w-11 place-items-center rounded-xl bg-neutral-100 text-neutral-400">
+    <div className="mt-8 flex justify-center">
+      <div className="gg-card flex w-full max-w-2xl flex-col items-center px-8 py-20 text-center">
+        <span className="grid h-14 w-14 place-items-center rounded-full bg-[#edf5ef] text-[#1c6b58]">
           <ClockIcon />
         </span>
-        <span className="mt-4 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700">
+        <span className="mt-5 rounded-full border border-[#d8e7d9] bg-[#f1f7f1] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-[#286b5a]">
           {badge}
         </span>
-        <h2 className="mt-3 text-lg font-semibold text-neutral-900">{title}</h2>
-        <p className="mt-2 text-sm text-neutral-500">{description}</p>
+        <h2 className="mt-4 font-[Georgia] text-3xl font-medium text-[#102b22]">{title}</h2>
+        <p className="mt-3 max-w-lg text-sm leading-6 text-[#68766f]">{description}</p>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ export function RangePills({
   basePath?: string;
 }) {
   return (
-    <nav className="inline-flex rounded-xl border border-neutral-200 bg-white p-1 shadow-sm">
+    <nav className="inline-flex rounded-full border border-[#d8e2da] bg-white p-1 shadow-sm">
       {ORDER.map((key) => {
         const isActive = key === active;
         return (
@@ -20,10 +20,10 @@ export function RangePills({
             href={key === 'month' ? basePath : `${basePath}?range=${key}`}
             aria-current={isActive ? 'page' : undefined}
             className={
-              'rounded-lg px-3.5 py-1.5 text-sm font-medium transition ' +
+              'rounded-full px-3.5 py-1.5 text-sm font-medium transition ' +
               (isActive
-                ? 'bg-emerald-700 text-white'
-                : 'text-neutral-600 hover:bg-neutral-50')
+                ? 'bg-[#0b5c49] text-white'
+                : 'text-[#66756e] hover:bg-[#f1f5f1]')
             }
           >
             {RANGE_LABELS[key]}

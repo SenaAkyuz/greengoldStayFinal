@@ -21,13 +21,14 @@ export default async function PaymentsPage() {
   const hotel = hotelRes.data;
 
   return (
-    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="payments">
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
+    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="payments" isDemo={hotel?.role === 'demo_viewer'}>
+      <main className="gg-page">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+          <div className="gg-kicker">Ödeme doğrulaması</div>
+          <h1 className="gg-title">
             Tahsilatlar
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Gerçekten tahsil edilmiş katkılar
           </p>
         </div>

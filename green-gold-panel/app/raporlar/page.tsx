@@ -48,14 +48,16 @@ export default async function ReportsPage({
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="reports"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <main className="gg-page">
+        <div className="gg-page-header">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            <div className="gg-kicker">Veri özeti</div>
+            <h1 className="gg-title">
               Raporlar
             </h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
+            <p className="gg-subtitle">
               Etkileşim, dönüşüm ve tahmini karbon özeti
               {report?.period
                 ? ` · ${report.period.from} – ${report.period.to}`
@@ -66,7 +68,7 @@ export default async function ReportsPage({
             <RangePills active={range} basePath="/raporlar" />
             <a
               href={exportHref}
-              className="rounded-lg bg-emerald-700 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              className="rounded-full bg-[#075442] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#043f34]"
             >
               CSV indir
             </a>

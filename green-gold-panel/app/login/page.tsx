@@ -4,7 +4,7 @@ import LoginForm from './LoginForm';
 // Client'a yalnızca boolean bayrak geçer — kimlik bilgisi asla gitmez.
 export default function LoginPage() {
   const demoEnabled =
-    process.env.NODE_ENV !== 'production' &&
+    process.env.DEMO_LOGIN_ENABLED === 'true' &&
     !!process.env.DEMO_LOGIN_EMAIL &&
     !!process.env.DEMO_LOGIN_PASSWORD;
 

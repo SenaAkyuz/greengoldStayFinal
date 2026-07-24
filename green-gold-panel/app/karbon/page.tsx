@@ -52,14 +52,16 @@ export default async function CarbonPage({
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="carbon"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <main className="gg-page">
+        <div className="gg-page-header">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+            <div className="gg-kicker">Tahmini etki görünümü</div>
+            <h1 className="gg-title">
               Karbon Etkisi
             </h1>
-            <p className="mt-0.5 text-sm text-neutral-500">
+            <p className="gg-subtitle">
               Widget etkileşimlerine dayalı tahmini katkı
               {carbon?.period
                 ? ` · ${carbon.period.from} – ${carbon.period.to}`
@@ -79,7 +81,7 @@ export default async function CarbonPage({
         {carbon && (
           <>
             {/* Hero */}
-            <section className="mt-6 overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm sm:p-8">
+            <section className="gg-card mt-7 overflow-hidden bg-gradient-to-br from-[#eaf4ec] via-white to-[#f4f2df] p-7 sm:p-9">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -87,10 +89,10 @@ export default async function CarbonPage({
                 </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="text-5xl font-semibold tracking-tight text-emerald-900 tabular-nums sm:text-6xl">
+                <span className="font-[Georgia] text-5xl font-medium tracking-tight text-[#0a493b] tabular-nums sm:text-6xl">
                   {nf(carbon.estimated_co2_kg)}
                 </span>
-                <span className="text-2xl font-medium text-emerald-700">
+                <span className="text-2xl font-medium text-[#377866]">
                   kg CO₂
                 </span>
               </div>
@@ -143,8 +145,8 @@ function SupportCard({
   hint?: string;
 }) {
   return (
-    <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-      <div className="text-3xl font-semibold tracking-tight text-neutral-900 tabular-nums">
+    <div className="gg-card p-5">
+      <div className="font-[Georgia] text-3xl font-medium tracking-tight text-[#102b22] tabular-nums">
         {value}
       </div>
       <div className="mt-1 text-sm font-medium text-neutral-600">{label}</div>

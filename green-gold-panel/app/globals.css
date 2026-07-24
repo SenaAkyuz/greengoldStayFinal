@@ -6,6 +6,85 @@
   --font-mono: var(--font-geist-mono);
 }
 
+:root {
+  --gg-forest: #064b3d;
+  --gg-forest-deep: #033d32;
+  --gg-forest-soft: #176b58;
+  --gg-lime: #c9eb47;
+  --gg-canvas: #f5f7f3;
+  --gg-paper: #ffffff;
+  --gg-line: #dce4dc;
+  --gg-muted: #66756e;
+  --gg-display: Georgia, "Times New Roman", serif;
+}
+
 body {
   font-family: var(--font-geist-sans), system-ui, Arial, sans-serif;
+  background: var(--gg-canvas);
+  color: #12251e;
+}
+
+::selection {
+  background: #dff39a;
+  color: #083f35;
+}
+
+.gg-page {
+  width: 100%;
+  max-width: 1480px;
+  margin-inline: auto;
+  padding: 34px 36px 56px;
+}
+
+.gg-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gg-kicker {
+  color: #2f7667;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.gg-title {
+  margin-top: 7px;
+  color: #10251e;
+  font-family: var(--gg-display);
+  font-size: clamp(30px, 3vw, 42px);
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.gg-subtitle {
+  margin-top: 8px;
+  color: var(--gg-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.gg-card {
+  border: 1px solid var(--gg-line);
+  border-radius: 15px;
+  background: var(--gg-paper);
+  box-shadow: 0 16px 40px rgba(16, 49, 39, 0.045);
+}
+
+.gg-notice {
+  border: 1px solid #d2e5d6;
+  border-radius: 13px;
+  background: #edf6ee;
+  color: #174d3f;
+}
+
+@media (max-width: 767px) {
+  .gg-page {
+    padding: 24px 18px 40px;
+  }
 }

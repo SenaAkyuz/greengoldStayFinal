@@ -25,6 +25,8 @@ export interface HotelInfo {
   hotel_type: string;
   logo_url: string | null;
   brand_color: string | null;
+  // Giriş yapan kullanıcının rolü (demo modu UI'ı için). 'demo_viewer' = salt okunur.
+  role: string;
 }
 
 export interface HotelUpdate {

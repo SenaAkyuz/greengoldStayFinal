@@ -44,23 +44,43 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-neutral-50 px-4 py-16">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-700 text-white">
+    <main className="grid min-h-full bg-[#f5f7f3] lg:grid-cols-[52%_48%]">
+      <section className="relative hidden overflow-hidden bg-[#064b3d] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/10" />
+        <div className="absolute -bottom-32 -left-32 h-[430px] w-[430px] rounded-full border border-[#c9eb47]/20" />
+        <div className="relative flex items-center gap-3">
+          <span className="grid h-12 w-12 place-items-center rounded-full border border-[#c9eb47] font-[Georgia] text-xl text-[#c9eb47]">G</span>
+          <div>
+            <div className="font-bold tracking-[0.18em]">GREEN GOLD</div>
+            <div className="mt-1 text-[9px] tracking-[0.26em] text-[#9cc7ba]">HOTEL PORTAL</div>
+          </div>
+        </div>
+        <div className="relative max-w-xl">
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#c9eb47]">Sürdürülebilir konaklama</div>
+          <h2 className="mt-5 font-[Georgia] text-5xl leading-[1.08]">Otelinizin Green Stay yolculuğunu yönetin.</h2>
+          <p className="mt-5 max-w-md text-sm leading-7 text-[#b9d3cb]">Widget etkileşimlerini, tahmini karbon etkisini ve entegrasyon ayarlarını tek panelden takip edin.</p>
+        </div>
+        <div className="relative text-xs text-[#8fb9ae]">Green Gold · Hotel Sustainability Platform</div>
+      </section>
+
+      <div className="flex items-center justify-center px-5 py-14">
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex items-center gap-3 lg:hidden">
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-[#064b3d] text-[#c9eb47]">
             <LeafIcon />
           </span>
           <div>
-            <div className="text-[15px] font-semibold text-neutral-900">
-              Green Gold
+            <div className="text-[15px] font-bold tracking-[0.14em] text-[#12372c]">
+              GREEN GOLD
             </div>
             <div className="text-xs text-neutral-500">Otel Paneli</div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-neutral-900">Giriş yap</h1>
-          <p className="mt-1 mb-5 text-sm text-neutral-500">
+        <div className="gg-card p-7 sm:p-9">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#347866]">Otel yönetim paneli</div>
+          <h1 className="mt-3 font-[Georgia] text-4xl font-medium text-[#102b22]">Giriş yap</h1>
+          <p className="mt-2 mb-7 text-sm text-[#6d7b75]">
             Otel yönetim paneline erişmek için giriş yapın.
           </p>
 
@@ -107,7 +127,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.currentTarget.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
               />
             </div>
 
@@ -133,14 +153,14 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
-                className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/40 disabled:opacity-60"
+              className="w-full rounded-lg bg-[#075442] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
             >
               {loading ? 'Giriş yapılıyor…' : 'Giriş yap'}
             </button>
@@ -148,6 +168,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
 
           {demoEnabled && <DemoLogin />}
         </div>
+      </div>
       </div>
     </main>
   );
@@ -173,7 +194,7 @@ function DemoLogin() {
         <DemoSubmitButton />
       </form>
       <p className="mt-2 text-center text-xs text-neutral-400">
-        Kimlik bilgileri sunucuda kalır; production’da görünmez.
+        İnceleme hesabıdır; gerçek ödeme veya rezervasyon verisi içermez.
       </p>
     </div>
   );
@@ -187,7 +208,7 @@ function DemoSubmitButton() {
       disabled={pending}
       className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300 disabled:opacity-60"
     >
-      {pending ? 'Giriş yapılıyor…' : 'Demo olarak gir (yalnızca geliştirme)'}
+      {pending ? 'Demo açılıyor…' : 'Demo panelini görüntüle'}
     </button>
   );
 }

@@ -32,13 +32,15 @@ export default async function IntegrationPage() {
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
       active="integration"
+      isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="mx-auto w-full max-w-5xl px-5 py-8">
+      <main className="gg-page">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">
+          <div className="gg-kicker">Kurulum ve bağlantı</div>
+          <h1 className="gg-title">
             Entegrasyon
           </h1>
-          <p className="mt-0.5 text-sm text-neutral-500">
+          <p className="gg-subtitle">
             Widget embed kodu ve izinli domain durumu
           </p>
         </div>
