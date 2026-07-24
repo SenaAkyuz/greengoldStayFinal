@@ -1,0 +1,44 @@
+name: Relock (Linux package-lock üret)
+
+# ELLE tetiklenir (workflow_dispatch). Amaç: package-lock.json'ları LINUX runner'da
+# yeniden üretmek — böylece Windows'ta üretilen lock'ta eksik olan Linux'a özgü
+# optional dependency dalı (ör. rolldown wasm binding'in @emnapi/* nested deps'i)
+# da lockfile'a girer. lockfileVersion 3 tüm platformların girdilerini tuttuğu için
+# sonuç lock hem Linux hem Windows'ta `npm ci` ile çalışmalı.
+#
+# Akış: bu workflow'u Actions sekmesinden çalıştır → üretilen 3 lock'u artifact
+# olarak indir → repoya commit'le → ci.yml'i `npm ci`ye geri döndür.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  relock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Widget relock
+        working-directory: green-gold-widget
+        run: npm install --package-lock-only --no-audit --no-fund
+
+      - name: API relock
+        working-directory: green-gold-api
+        run: npm install --package-lock-only --no-audit --no-fund
+
+      - name: Panel relock
+        working-directory: green-gold-panel
+        run: npm install --package-lock-only --no-audit --no-fund
+
+      - name: package-lock.json'ları artifact olarak yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package-locks
+          path: |
+            green-gold-widget/package-lock.json
+            green-gold-api/package-lock.json
+            green-gold-panel/package-lock.json

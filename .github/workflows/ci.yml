@@ -14,15 +14,21 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          # Dev ortamıyla hizalı: Node 24 -> npm 11. package-lock'lar npm 11 ile
-          # üretildi; Node 22'nin npm 10'u optional/nested dep ağacını farklı
-          # hesaplayıp `npm ci`yi "Missing ..." ile düşürüyordu.
+          # Dev ortamıyla hizalı (npm 11).
           node-version: '24'
+
+      # NOT: Aşağıdaki install adımları geçici olarak `npm install` kullanır.
+      # Sebep: package-lock'lar Windows'ta üretildiğinden Linux'a özgü optional
+      # dependency dalı (ör. rolldown wasm binding'in @emnapi/* nested deps'i)
+      # eksik; `npm ci` lockfile'ı birebir uyguladığı için "Missing ..." ile
+      # reddediyor. Kalıcı çözüm: relock.yml (Linux'ta package-lock'ları yeniden
+      # üret) → commit → burada `npm ci`ye geri dön.
+      # TODO: lockfile'lar Linux'ta yeniden üretilince `npm ci`ye dönülecek.
 
       # --- Widget: build + testler ---
       - name: Widget install
         working-directory: green-gold-widget
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Widget tests (vitest)
         working-directory: green-gold-widget
@@ -38,7 +44,7 @@ jobs:
       # --- API: typecheck + testler ---
       - name: API install
         working-directory: green-gold-api
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: API typecheck
         working-directory: green-gold-api
@@ -51,7 +57,7 @@ jobs:
       # --- Panel: typecheck + build ---
       - name: Panel install
         working-directory: green-gold-panel
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Panel typecheck
         working-directory: green-gold-panel
