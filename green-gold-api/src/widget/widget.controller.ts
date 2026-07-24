@@ -11,8 +11,12 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import { CreateWidgetEventDto } from './dto/create-widget-event.dto';
 import { WidgetService } from './widget.service';
 import { WidgetKeyRateGuard } from '../common/widget-key-rate.guard';
+import { Public } from '../common/route-metadata';
 
-// /widget/* public yüzey: IP başına 60/dk (ThrottlerGuard) + key başına 300/dk.
+// /widget/* public yüzey: auth YOK (@Public). IP başına 60/dk (ThrottlerGuard)
+// + key başına 300/dk. POST /widget/events public'tir — demo yazma yasağı kapsam
+// dışıdır (auth'lı değil), bu kasıtlıdır.
+@Public()
 @UseGuards(ThrottlerGuard, WidgetKeyRateGuard)
 @Controller('widget')
 export class WidgetController {

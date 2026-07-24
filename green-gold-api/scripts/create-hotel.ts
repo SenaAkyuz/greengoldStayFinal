@@ -60,6 +60,8 @@ function parseArgs(argv: string[]): { raw: RawInput; dryRun: boolean } {
       hotelType: out.type ?? out['hotel-type'],
       adminEmail: out.email,
       adminName: out['admin-name'],
+      role: out.role,
+      password: out.password,
     },
   };
 }
@@ -137,14 +139,28 @@ function makeDeps(db: SupabaseClient): CreateHotelDeps {
     deleteHotel: async (id) => {
       await db.from('hotels').delete().eq('id', id);
     },
-    createAuthInvite: async (email, redirectTo) => {
-      // generateLink('invite'): auth kullanıcı oluşturur (ŞİFRESİZ) + davet linki.
+    createAuthUser: async (email, opts) => {
+      // password verildiyse: doğrudan o şifreyle kullanıcı (demo hesabı gibi).
+      if (opts.password) {
+        const { data, error } = await db.auth.admin.createUser({
+          email,
+          password: opts.password,
+          email_confirm: true,
+        });
+        if (error || !data?.user) {
+          throw new Error(
+            `Kullanıcı oluşturulamadı: ${error?.message ?? 'bilinmeyen'}`,
+          );
+        }
+        return { id: data.user.id, inviteLink: null };
+      }
+      // Aksi halde generateLink('invite'): ŞİFRESİZ + davet linki.
       // NOT: bu çağrı e-POSTA GÖNDERMEZ, yalnızca linki döndürür. Mail göndermek
       // istenirse ayrıca auth.admin.inviteUserByEmail kullanılmalı.
       const { data, error } = await db.auth.admin.generateLink({
         type: 'invite',
         email,
-        options: { redirectTo },
+        options: { redirectTo: opts.redirectTo },
       });
       if (error || !data?.user || !data.properties?.action_link) {
         throw new Error(
@@ -208,6 +224,8 @@ async function main(): Promise<void> {
     console.log(`  Otel tipi       : ${plan.hotelType}`);
     console.log(`  Otel kodu       : ${plan.hotelCode}`);
     console.log(`  Status          : ${plan.status} (yayında değil)`);
+    console.log(`  Rol             : ${plan.role}`);
+    console.log(`  Auth modu       : ${plan.authMode}`);
     console.log(`  Yönetici e-posta: ${plan.adminEmail}`);
     console.log('\n  Embed kodu (widget key gerçek oluşturmada üretilir):\n');
     console.log(embedCode('<WIDGET_KEY_OLUSTURULACAK>', apiBase));
@@ -222,19 +240,33 @@ async function main(): Promise<void> {
   console.log(`  Otel id         : ${res.hotelId}`);
   console.log(`  Otel kodu       : ${res.hotelCode}`);
   console.log(`  Widget key      : ${res.publicWidgetKey}`);
+  console.log(`  Rol             : ${res.role}`);
   console.log(`  Yönetici e-posta: ${res.adminEmail}`);
   console.log('\n  Embed kodu:\n');
   console.log(embedCode(res.publicWidgetKey, apiBase));
-  console.log('\n  🔗 Davet / şifre-belirleme linki (BİR KEZ gösterilir, hassas):\n');
-  console.log(`     ${res.inviteLink}`);
-  console.log(
-    '\n  (Bu link e-posta GÖNDERMEZ; yöneticiye güvenli kanaldan iletin.',
-  );
-  console.log(
-    '   Panelde /set-password akışına yönlenir, kullanıcı kendi şifresini koyar.)',
-  );
+
+  if (res.inviteLink) {
+    console.log(
+      '\n  🔗 Davet / şifre-belirleme linki (BİR KEZ gösterilir, hassas):\n',
+    );
+    console.log(`     ${res.inviteLink}`);
+    console.log(
+      '\n  (Bu link e-posta GÖNDERMEZ; yöneticiye güvenli kanaldan iletin.',
+    );
+    console.log(
+      '   Panelde /set-password akışına yönlenir, kullanıcı kendi şifresini koyar.)',
+    );
+  } else {
+    console.log(
+      '\n  🔑 Kullanıcı verilen şifreyle oluşturuldu (davet linki yok).',
+    );
+  }
   console.log('\n  Sonraki adımlar:');
-  console.log('   1) Yönetici davet linkiyle /set-password\'de şifresini belirler.');
+  if (res.inviteLink) {
+    console.log("   1) Yönetici davet linkiyle /set-password'de şifresini belirler.");
+  } else {
+    console.log('   1) Kullanıcı verilen e-posta/şifreyle giriş yapabilir.');
+  }
   console.log("   2) Panelde Ayarlar > izinli domain'lere otelin sitesini ekleyin.");
   console.log('   3) Embed kodunu otelin ödeme (checkout) sayfasına yapıştırın.');
   console.log(

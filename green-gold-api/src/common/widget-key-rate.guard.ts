@@ -4,8 +4,11 @@ import { Request } from 'express';
 
 /**
  * Widget key başına ek hız sınırı (IP başına sınırın üstüne, spam/şişirme yavaşlatma).
- * Basit sabit-pencere sayaç (tek instance pilot için yeterli; dağıtık ortamda
- * paylaşımlı store'a taşınır). key yoksa geçer (IP throttler zaten korur).
+ * Basit sabit-pencere sayaç. key yoksa geçer (IP throttler zaten korur).
+ *
+ * NOT: best-effort, dağıtık DEĞİL — bellek-içi sayaç yalnızca tek instance'ta
+ * geçerli. Vercel/çok-instance deploy'da instance'lar arası paylaşılmaz; gerçek
+ * koruma için deploy'da paylaşımlı store (ör. Redis/Upstash) gerekir.
  */
 @Injectable()
 export class WidgetKeyRateGuard implements CanActivate {

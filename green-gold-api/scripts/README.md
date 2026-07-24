@@ -75,6 +75,57 @@ npm run activate-hotel -- --key <public_widget_key>
 - ⚠️ **En az bir geçerli `allowed_origin` yoksa aktivasyonu REDDEDER** (widget
   izinsiz domain'de çalışmasın). `--dry-run` ile önce kontrol edebilirsiniz.
 
+## Demo tenant kurulumu (herkese açık demo giriş için)
+
+Demo giriş butonu (`DEMO_LOGIN_ENABLED=true`) **ayrı** bir demo tenant'ına
+bağlanmalı — pilot otelin gerçek verisi/anahtarı asla demo'da görünmemeli.
+
+### 1a) Demo kullanıcısı YOKSA (ilk kurulum)
+
+```bash
+npm run create-hotel -- \
+  --name "Green Gold Demo Otel" --city "Antalya" \
+  --email demo@greengold.example \
+  --role demo_viewer --password '<DEMO_LOGIN_PASSWORD>'
+```
+
+### 1b) Demo Auth kullanıcısı ZATEN VARSA (yeniden bağlama)
+
+`create-hotel`'i körü körüne çalıştırmayın (preflight e-posta çakışmasında
+zaten reddeder). Bunun yerine mevcut kullanıcıyı demo tenant'a bağlayın:
+
+```bash
+npm run rebind-demo-user -- --email demo@greengold.example
+#   önce kontrol:  ... --email demo@greengold.example --dry-run
+```
+
+- Demo Otel'i bulur/oluşturur; **mevcut** demo kullanıcısının `public.users`
+  satırını bu otele bağlar (`hotel_id` + `role='demo_viewer'` + `auth_user_id`).
+- **İdempotent**; **yetim** profilleri temizler → pilot otelde demo kalıntısı
+  bırakmaz. Sonda "tek profil, doğru bağlar" doğrulaması yapar.
+
+> Her iki durumda da: `--role demo_viewer` → API'de tüm yazma metotları 403
+> (`DemoReadOnlyGuard`, global). Panel `.env`'inde `DEMO_LOGIN_EMAIL` /
+> `DEMO_LOGIN_PASSWORD` demo kullanıcıyla aynı olmalı; `DEMO_LOGIN_ENABLED=true`.
+
+```bash
+# 2) Demo otelinin izinli origin'ini SQL ile ekleyin (demo kullanıcı salt
+#    okunur olduğundan panelden ekleyemez):
+#    UPDATE hotels SET allowed_origins = ARRAY['https://<demo-panel-domain>']
+#      WHERE public_widget_key = '<demo_key>';
+
+# 3) Aktive edin
+npm run activate-hotel -- --key <demo_public_widget_key>
+
+# 4) Gerçekçi demo verisi (idempotent — tekrar çalıştırınca çoğaltmaz)
+npm run seed-demo-data -- --key <demo_public_widget_key>
+#    Kontrol için önce:  ... --key <key> --dry-run
+```
+
+Seed verisi: son ~60 güne yayılmış, huni monoton (viewed ⊇ selected ⊇ clicked),
+dönüşüm **gerçekçi** (%100 değil), `nights` 1–7. Yalnızca `demo-sess-` önekli
+kayıtları yönetir; gerçek event'lere dokunmaz.
+
 ## Güvenlik notları
 
 - Yeni kullanıcı **yalnızca kendi** otelini görür (tenant izolasyonu: profil

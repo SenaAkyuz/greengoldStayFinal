@@ -1,32 +1,26 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  Query,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { AuthGuard } from '../common/auth.guard';
 import type { AuthenticatedRequest } from '../common/auth.guard';
 import { DashboardService } from './dashboard.service';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 
+// Guard'lar GLOBAL (AppModule): AuthGuard req.auth'ı doldurur; DemoReadOnlyGuard
+// demo_viewer için tüm yazma metotlarını 403 'demo_read_only' ile reddeder.
+// Bu controller @Public değil → auth korumalı.
 @Controller('dashboard')
-@UseGuards(AuthGuard)
 export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
-  // GET /dashboard/hotel (auth'lı) — giriş yapan kullanıcının otel bilgisi
+  // GET /dashboard/hotel (auth'lı) — giriş yapan kullanıcının otel bilgisi + rolü
   @Get('hotel')
   async hotel(@Req() req: AuthenticatedRequest) {
-    return this.dashboardService.getHotel(req.auth.hotelId);
+    const hotel = await this.dashboardService.getHotel(req.auth.hotelId);
+    // role panelin demo modu rozeti/disable UI'ı için gerekli (yazma yetkisi değil).
+    return { ...hotel, role: req.auth.role };
   }
 
   // PATCH /dashboard/hotel (auth'lı) — otelin düzenlenebilir alanlarını günceller.
-  // hotel_id yalnızca token'dan; gövdedeki korumalı alanlar ValidationPipe ile 400.
+  // Demo yazma engeli DemoReadOnlyGuard'da (metot bazlı). hotel_id yalnızca token'dan.
   @Patch('hotel')
   async updateHotel(
     @Req() req: AuthenticatedRequest,

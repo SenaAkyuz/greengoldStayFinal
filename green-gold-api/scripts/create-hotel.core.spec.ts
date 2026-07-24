@@ -68,9 +68,12 @@ function makeDeps(over: Partial<CreateHotelDeps> = {}): {
     deleteHotel: async (id) => {
       calls.deletedHotel.push(id);
     },
-    createAuthInvite: async (email) => {
+    createAuthUser: async (email, opts) => {
       calls.invited.push(email);
-      return { id: 'auth-1', inviteLink: 'https://sb/verify?token=abc' };
+      return {
+        id: 'auth-1',
+        inviteLink: opts.password ? null : 'https://sb/verify?token=abc',
+      };
     },
     deleteAuthUser: async (id) => {
       calls.deletedAuth.push(id);
@@ -99,7 +102,7 @@ describe('planCreateHotel (dry-run)', () => {
   it('doğrulama + preflight yapar ama HİÇBİR yazma çağrısı yapmaz', async () => {
     const { deps, calls } = makeDeps();
     const spyInsert = jest.spyOn(deps, 'insertHotel');
-    const spyInvite = jest.spyOn(deps, 'createAuthInvite');
+    const spyInvite = jest.spyOn(deps, 'createAuthUser');
     const spyUser = jest.spyOn(deps, 'insertUser');
 
     const plan = await planCreateHotel(INPUT, deps);
@@ -183,9 +186,29 @@ describe('runCreateHotel', () => {
     expect(calls.inserted).toMatchObject({ hotel_code: 'HTL-1' });
   });
 
+  it('demo rolü + şifre: role yazılır, davet linki YOK', async () => {
+    const demoInput = validateInput({
+      name: 'Green Gold Demo Otel',
+      adminEmail: 'demo@greengold.example',
+      role: 'demo_viewer',
+      password: 'demopass123',
+    });
+    const { deps, calls } = makeDeps();
+    const res = await runCreateHotel(demoInput, deps, REDIRECT);
+    expect(res.role).toBe('demo_viewer');
+    expect(res.inviteLink).toBeNull();
+    expect(calls.userRow).toMatchObject({ role: 'demo_viewer' });
+  });
+
+  it('geçersiz role reddedilir', () => {
+    expect(() =>
+      validateInput({ name: 'X', adminEmail: 'a@b.co', role: 'superadmin' }),
+    ).toThrow(/role/);
+  });
+
   it('davet linki üretilemezse otel geri alınır (rollback)', async () => {
     const { deps, calls } = makeDeps({
-      createAuthInvite: async () => {
+      createAuthUser: async () => {
         throw new Error('davet patladı');
       },
     });

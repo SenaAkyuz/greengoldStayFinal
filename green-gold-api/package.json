@@ -19,7 +19,9 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "create-hotel": "ts-node -r tsconfig-paths/register scripts/create-hotel.ts",
-    "activate-hotel": "ts-node -r tsconfig-paths/register scripts/activate-hotel.ts"
+    "activate-hotel": "ts-node -r tsconfig-paths/register scripts/activate-hotel.ts",
+    "seed-demo-data": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
+    "rebind-demo-user": "ts-node -r tsconfig-paths/register scripts/rebind-demo-user.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

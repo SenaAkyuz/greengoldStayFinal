@@ -16,7 +16,13 @@ export interface RawInput {
   hotelType?: string;
   adminEmail?: string;
   adminName?: string;
+  role?: string;
+  password?: string;
 }
+
+// Bilinen roller. demo_viewer = salt okunur (DemoReadOnlyGuard).
+export const HOTEL_USER_ROLES = ['otel_yoneticisi', 'demo_viewer'] as const;
+export type HotelUserRole = (typeof HOTEL_USER_ROLES)[number];
 
 export interface CreateHotelInput {
   name: string;
@@ -25,6 +31,10 @@ export interface CreateHotelInput {
   hotelType: HotelType;
   adminEmail: string;
   adminName: string;
+  role: HotelUserRole;
+  // Verilirse kullanıcı bu şifreyle oluşturulur (demo hesabı gibi özel durumlar).
+  // Yoksa şifresiz davet linki üretilir (varsayılan, güvenli akış).
+  password?: string;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -61,10 +71,29 @@ export function validateInput(raw: RawInput): CreateHotelInput {
     hotelType = t as HotelType;
   }
 
+  let role: HotelUserRole = 'otel_yoneticisi';
+  if (raw.role) {
+    const r = raw.role.trim();
+    if (!HOTEL_USER_ROLES.includes(r as HotelUserRole)) {
+      throw new Error(
+        `Geçersiz role: ${r} (${HOTEL_USER_ROLES.join(' | ')})`,
+      );
+    }
+    role = r as HotelUserRole;
+  }
+
+  let password: string | undefined;
+  if (raw.password !== undefined && raw.password !== '') {
+    if (raw.password.length < 8) {
+      throw new Error('Şifre en az 8 karakter olmalı (--password).');
+    }
+    password = raw.password;
+  }
+
   const city = (raw.city ?? '').trim() || null;
   const adminName = (raw.adminName ?? '').trim() || adminEmail.split('@')[0];
 
-  return { name, city, timezone, hotelType, adminEmail, adminName };
+  return { name, city, timezone, hotelType, adminEmail, adminName, role, password };
 }
 
 /** Yazmadan ÖNCE çalışan salt-okunur çakışma kontrolleri. */
@@ -82,11 +111,14 @@ export interface WriteDeps {
     public_widget_key: string;
   }>;
   deleteHotel(id: string): Promise<void>;
-  /** generateLink('invite') — auth kullanıcı oluşturur (ŞİFRESİZ) + davet linki. */
-  createAuthInvite(
+  /**
+   * Auth kullanıcı oluşturur. password verilirse o şifreyle (inviteLink null);
+   * yoksa generateLink('invite') ile ŞİFRESİZ + davet linki.
+   */
+  createAuthUser(
     email: string,
-    redirectTo: string,
-  ): Promise<{ id: string; inviteLink: string }>;
+    opts: { password?: string; redirectTo: string },
+  ): Promise<{ id: string; inviteLink: string | null }>;
   deleteAuthUser(id: string): Promise<void>;
   insertUser(row: Record<string, unknown>): Promise<{ id: string }>;
 }
@@ -136,6 +168,8 @@ export interface CreateHotelPlan {
   status: 'pending';
   adminEmail: string;
   adminName: string;
+  role: HotelUserRole;
+  authMode: 'invite' | 'password';
 }
 
 /** DRY-RUN: doğrulama + preflight + kod üretimi; DB/Auth'a HİÇBİR yazma yapmaz. */
@@ -154,6 +188,8 @@ export async function planCreateHotel(
     status: 'pending',
     adminEmail: input.adminEmail,
     adminName: input.adminName,
+    role: input.role,
+    authMode: input.password ? 'password' : 'invite',
   };
 }
 
@@ -162,8 +198,10 @@ export interface CreateHotelResult {
   hotelCode: string;
   publicWidgetKey: string;
   authUserId: string;
-  inviteLink: string;
+  // Şifresiz davet akışında link; --password verildiyse null.
+  inviteLink: string | null;
   adminEmail: string;
+  role: HotelUserRole;
 }
 
 export async function runCreateHotel(
@@ -185,9 +223,12 @@ export async function runCreateHotel(
     status: 'pending',
   });
 
-  let auth: { id: string; inviteLink: string };
+  let auth: { id: string; inviteLink: string | null };
   try {
-    auth = await deps.createAuthInvite(input.adminEmail, redirectTo);
+    auth = await deps.createAuthUser(input.adminEmail, {
+      password: input.password,
+      redirectTo,
+    });
   } catch (e) {
     await deps.deleteHotel(hotel.id);
     throw e;
@@ -199,7 +240,7 @@ export async function runCreateHotel(
       auth_user_id: auth.id,
       full_name: input.adminName,
       email: input.adminEmail,
-      role: 'otel_yoneticisi',
+      role: input.role,
     });
   } catch (e) {
     await deps.deleteAuthUser(auth.id);
@@ -214,5 +255,6 @@ export async function runCreateHotel(
     authUserId: auth.id,
     inviteLink: auth.inviteLink,
     adminEmail: input.adminEmail,
+    role: input.role,
   };
 }
