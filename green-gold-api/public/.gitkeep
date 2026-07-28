@@ -1,0 +1,16 @@
+Bu klasor BILEREK bos.
+
+Vercel, bir Build Command tanimliysa (burada package.json "vercel-build": "nest build")
+build bittikten sonra bir STATIK cikti klasoru arar ve bulamazsa deploy'u su hatayla
+reddeder:
+
+  Error: No Output Directory named "public" found after the Build completed.
+
+Bu proje API-only: tum trafik vercel.json#rewrites ile /api serverless fonksiyonuna
+gider, servis edilecek statik varlik YOKTUR. Vercel'in kontrolunu gecmek icin bos bir
+"public" klasoru tutuyoruz (vercel.json#outputDirectory bunu acikca isaret eder).
+
+Git bos klasor takip etmedigi icin bu dosya gerekli. SILMEYIN — silinirse API deploy'u
+tekrar "No Output Directory" ile patlar. Buraya statik dosya da EKLEMEYIN: dosya sistemi
+rewrite'lardan once kontrol edildiginden, buraya konan bir dosya ayni yoldaki API
+rotasini golgeleyebilir (or. public/index.html "/" rotasini ele gecirir).
