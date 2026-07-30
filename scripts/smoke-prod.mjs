@@ -61,6 +61,27 @@ async function safeFetch(url, init) {
   }
 }
 
+// Next.js App Router, server component prop'larını (RSC/Flight verisi)
+// `self.__next_f.push([1,"..."])` script bloklarıyla ilk HTML yanıtına gömer.
+// Client-render edilen içerik (ör. GuestDemoWidget'ın imperatif oluşturduğu
+// <green-gold-widget> öğesi) SSR HTML'de HİÇ görünmez; onu metin/tag-adı
+// aramasıyla yoklamak yanlış negatif/pozitif üretir. Bunun yerine prop
+// adının bizzat bu Flight veri kanalında geçip geçmediğine bakıyoruz —
+// düz metin/parçalanmış HTML aramasına güvenmiyoruz.
+function extractRscPayload(html) {
+  const chunks = [];
+  const re = /self\.__next_f\.push\(\[\s*\d+\s*,\s*"((?:[^"\\]|\\.)*)"\s*\]\)/g;
+  let m;
+  while ((m = re.exec(html))) chunks.push(m[1]);
+  return chunks.join('\n');
+}
+// Push edilen string, kaynakta \" olarak escape edilmiş olabilir; hem
+// escape'li hem escape'siz tırnak biçimini tolere ediyoruz.
+function rscHasField(rsc, field, valuePattern) {
+  const key = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\\\?"${key}\\\\?"\\s*:\\s*${valuePattern}`).test(rsc);
+}
+
 // ---------------------------------------------------------------- 1) widget bundle
 {
   const url = `${PANEL}/green-gold-widget.v1.js`;
@@ -111,11 +132,23 @@ async function safeFetch(url, init) {
       redirected ? `HTTP ${res.status} → ${loc}` : `HTTP ${res.status}`);
     if (res.status === 200) {
       const html = await res.text();
-      const hasKeyWidget = /green-gold-widget/i.test(html) || /Demo şu an kullanılamıyor/.test(html);
+      // "Demo şu an kullanılamıyor" düz sunucu-taraflı ternary dallanmasıdır
+      // (demoKey ? <Widget/> : <Fallback/>) — bu metin araması güvenilir.
       const missingKey = /Demo şu an kullanılamıyor/.test(html);
-      record('2b', '/demo sayfasında widget önizlemesi var (NEXT_PUBLIC_DEMO_WIDGET_KEY dolu)',
-        hasKeyWidget && !missingKey,
-        missingKey ? 'Sayfa "Demo şu an kullanılamıyor" diyor → NEXT_PUBLIC_DEMO_WIDGET_KEY boş, panel redeploy gerekli.' : '');
+      // Ama widget'ın KENDİSİ (<green-gold-widget>) useEffect içinde
+      // imperatif oluşturulur, SSR HTML'de asla görünmez — onun yerine
+      // publicKey prop'unun RSC payload'ında geçtiğini doğruluyoruz.
+      const rsc = extractRscPayload(html);
+      const publicKeyInRsc = KEY
+        ? rsc.includes(KEY) // operatör anahtarı verdiyse: TAM değer payload'da mı?
+        : rscHasField(rsc, 'publicKey', '"[^"\\\\]*(?:\\\\.[^"\\\\]*)*"');
+      record('2b', 'RSC payload\'da publicKey prop\'u var (NEXT_PUBLIC_DEMO_WIDGET_KEY dolu)',
+        publicKeyInRsc && !missingKey,
+        missingKey
+          ? 'Sayfa "Demo şu an kullanılamıyor" diyor → NEXT_PUBLIC_DEMO_WIDGET_KEY boş, panel redeploy gerekli.'
+          : publicKeyInRsc
+            ? `RSC payload'da ${KEY ? '--key değeri' : '"publicKey" alanı'} bulundu.`
+            : 'RSC payload\'da publicKey bulunamadı (widget custom element client-side oluşturulduğu için ayrıca browser/E2E doğrulaması önerilir).');
       record('2c', 'Dürüstlük ibareleri görünür ("tahmini" / "önizleme")',
         /tahmini/i.test(html) && /önizleme/i.test(html), '');
     }
@@ -140,13 +173,19 @@ async function safeFetch(url, init) {
   if (!res) record(4, '/login açılıyor', false, `İstek hatası: ${err}`);
   else {
     const html = res.status === 200 ? await res.text() : '';
-    record(4, '/login → 200 ve "Demo panelini görüntüle" butonu var',
-      res.status === 200 && /Demo panelini görüntüle/.test(html),
+    // "Demo panelini görüntüle" metni {demoEnabled && <DemoLogin/>} altında
+    // koşullu; server component prop'u demoEnabled zaten RSC payload'ında
+    // taşınıyor — düz metin araması yerine doğrudan onu kontrol ediyoruz
+    // (streaming/parçalanma nedeniyle metin araması güvenilmez olabilir).
+    const rsc = extractRscPayload(html);
+    const demoEnabledInRsc = rscHasField(rsc, 'demoEnabled', 'true');
+    record(4, '/login → 200 ve RSC payload\'da demoEnabled:true',
+      res.status === 200 && demoEnabledInRsc,
       res.status !== 200
         ? `HTTP ${res.status}`
-        : /Demo panelini görüntüle/.test(html)
-          ? 'Butonun tıklanması + panel içeriği MANUEL doğrulanacak (madde 4-6).'
-          : 'Buton yok → DEMO_LOGIN_ENABLED=true değil (runtime env; redeploy şart değil).');
+        : demoEnabledInRsc
+          ? 'demoEnabled:true bulundu. Butonun tıklanması + panel içeriği MANUEL doğrulanacak (madde 4-6).'
+          : 'demoEnabled:true YOK → DEMO_LOGIN_ENABLED / DEMO_LOGIN_EMAIL / DEMO_LOGIN_PASSWORD env\'lerinden biri eksik (runtime env; redeploy şart değil). NOT: bu üç env\'in DEĞERİ hiçbir zaman loglanmaz, yalnızca boolean sonucu kontrol edilir.');
   }
 }
 

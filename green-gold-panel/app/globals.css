@@ -14,7 +14,9 @@
   --gg-canvas: #f5f7f3;
   --gg-paper: #ffffff;
   --gg-line: #dce4dc;
-  --gg-muted: #66756e;
+  /* WCAG AA (4.5:1) icin dogrulandi: white uzerinde 5.85:1, canvas uzerinde
+     5.42:1 (eski #66756e canvas uzerinde 4.49:1 ile sinirdaydi). */
+  --gg-muted: #5a6862;
   --gg-display: Georgia, "Times New Roman", serif;
 }
 

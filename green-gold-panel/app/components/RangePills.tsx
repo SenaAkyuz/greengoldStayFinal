@@ -20,7 +20,7 @@ export function RangePills({
             href={key === 'month' ? basePath : `${basePath}?range=${key}`}
             aria-current={isActive ? 'page' : undefined}
             className={
-              'rounded-full px-3.5 py-1.5 text-sm font-medium transition ' +
+              'flex min-h-[44px] items-center rounded-full px-3.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 ' +
               (isActive
                 ? 'bg-[#0b5c49] text-white'
                 : 'text-[#66756e] hover:bg-[#f1f5f1]')

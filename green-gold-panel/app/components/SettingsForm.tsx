@@ -177,7 +177,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
                 type="button"
                 onClick={() => removeOrigin(o)}
                 aria-label={`${o} kaldır`}
-                className="text-emerald-600 hover:text-emerald-900"
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded text-emerald-600 hover:text-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-600/40"
               >
                 ×
               </button>
@@ -202,7 +202,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
           <button
             type="button"
             onClick={addOrigin}
-            className="shrink-0 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50"
+            className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
           >
             Ekle
           </button>
@@ -257,7 +257,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
                 <button
                   type="button"
                   onClick={() => setBrandColor('')}
-                  className="shrink-0 rounded-lg border border-neutral-300 px-2.5 py-2 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+                  className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
                 >
                   Temizle
                 </button>
@@ -343,7 +343,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
         <button
           type="submit"
           disabled={isPending}
-          className="rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30 disabled:opacity-60"
+          className="min-h-[44px] rounded-lg bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30 disabled:opacity-60"
         >
           {isPending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>

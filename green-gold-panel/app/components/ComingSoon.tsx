@@ -42,19 +42,19 @@ export function ComingSoon({
 
         <dl className="mt-8 space-y-5 text-left text-sm">
           <div>
-            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#718078]">
+            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#5a6862]">
               Ne gösterecek?
             </dt>
             <dd className="mt-1 leading-relaxed text-[#3d4a45]">{whatItShows}</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#718078]">
+            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#5a6862]">
               Neden henüz boş?
             </dt>
             <dd className="mt-1 leading-relaxed text-[#3d4a45]">{whyEmpty}</dd>
           </div>
           <div>
-            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#718078]">
+            <dt className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#5a6862]">
               Gereken
             </dt>
             <dd className="mt-2">

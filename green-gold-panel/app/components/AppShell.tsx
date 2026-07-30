@@ -111,7 +111,7 @@ export function AppShell({
               onClick={() => setMenuOpen(true)}
               aria-label="Menüyü aç"
               aria-expanded={menuOpen}
-              className="grid h-10 w-10 place-items-center rounded-lg border border-neutral-300 text-neutral-700 md:hidden"
+              className="grid h-11 w-11 place-items-center rounded-lg border border-neutral-300 text-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 md:hidden"
             >
               <MenuIcon />
             </button>
@@ -252,7 +252,7 @@ function NavLink({
         aria-current={isActive ? 'page' : undefined}
         onClick={onNavigate}
         className={
-          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition ' +
+          'flex min-h-[44px] items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition focus:outline-none focus:ring-2 focus:ring-[#c9eb47]/40 ' +
           (isActive
             ? 'bg-[#19705c] text-white shadow-sm'
             : 'text-[#c6ddd6] hover:bg-white/[0.06] hover:text-white')

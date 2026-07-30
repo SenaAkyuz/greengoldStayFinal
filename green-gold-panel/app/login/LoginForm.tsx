@@ -80,7 +80,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
         <div className="gg-card p-7 sm:p-9">
           <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#347866]">Otel yönetim paneli</div>
           <h1 className="mt-3 font-[Georgia] text-4xl font-medium text-[#102b22]">Giriş yap</h1>
-          <p className="mt-2 mb-7 text-sm text-[#6d7b75]">
+          <p className="mt-2 mb-7 text-sm text-[#5a6862]">
             Otel yönetim paneline erişmek için giriş yapın.
           </p>
 
@@ -160,7 +160,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-[#075442] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
+              className="min-h-[44px] w-full rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
             >
               {loading ? 'Giriş yapılıyor…' : 'Giriş yap'}
             </button>
@@ -206,7 +206,7 @@ function DemoSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300 disabled:opacity-60"
+      className="min-h-[44px] w-full rounded-lg border border-neutral-300 bg-white px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300 disabled:opacity-60"
     >
       {pending ? 'Demo açılıyor…' : 'Demo panelini görüntüle'}
     </button>

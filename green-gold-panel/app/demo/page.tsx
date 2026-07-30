@@ -33,7 +33,7 @@ export default function DemoPage() {
           </div>
           <Link
             href="/login"
-            className="rounded-full bg-[#075442] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#043f34]"
+            className="inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
           >
             Paneli görüntüle
           </Link>
@@ -104,7 +104,7 @@ export default function DemoPage() {
             </p>
             <Link
               href="/login"
-              className="mt-5 inline-block rounded-full bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34]"
+              className="mt-5 inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
             >
               Paneli görüntüle
             </Link>
@@ -172,7 +172,7 @@ export default function DemoPage() {
           </div>
           <Link
             href="/login"
-            className="mt-4 inline-block rounded-full bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34] sm:mt-0"
+            className="mt-4 inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 sm:mt-0"
           >
             Paneli görüntüle
           </Link>

@@ -45,7 +45,7 @@ export function IntegrationCard({
         </div>
         <button
           onClick={copy}
-          className="shrink-0 rounded-lg border border-[#cfdad2] px-3 py-1.5 text-sm font-medium text-[#315d50] transition hover:bg-[#f1f6f2] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30"
+          className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-[#cfdad2] px-3 text-sm font-medium text-[#315d50] transition hover:bg-[#f1f6f2] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30"
         >
           {copied ? 'Kopyalandı ✓' : 'Kopyala'}
         </button>

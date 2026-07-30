@@ -28,25 +28,28 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-neutral-50 px-4 py-16">
+    <main className="flex min-h-full items-center justify-center bg-[#f5f7f3] px-4 py-16">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex items-center gap-2.5">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-700 text-white">
+        <div className="mb-8 flex items-center gap-3">
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-[#064b3d] text-[#c9eb47]">
             <LeafIcon />
           </span>
           <div>
-            <div className="text-[15px] font-semibold text-neutral-900">
-              Green Gold
+            <div className="text-[15px] font-bold tracking-[0.14em] text-[#12372c]">
+              GREEN GOLD
             </div>
             <div className="text-xs text-neutral-500">Otel Paneli</div>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-          <h1 className="text-lg font-semibold text-neutral-900">
+        <div className="gg-card p-7">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#347866]">
+            Şifre kurtarma
+          </div>
+          <h1 className="mt-3 font-[Georgia] text-3xl font-medium text-[#102b22]">
             Şifreni sıfırla
           </h1>
-          <p className="mt-1 mb-5 text-sm text-neutral-500">
+          <p className="mt-2 mb-6 text-sm text-[#5a6862]">
             E-posta adresini gir, sana bir sıfırlama bağlantısı gönderelim.
           </p>
 
@@ -61,7 +64,7 @@ export default function ForgotPasswordPage() {
               </div>
               <Link
                 href="/login"
-                className="block text-center text-sm font-medium text-emerald-700 hover:text-emerald-800"
+                className="block rounded text-center text-sm font-medium text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
               >
                 Girişe dön
               </Link>
@@ -82,21 +85,21 @@ export default function ForgotPasswordPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.currentTarget.value)}
-                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                  className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600/40 disabled:opacity-60"
+                className="min-h-[44px] w-full rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
               >
                 {loading ? 'Gönderiliyor…' : 'Sıfırlama bağlantısı gönder'}
               </button>
 
               <Link
                 href="/login"
-                className="block text-center text-sm font-medium text-neutral-600 hover:text-neutral-900"
+                className="block rounded text-center text-sm font-medium text-neutral-600 hover:text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
               >
                 Girişe dön
               </Link>

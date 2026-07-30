@@ -121,7 +121,7 @@ export default async function OverviewPage({
             </div>
             <Link
               href="/entegrasyon"
-              className="shrink-0 rounded-lg bg-[#075442] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34]"
+              className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
             >
               Entegrasyon sayfasına git
             </Link>
@@ -151,7 +151,10 @@ function ConversionStory({ report }: { report: DashboardReport }) {
     <section className="gg-card mt-8 p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-neutral-700">Dönüşüm hikâyesi</h2>
-        <Link href="/funnel" className="text-xs font-semibold text-[#0b5c49] underline">
+        <Link
+          href="/funnel"
+          className="rounded text-xs font-semibold text-[#0b5c49] underline focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+        >
           Tüm dönüşüm hunisini gör →
         </Link>
       </div>
@@ -228,7 +231,7 @@ function EstimatedImpactSummary({ report }: { report: DashboardReport }) {
       </div>
       <Link
         href="/karbon"
-        className="mt-4 inline-block text-xs font-semibold text-[#0b5c49] underline"
+        className="mt-4 inline-block rounded text-xs font-semibold text-[#0b5c49] underline focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
       >
         Katsayı ve metodoloji notunu gör →
       </Link>
@@ -258,7 +261,7 @@ function EmptyOverviewState({ hotel }: { hotel: HotelInfo | null }) {
 
       <Link
         href="/entegrasyon"
-        className="mt-5 inline-block rounded-lg bg-[#075442] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#043f34]"
+        className="mt-5 inline-flex min-h-[44px] items-center rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
       >
         Entegrasyon sekmesindeki kodu kullanın
       </Link>
