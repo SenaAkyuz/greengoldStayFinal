@@ -36,7 +36,17 @@ export default async function PaymentsPage() {
         <ComingSoon
           title="Henüz tahsilat hattı yok"
           badge="Faz 2"
-          description="Ödeme hattı ve gerçek katkı iş modeli devreye girdiğinde, doğrulanmış tahsilatlar burada görünecek. Buton tıklaması tahsilat değildir; 'tahsil edildi' yalnızca gerçek ödeme onayıyla söylenir."
+          whatItShows="Otel hesabınıza doğrudan geçen, gerçek ödeme onayı almış tahsilatlar; tutar, tarih ve mutabakat durumuyla."
+          whyEmpty="Ödeme altyapısı ve gerçek katkı iş modeli henüz devreye alınmadı. Widget'taki buton tıklaması bir tahsilat değildir."
+          requirements={[
+            'Katkı modeli kararı (gece başına sabit tutar, oran bazlı vb.)',
+            'Otel merchant hesabı / IBAN bilgisi',
+            'Ödeme sağlayıcısı entegrasyonu',
+            'Komisyon oranı kararı',
+          ]}
+          notice="Henüz ödeme alınmıyor. 'Tahsil edildi' ifadesi yalnızca gerçek ödeme onayıyla kullanılacaktır."
+          ctaHref="/entegrasyon"
+          ctaLabel="Entegrasyon sayfasına git"
         />
       </main>
     </AppShell>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from '../actions';
 
@@ -23,20 +23,25 @@ type NavItem = {
   icon: React.ReactNode;
 };
 
-// Sidebar sırası brief'teki 9 sekme hikâyesini izler; bu adımda YALNIZCA
-// mevcut sayfalar linklidir. Misafir Demo / Rezervasyonlar / Tahsilatlar /
-// Sertifikalar / Raporlar / Entegrasyon sonraki alt adımlarda eklenecek.
-const NAV: NavItem[] = [
+// Ana/aktif ürün alanları — pilotta gerçek işlevi olan 7 sekme.
+const NAV_PRIMARY: NavItem[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/', icon: <GridIcon /> },
   { key: 'guest-demo', label: 'Misafir Demo', href: '/misafir-demo', icon: <EyeIcon /> },
-  { key: 'reservations', label: 'Rezervasyonlar', href: '/rezervasyonlar', icon: <CalendarIcon /> },
-  { key: 'payments', label: 'Tahsilatlar', href: '/tahsilatlar', icon: <CardIcon /> },
-  { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
-  { key: 'certificates', label: 'Sertifikalar', href: '/sertifikalar', icon: <AwardIcon /> },
+  { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'reports', label: 'Raporlar', href: '/raporlar', icon: <ReportIcon /> },
   { key: 'integration', label: 'Entegrasyon', href: '/entegrasyon', icon: <CodeIcon /> },
   { key: 'settings', label: 'Ayarlar', href: '/ayarlar', icon: <GearIcon /> },
+];
+
+// Faz 2 alanları — sayfalar dürüst boş durumla erişilebilir, ama sidebar'da
+// ayrı bir "Yakında" alt grubunda gösterilir ki pilot ürün kalabalık
+// görünmesin. Yeni bir feature-flag/env eklemek bu ölçekte gereksiz risk;
+// görsel gruplama yeterli ve mobil drawer/erişilebilirliği etkilemiyor.
+const NAV_PHASE2: NavItem[] = [
+  { key: 'reservations', label: 'Rezervasyonlar', href: '/rezervasyonlar', icon: <CalendarIcon /> },
+  { key: 'payments', label: 'Tahsilatlar', href: '/tahsilatlar', icon: <CardIcon /> },
+  { key: 'certificates', label: 'Sertifikalar', href: '/sertifikalar', icon: <AwardIcon /> },
 ];
 
 export function AppShell({
@@ -76,7 +81,6 @@ export function AppShell({
         <BrandBlock />
         <HotelBlock hotelName={hotelName} city={city} />
         <NavList active={active} />
-        <ConnectionStatus />
         <SidebarLogout />
       </aside>
 
@@ -92,7 +96,6 @@ export function AppShell({
             <BrandBlock />
             <HotelBlock hotelName={hotelName} city={city} />
             <NavList active={active} onNavigate={() => setMenuOpen(false)} />
-            <ConnectionStatus />
             <SidebarLogout />
           </div>
         </div>
@@ -200,46 +203,75 @@ function NavList({
   active: ActivePage;
   onNavigate?: () => void;
 }) {
+  // Desktop sidebar ve mobil drawer aynı anda DOM'da bulunabildiği için
+  // (drawer açıkken aside CSS ile gizli ama hâlâ mevcut), sabit id yerine
+  // her NavList örneği için benzersiz heading id üretiyoruz.
+  const phase2HeadingId = useId();
+
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3">
-      {NAV.map((item) => {
-        const isActive = item.key === active;
-        return (
-          <Link
-            key={item.key}
-            href={item.href}
-            aria-current={isActive ? 'page' : undefined}
-            onClick={onNavigate}
-            className={
-              'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition ' +
-              (isActive
-                ? 'bg-[#19705c] text-white shadow-sm'
-                : 'text-[#c6ddd6] hover:bg-white/[0.06] hover:text-white')
-            }
-          >
-            <span
-              className={isActive ? 'text-[#d8f064]' : 'text-[#8fc0b2]'}
-              aria-hidden="true"
-            >
-              {item.icon}
-            </span>
-            {item.label}
-          </Link>
-        );
-      })}
+      <ul className="flex flex-col gap-1">
+        {NAV_PRIMARY.map((item) => (
+          <NavLink key={item.key} item={item} active={active} onNavigate={onNavigate} />
+        ))}
+      </ul>
+
+      <p
+        id={phase2HeadingId}
+        className="mb-1 mt-4 flex items-center gap-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#8fb9ae]"
+      >
+        <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
+        Yakında
+        <span aria-hidden="true" className="h-px flex-1 bg-white/10" />
+      </p>
+      <ul aria-labelledby={phase2HeadingId} className="flex flex-col gap-1">
+        {NAV_PHASE2.map((item) => (
+          <NavLink key={item.key} item={item} active={active} onNavigate={onNavigate} phase2 />
+        ))}
+      </ul>
     </nav>
   );
 }
 
-function ConnectionStatus() {
+function NavLink({
+  item,
+  active,
+  onNavigate,
+  phase2 = false,
+}: {
+  item: NavItem;
+  active: ActivePage;
+  onNavigate?: () => void;
+  phase2?: boolean;
+}) {
+  const isActive = item.key === active;
   return (
-    <div className="mx-4 mb-3 rounded-xl border border-white/[0.06] bg-white/[0.07] px-4 py-3">
-      <div className="flex items-center gap-2 text-[11px] font-semibold text-white">
-        <span className="h-2 w-2 rounded-full bg-[#c9eb47] shadow-[0_0_0_5px_rgba(201,235,71,.12)]" />
-        Sistem bağlantısı aktif
-      </div>
-      <div className="mt-1 pl-4 text-[10px] text-[#8fb9ae]">Güvenli bağlantı</div>
-    </div>
+    <li>
+      <Link
+        href={item.href}
+        aria-current={isActive ? 'page' : undefined}
+        onClick={onNavigate}
+        className={
+          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] font-medium transition ' +
+          (isActive
+            ? 'bg-[#19705c] text-white shadow-sm'
+            : 'text-[#c6ddd6] hover:bg-white/[0.06] hover:text-white')
+        }
+      >
+        <span
+          className={isActive ? 'text-[#d8f064]' : 'text-[#8fc0b2]'}
+          aria-hidden="true"
+        >
+          {item.icon}
+        </span>
+        <span className="flex-1">{item.label}</span>
+        {phase2 && (
+          <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-[#9cc7ba]">
+            Faz 2
+          </span>
+        )}
+      </Link>
+    </li>
   );
 }
 

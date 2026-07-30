@@ -36,7 +36,17 @@ export default async function CertificatesPage() {
         <ComingSoon
           title="Sertifika üretimi henüz hazır değil"
           badge="Entegrasyon bekleniyor"
-          description="Gerçek karbon doğrulama/kredi metodolojisi ve sertifika üretimi hazır olduğunda, doğrulanmış katkılara dayalı sertifikalar burada oluşturulacak. Tahmini rakamlar sertifika yerine geçmez."
+          whatItShows="Doğrulanmış katkılara dayalı, misafir ve otel adına üretilen dijital sertifikalar."
+          whyEmpty="Karbon doğrulama/kredi metodolojisi ve sertifika üretim altyapısı henüz hazır değil."
+          requirements={[
+            'Karbon hesaplama/doğrulama metodolojisi',
+            'Bağımsız doğrulayıcı kurum',
+            'Kredi/offset kaynağının belirlenmesi',
+            'Sertifika belge standardı',
+          ]}
+          notice="Tahmini değer sertifika değildir."
+          ctaHref="/entegrasyon"
+          ctaLabel="Entegrasyon sayfasına git"
         />
       </main>
     </AppShell>

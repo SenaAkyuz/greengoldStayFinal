@@ -36,7 +36,15 @@ export default async function ReservationsPage() {
         <ComingSoon
           title="Henüz rezervasyon bağlantısı yok"
           badge="Faz 2"
-          description="Booking Engine’den 'rezervasyon tamamlandı' bildirimi bağlandığında, doğrulanmış rezervasyonlar burada listelenecek. Widget buton tıklaması bir rezervasyon değildir."
+          whatItShows="Booking Engine/PMS tarafından onaylanmış gerçek rezervasyonlar; misafir, tarih ve durum bilgisiyle."
+          whyEmpty="Otelinizin Booking Engine/PMS sistemiyle henüz bir webhook bağlantısı kurulmadı. Widget'taki buton tıklaması bir rezervasyon değildir."
+          requirements={[
+            'Booking Engine/PMS sağlayıcınızın webhook dokümantasyonu',
+            "'Rezervasyon tamamlandı' olayı için paylaşılan bir secret/anahtar",
+            'Green Gold API tarafında webhook uç noktasının etkinleştirilmesi',
+          ]}
+          ctaHref="/entegrasyon"
+          ctaLabel="Entegrasyon sayfasına git"
         />
       </main>
     </AppShell>
