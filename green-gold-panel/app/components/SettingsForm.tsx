@@ -113,7 +113,16 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
               ))}
             </datalist>
           </Field>
+        </div>
+      </section>
 
+      {/* Katkı ayarı — ayrı bölüm, otel bilgilerinden ayrıştırıldı */}
+      <section className="gg-card p-6">
+        <h2 className="text-sm font-semibold text-neutral-900">Katkı ayarı</h2>
+        <p className="mt-1 text-xs text-neutral-500">
+          Misafirin widget&apos;ta göreceği gece başı katkı tutarı.
+        </p>
+        <div className="mt-4 max-w-xs">
           <Field
             label="Gece başı katkı tutarı"
             htmlFor="amount"
@@ -319,7 +328,7 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
           <ReadOnlyField
             label="Tahmini CO₂ katsayısı"
             value={`${hotel.estimated_co2_per_night_kg.toLocaleString('tr-TR')} kg/gece`}
-            note="GEÇİCİ PLACEHOLDER — Green Gold metodoloji onayı olmadan gerçek otele sunulmamalı."
+            note="Tahmini — Green Gold metodoloji onayı bekliyor; onay öncesi gerçek otele sunulmamalı."
           />
           <ReadOnlyField
             label="Widget anahtarı"
