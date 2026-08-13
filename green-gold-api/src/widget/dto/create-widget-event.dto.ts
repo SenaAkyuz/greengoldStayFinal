@@ -16,6 +16,11 @@ export const WIDGET_EVENT_TYPES = [
   'widget_goruntulendi',
   'checkbox_secildi',
   'katki_ekle_butonuna_basildi',
+  // Ana site (WordPress) -> SynXis booking engine yönlendirme tıklaması.
+  // Rezervasyon başladı/tamamlandı/ödeme yapıldı ANLAMINA GELMEZ — yalnızca
+  // "misafir Book bağlantısına tıkladı". Otel bazlı feature flag ile korunur
+  // (bkz. WidgetService.recordEvent + widget-settings.ts), varsayılan kapalı.
+  'booking_engine_clicked',
 ] as const;
 
 export type WidgetEventType = (typeof WIDGET_EVENT_TYPES)[number];

@@ -86,6 +86,7 @@ placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitign
 | `npm run activate-hotel` | Bir oteli aktifleştirir (canlıya alma öncesi). |
 | `npm run rebind-demo-user` | Demo tenant'ını mevcut demo auth kullanıcısına bağlar. |
 | `npm run seed-demo-data` | Demo tenant'ına temsili (gerçek olmayan) veri yükler. |
+| `npm run set-widget-settings` | Otel bazlı `widget_settings` (pilot_mode, karbon görünürlüğü, booking-click tracking, TR/EN metin override'ları) düzenler — bkz. `green-gold-api/scripts/README.md`. |
 
 > Bu script'ler `service_role` anahtarı kullanır (RLS bypass) — **yalnızca lokal/operatör**
 > ortamında çalıştırılır, hiçbir zaman client'a veya prod runtime'a konmaz.

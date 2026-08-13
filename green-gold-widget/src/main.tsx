@@ -2,7 +2,7 @@ import { render } from 'preact';
 import { Widget } from './widget';
 import { STYLES } from './styles';
 import { fetchConfig, fetchImpact, sendEvent } from './api';
-import type { Lang, WidgetConfig, WidgetImpact } from './types';
+import type { Lang, WidgetConfig, WidgetEventType, WidgetImpact } from './types';
 
 const DEFAULT_API = 'http://localhost:3000';
 const TAG = 'green-gold-widget';
@@ -27,6 +27,34 @@ function randomSessionRef(): string {
   });
 }
 
+const JOURNEY_STORAGE_KEY = 'greengold_journey_id';
+const MAX_JOURNEY_ID_LEN = 100; // API session_ref MaxLength(100) ile tutarlı
+
+/**
+ * Kişisel veri İÇERMEYEN, sayfalar arası devam eden yolculuk kimliği.
+ *   1) `data-journey-id` host tarafından verilmişse (kendi kimliğini
+ *      yönetmek isteyen bir WordPress entegrasyonu) -> o kullanılır.
+ *   2) Yoksa first-party `sessionStorage` (aynı sekme/oturum boyunca kalıcı,
+ *      üçüncü taraf izleme YOK, sekme kapanınca temizlenir) -> ilk sayfada
+ *      üretilir, sonraki sayfalarda okunur.
+ *   3) Storage erişilemezse (gizli mod/engellenmiş) -> bu örnek ömrü boyunca
+ *      geçerli rastgele bir kimliğe GÜVENLE düşer (host sayfa asla bozulmaz).
+ */
+function resolveJourneyId(attrValue: string | null): string {
+  const attr = attrValue?.trim();
+  if (attr && attr.length <= MAX_JOURNEY_ID_LEN) return attr;
+
+  try {
+    const existing = window.sessionStorage.getItem(JOURNEY_STORAGE_KEY);
+    if (existing) return existing;
+    const created = randomSessionRef();
+    window.sessionStorage.setItem(JOURNEY_STORAGE_KEY, created);
+    return created;
+  } catch {
+    return randomSessionRef();
+  }
+}
+
 class GreenGoldWidget extends HTMLElement {
   static get observedAttributes(): string[] {
     return ['data-nights', 'data-lang'];
@@ -40,6 +68,17 @@ class GreenGoldWidget extends HTMLElement {
   private apiBase = DEFAULT_API;
   /** Önizleme modu: hiç event POST'lanmaz (panel açan yönetici analitiği şişirmesin). */
   private preview = false;
+  /**
+   * Tracker-only modu (`data-tracker-only="true"`): yalnızca
+   * `trackBookingEngineClick()` çağrılabilsin diye "key + sessionRef" hazırlığı
+   * yapılır — kart RENDER EDİLMEZ, config/impact ÇEKİLMEZ, `widget_goruntulendi`
+   * ASLA gönderilmez. Header/nav gibi Book bağlantısı olan ama sürdürülebilirlik
+   * kartının görünmesi istenmeyen sayfalarda kullanılır; gizli bir kart sahte
+   * "görüntülenme" üretmesin diye ayrı bir mod olarak tasarlandı (bkz. kök
+   * WordPress dokümanı §5, §9). Reaktif olması gerekmediği için
+   * `observedAttributes`'e eklenmedi — yalnızca ilk bağlanmada okunur.
+   */
+  private trackerOnly = false;
   /** Bu session'da hangi event tipleri gönderildi — her tip en fazla bir kez. */
   private sentEvents = new Set<string>();
 
@@ -50,9 +89,18 @@ class GreenGoldWidget extends HTMLElement {
 
     this.apiBase = this.getAttribute('data-api') ?? DEFAULT_API;
     this.preview = this.getAttribute('data-preview') === 'true';
+    this.trackerOnly = this.getAttribute('data-tracker-only') === 'true';
     // sessionRef ve gönderilen-event seti örnek ömrü boyunca KALICI:
     // element DOM'dan çıkıp tekrar eklenince aynı session sürer.
-    if (!this.sessionRef) this.sessionRef = randomSessionRef();
+    if (!this.sessionRef) {
+      this.sessionRef = resolveJourneyId(this.getAttribute('data-journey-id'));
+    }
+
+    // Tracker-only: yalnızca trackBookingEngineClick() için gereken (key +
+    // sessionRef) hazır. Kart yok, config/impact isteği yok, görüntülenme
+    // event'i yok — gizli bir element sahte görüntülenme/funnel verisi
+    // üretmesin.
+    if (this.trackerOnly) return;
 
     // Tek shadow root: remove+append'te attachShadow tekrar çağrılırsa patlar.
     // Yalnızca yoksa kur -> element güvenle yeniden bağlanabilir.
@@ -94,10 +142,7 @@ class GreenGoldWidget extends HTMLElement {
   }
 
   /** Aynı event tipini session başına en fazla bir kez gönderir. */
-  private sendOnce(
-    type: 'widget_goruntulendi' | 'checkbox_secildi' | 'katki_ekle_butonuna_basildi',
-    metadata: Record<string, unknown>,
-  ): void {
+  private sendOnce(type: WidgetEventType, metadata: Record<string, unknown>): void {
     // Önizleme: etkileşim çalışır, callback'ler tetiklenir; ama analitik yok.
     if (this.preview) return;
     if (this.sentEvents.has(type)) return;
@@ -168,6 +213,26 @@ class GreenGoldWidget extends HTMLElement {
         },
       }),
     );
+  }
+
+  /**
+   * PUBLIC method — host sayfanın (ör. WordPress ana sitesi) SynXis booking
+   * engine bağlantısına yönlendiren "Book" linkine tıklamayı ölçmesi için.
+   *
+   *   document.querySelector('green-gold-widget')?.trackBookingEngineClick();
+   *
+   * Bu bir rezervasyon/ödeme onayı DEĞİLDİR — yalnızca "misafir Book
+   * bağlantısına tıkladı" bilgisini kaydeder (event: booking_engine_clicked).
+   * Otel bazlı feature flag KAPALIYSA API isteği **400** ile reddeder; bu
+   * istek `sendEvent()` üzerinden fire-and-forget gönderildiği için (yanıtı
+   * bekletmez/kontrol etmez) host sayfa bu 400'ü hiç görmez — Book linkinin
+   * navigasyonu bundan ASLA etkilenmez/geciktirilmez.
+   * Element henüz bağlanmamışsa (data-key yok) ya da preview modundaysa
+   * sessizce no-op — host sayfa hiçbir zaman bozulmaz.
+   */
+  trackBookingEngineClick(): void {
+    if (!this.key) return;
+    this.sendOnce('booking_engine_clicked', {});
   }
 }
 

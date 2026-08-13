@@ -126,6 +126,53 @@ Seed verisi: son ~60 güne yayılmış, huni monoton (viewed ⊇ selected ⊇ cl
 dönüşüm **gerçekçi** (%100 değil), `nights` 1–7. Yalnızca `demo-sess-` önekli
 kayıtları yönetir; gerçek event'lere dokunmaz.
 
+## Widget pilot ayarları (`widget_settings`) — panel UI YOK, bilinçli tercih
+
+`hotels.widget_settings` (JSONB) şu bayrakları taşır: `pilot_mode`,
+`show_estimated_impact`, `enable_booking_click_tracking`, `content_overrides`
+(TR/EN, yalnızca `heading` / `checkboxLabel` / `addButton` / `confirmation`
+düz metin override'ları — HTML kabul edilmez). **Varsayılan hepsi kapalı/boş**
+(migration `0007_widget_settings.sql`) — yeni/gerçek bir otel yanlışlıkla
+placeholder karbon sayıları göstermez veya booking-click event'i üretmez.
+
+Bu ayarlar **bilinçli olarak panelde değil** — Green Gold operasyon ekibinin
+kontrolünde: sürdürülebilirlik sayılarının ne zaman gösterileceği bir ürün/
+hukuk kararı, otel yöneticisinin kendi başına açıp kapatabileceği bir şey
+değil. Değiştirmek için:
+
+```bash
+# Örnek: Princes' Palace pilotu için booking-click tracking'i aç, karbon
+# sayılarını KAPALI bırak (metodoloji onayı gelene kadar):
+npm run set-widget-settings -- \
+  --key <public_widget_key> \
+  --enable-booking-click-tracking true \
+  --dry-run          # önce kontrol et, sonra --dry-run'ı kaldırıp tekrar çalıştır
+```
+
+| Bayrak | Açıklama |
+| --- | --- |
+| `--key` | Zorunlu. Otelin `public_widget_key`'i. |
+| `--pilot-mode true\|false` | Bilgilendirici pilot işareti (şu an davranış değiştirmez; ileride panel/rapor etiketlemesi için ayrılmıştır). |
+| `--show-estimated-impact true\|false` | CO₂/ağaç-yılı/aylık impact satırlarının widget'ta gösterilip gösterilmeyeceği. |
+| `--enable-booking-click-tracking true\|false` | `booking_engine_clicked` event'inin bu otel için kabul edilip edilmeyeceği. |
+| `--content-tr-*` / `--content-en-*` | `heading` / `checkbox-label` / `add-button` / `confirmation` düz metin override'ı (boş string `""` verilirse o alan override'dan kaldırılır). |
+| `--clear-content-overrides` | Tüm TR/EN override'ları temizler. |
+| `--dry-run` | Hiçbir şey yazmadan önce/sonra durumu gösterir. |
+
+Yalnızca verilen bayraklar değişir — diğer ayarlar dokunulmadan kalır
+(kısmi güncelleme, `applyPatch` — `set-widget-settings.core.spec.ts`).
+
+### Demo tenant'ta mevcut görünümü korumak
+
+Bu migration'dan önce demo widget'ı her zaman CO₂/impact satırlarını
+gösteriyordu (`is_estimated` her zaman `true`'ydu). Yeni varsayılan `false`
+olduğundan, demo tenant'ın mevcut görünümünü korumak için migration
+uygulandıktan sonra AÇIKÇA açın:
+
+```bash
+npm run set-widget-settings -- --key <demo_public_widget_key> --show-estimated-impact true
+```
+
 ## Güvenlik notları
 
 - Yeni kullanıcı **yalnızca kendi** otelini görür (tenant izolasyonu: profil
