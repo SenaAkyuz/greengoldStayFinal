@@ -5,7 +5,9 @@ import {
   getApiBaseUrl,
   getWidgetEmbedSrc,
   getWidgetEventsSummary,
+  getIntegrationHealth,
   type HotelInfo,
+  type IntegrationHealthItem,
 } from '@/lib/api';
 import { AppShell } from '../components/AppShell';
 import { IntegrationCard } from '../components/IntegrationCard';
@@ -28,9 +30,10 @@ export default async function IntegrationPage() {
   // yüzden "ilk etkileşim" değil yalnızca "son 30 günde etkileşim" iddia
   // ediyoruz. Üç durum: istek başarısızsa/veri yoksa 'unknown' (nötr,
   // "etkileşim yok" VARSAYILMAZ); views===0 ise 'pending'; views>0 ise 'done'.
-  const [hotelRes, summaryRes] = await Promise.all([
+  const [hotelRes, summaryRes, integrationHealthRes] = await Promise.all([
     getHotel(token),
     getWidgetEventsSummary(token, '30d'),
+    getIntegrationHealth(token),
   ]);
   const hotel = hotelRes.data;
   const recentActivity: CheckState =
@@ -96,10 +99,63 @@ export default async function IntegrationPage() {
               widgetSrcConfigured={widgetSrcConfigured}
               recentActivity={recentActivity}
             />
+
+            <BookingEngineIntegrationHealth
+              integrations={integrationHealthRes.data?.integrations ?? []}
+            />
           </>
         )}
       </main>
     </AppShell>
+  );
+}
+
+// Faz 2 — booking engine/PMS webhook entegrasyonu sağlığı. Yalnızca
+// DOĞRULANMIŞ entegrasyon kayıtları gösterilir (secret/routing id ASLA —
+// API zaten döndürmüyor, bkz. IntegrationsReadService.getIntegrationHealth).
+function BookingEngineIntegrationHealth({
+  integrations,
+}: {
+  integrations: IntegrationHealthItem[];
+}) {
+  return (
+    <section className="gg-card mt-6 p-6">
+      <h2 className="text-sm font-semibold text-neutral-900">
+        Booking Engine/PMS entegrasyonu (Faz 2)
+      </h2>
+      <p className="mt-1 text-sm text-neutral-500">
+        Widget entegrasyonundan AYRI: bu, rezervasyon/ödeme onayının otelin
+        booking engine&apos;inden sunucudan sunucuya doğrulandığı bağlantıdır.
+      </p>
+
+      {integrations.length === 0 ? (
+        <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
+          Henüz bir booking engine/PMS webhook entegrasyonu kaydedilmedi.
+        </div>
+      ) : (
+        <ul className="mt-4 space-y-2.5 text-sm">
+          {integrations.map((integ) => (
+            <li
+              key={integ.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-3 py-2.5"
+            >
+              <div>
+                <span className="font-medium text-neutral-800">{integ.provider}</span>
+                <span className="ml-2 text-xs text-neutral-500">({integ.environment})</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-neutral-500">
+                <span>Durum: {integ.status}</span>
+                <span>
+                  Son delivery: {integ.last_delivery_status ?? 'yok'}
+                  {integ.last_delivery_at &&
+                    ` — ${new Date(integ.last_delivery_at).toLocaleString('tr-TR')}`}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

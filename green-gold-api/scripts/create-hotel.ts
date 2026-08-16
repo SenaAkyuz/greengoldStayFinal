@@ -268,10 +268,33 @@ async function main(): Promise<void> {
     console.log('   1) Kullanıcı verilen e-posta/şifreyle giriş yapabilir.');
   }
   console.log("   2) Panelde Ayarlar > izinli domain'lere otelin sitesini ekleyin.");
-  console.log('   3) Embed kodunu otelin ödeme (checkout) sayfasına yapıştırın.');
+  console.log('   3) Embed kodunu otelin SİTESİNE (ör. WordPress) yerleştirin.');
   console.log(
-    `   4) Aktive edin:  npm run activate-hotel -- --key ${res.publicWidgetKey}\n`,
+    `   4) Aktive edin:  npm run activate-hotel -- --key ${res.publicWidgetKey}`,
   );
+  console.log('');
+  console.log('  ⚠️  Faz 1 widget ≠ Faz 2 booking-engine entegrasyonu:');
+  console.log(
+    '     Yukarıdaki embed, otelin KENDİ sitesinde tercih/analitik sinyali',
+  );
+  console.log(
+    '     toplayan Faz 1 widget\'ıdır. Bir ödeme veya rezervasyon DEĞİLDİR ve',
+  );
+  console.log('     booking engine\'in toplamını DEĞİŞTİRMEZ.');
+  console.log(
+    '     Booking engine\'de gerçek, tahsil edilen bir optional extra için',
+  );
+  console.log('     AYRI bir entegrasyon gerekir:');
+  console.log(
+    `        npm run create-integration -- --hotel-key ${res.publicWidgetKey} \\`,
+  );
+  console.log(
+    '          --provider <provider> --external-property-id <id> \\',
+  );
+  console.log(
+    '          --product-code <code> --secret-ref <SAFE_REF> --dry-run',
+  );
+  console.log('     Ayrıntı: scripts/README.md > "Booking engine entegrasyonu"\n');
 }
 
 main().catch((e: unknown) => {

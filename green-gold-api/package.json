@@ -21,8 +21,12 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "create-hotel": "ts-node -r tsconfig-paths/register scripts/create-hotel.ts",
     "activate-hotel": "ts-node -r tsconfig-paths/register scripts/activate-hotel.ts",
+    "create-integration": "ts-node -r tsconfig-paths/register scripts/create-integration.ts",
+    "activate-integration": "ts-node -r tsconfig-paths/register scripts/activate-integration.ts",
+    "rotate-integration-secret": "ts-node -r tsconfig-paths/register scripts/rotate-integration-secret.ts",
     "seed-demo-data": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
-    "rebind-demo-user": "ts-node -r tsconfig-paths/register scripts/rebind-demo-user.ts"
+    "rebind-demo-user": "ts-node -r tsconfig-paths/register scripts/rebind-demo-user.ts",
+    "set-widget-settings": "ts-node -r tsconfig-paths/register scripts/set-widget-settings.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

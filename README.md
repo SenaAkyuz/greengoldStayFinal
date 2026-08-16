@@ -86,9 +86,30 @@ placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitign
 | `npm run activate-hotel` | Bir oteli aktifleştirir (canlıya alma öncesi). |
 | `npm run rebind-demo-user` | Demo tenant'ını mevcut demo auth kullanıcısına bağlar. |
 | `npm run seed-demo-data` | Demo tenant'ına temsili (gerçek olmayan) veri yükler. |
+| `npm run set-widget-settings` | Otel bazlı `widget_settings` (pilot_mode, karbon görünürlüğü, booking-click tracking, TR/EN metin override'ları) düzenler — bkz. `green-gold-api/scripts/README.md`. |
+| `npm run create-integration` | **(Faz 2)** Otele booking engine/PMS entegrasyonu ekler. `create-hotel`'den **ayrıdır** — `pending` doğar. |
+| `npm run activate-integration` | **(Faz 2)** Entegrasyonu tüm güvenlik kapılarından geçirerek `active` yapar. |
+| `npm run rotate-integration-secret` | **(Faz 2)** İki aşamalı (overlap'li) secret rotasyonu. |
 
 > Bu script'ler `service_role` anahtarı kullanır (RLS bypass) — **yalnızca lokal/operatör**
 > ortamında çalıştırılır, hiçbir zaman client'a veya prod runtime'a konmaz.
+
+### Faz 1 widget ≠ Faz 2 booking-engine entegrasyonu
+
+Bu ikisi **ayrı** kurulumlardır; biri diğerinin yerine geçmez:
+
+| | **Faz 1 — widget** | **Faz 2 — booking engine optional extra** |
+|---|---|---|
+| Nereye | Otelin kendi sitesi (WordPress vb.) | Booking engine'in kendi ürün kataloğu |
+| Ne yapar | Tercih/analitik sinyali toplar | Gerçek, tahsil edilen bir kalem ekler |
+| Ödeme | **YOK** — buton tıklaması ödeme değildir | Otelin payment gateway'inde tek tahsilat |
+| Kurulum | `create-hotel` + embed kodu | `create-integration` → `activate-integration` |
+| Veri | `widget_events` | `reservations` + `contributions` (imzalı, doğrulanmış) |
+
+> **Production blocker (Faz 2):** entegrasyon secret'ları için gerçek bir
+> secrets manager **henüz yok**. Env tabanlı çözüm yalnızca local/sandbox
+> içindir ve production resolver bilinçli olarak **fail-closed**tır —
+> `--environment production` entegrasyonlar aktive edilemez.
 
 ---
 

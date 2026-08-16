@@ -146,6 +146,78 @@ export async function updateHotel(
   }
 }
 
+// Faz 2 — booking engine/PMS entegrasyon çekirdeği (bkz. green-gold-api
+// src/integrations/*). Yalnızca imzası doğrulanmış server-to-server event'lerden
+// yazılan gerçek kayıtlar; widget click event'i DEĞİL.
+export interface ReservationContributionSummary {
+  selected: boolean;
+  amount_minor: number;
+  currency: string;
+  status: string;
+  collected_at: string | null;
+  refunded_at: string | null;
+}
+
+export interface ReservationSummary {
+  id: string;
+  provider_reservation_id: string;
+  booking_status: string;
+  arrival_date: string | null;
+  departure_date: string | null;
+  provider_updated_at: string | null;
+  updated_at: string;
+  contribution: ReservationContributionSummary | null;
+}
+
+export interface ReservationsPage {
+  period: { from: string; to: string };
+  items: ReservationSummary[];
+  truncated: boolean;
+}
+
+export interface CurrencyContributionTotals {
+  currency: string;
+  collected_total_minor: number;
+  refunded_total_minor: number;
+  net_contribution_minor: number;
+}
+
+export interface ContributionsSummary {
+  period: { from: string; to: string };
+  totals: CurrencyContributionTotals[];
+  contributions_count: number;
+}
+
+export interface IntegrationHealthItem {
+  id: string;
+  provider: string;
+  environment: string;
+  status: string;
+  external_property_id: string;
+  last_delivery_at: string | null;
+  last_delivery_status: string | null;
+  last_delivery_signature_verified: boolean | null;
+}
+
+export interface IntegrationHealthSummary {
+  integrations: IntegrationHealthItem[];
+}
+
+export function getReservations(token: string, range?: string) {
+  return apiGet<ReservationsPage>(`/dashboard/reservations${rangeQs(range)}`, token);
+}
+
+export function getContributionsSummary(token: string, range?: string) {
+  return apiGet<ContributionsSummary>(
+    `/dashboard/contributions-summary${rangeQs(range)}`,
+    token,
+  );
+}
+
+export function getIntegrationHealth(token: string) {
+  return apiGet<IntegrationHealthSummary>('/dashboard/integration-health', token);
+}
+
 export function getApiBaseUrl() {
   return API_BASE_URL;
 }

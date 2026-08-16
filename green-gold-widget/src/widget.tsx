@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { Lang, WidgetConfig, WidgetImpact } from './types';
-import { I18N } from './i18n';
+import { resolveStrings } from './i18n';
 
 interface Props {
   config: WidgetConfig;
@@ -89,10 +89,14 @@ export function Widget({
   preview,
   impact,
 }: Props) {
-  const t = I18N[lang];
+  const t = resolveStrings(lang, config.content_overrides);
   const numLocale = lang === 'tr' ? 'tr-TR' : 'en-GB';
   const fmtNum = (n: number) => n.toLocaleString(numLocale);
-  const showImpact = !!impact && impact.estimated_co2_kg > 0;
+  // config.show_estimated_impact ek savunma katmanı: API zaten kapalıyken
+  // estimated_co2_kg'yi 0 döner, ama gösterim mantığı da flag'i doğrudan
+  // kontrol eder — "hiç render etme" gereksinimi tek noktaya bağlı kalmasın.
+  const showImpact =
+    !!config.show_estimated_impact && !!impact && impact.estimated_co2_kg > 0;
   const [checked, setChecked] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
@@ -150,16 +154,20 @@ export function Widget({
             <span class="line-label">{t.totalLabel}</span>
             <span class="line-value">{money(amountTotal)}</span>
           </div>
-          <div class="line">
-            <span class="line-label">{t.co2Label}</span>
-            <span class="line-value co2-value">
-              <span>≈ {co2Total} kg CO₂</span>
-              {config.is_estimated && (
-                <span class="badge">{t.estimatedBadge}</span>
-              )}
-            </span>
-          </div>
-          {config.is_estimated && <p class="co2-note">{t.co2Note}</p>}
+          {config.show_estimated_impact && (
+            <>
+              <div class="line">
+                <span class="line-label">{t.co2Label}</span>
+                <span class="line-value co2-value">
+                  <span>≈ {co2Total} kg CO₂</span>
+                  {config.is_estimated && (
+                    <span class="badge">{t.estimatedBadge}</span>
+                  )}
+                </span>
+              </div>
+              {config.is_estimated && <p class="co2-note">{t.co2Note}</p>}
+            </>
+          )}
         </div>
       )}
 

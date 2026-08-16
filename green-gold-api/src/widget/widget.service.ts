@@ -13,6 +13,10 @@ import {
 } from './dto/create-widget-event.dto';
 import { effectiveCo2PerNight, normalizeHotelType } from '../common/hotel-type';
 import { DashboardService } from '../dashboard/dashboard.service';
+import {
+  resolveWidgetSettings,
+  type ContentOverrides,
+} from '../common/widget-settings';
 
 export interface WidgetConfig {
   hotel_name: string;
@@ -24,6 +28,14 @@ export interface WidgetConfig {
   logo_url: string | null;
   brand_color: string | null;
   hotel_type: string;
+  // Pilot (Adım: Princes' Palace) — otel bazlı görünürlük. false iken widget
+  // CO2/ağaç-yılı/aylık impact satırlarını HİÇ render etmez; bu yüzden
+  // estimated_co2_per_night_kg de aynı satırda 0'a indirilir (aşağıda) —
+  // istemciye yanıltıcı bir sayı asla gönderilmez.
+  show_estimated_impact: boolean;
+  // Otel bazlı TR/EN metin override'ları (yalnızca doğrulanmış düz metin,
+  // HTML kabul edilmez — bkz. widget-settings.ts). Yoksa alan boş obje.
+  content_overrides: ContentOverrides;
 }
 
 /**
@@ -59,7 +71,7 @@ export class WidgetService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, hotel_type, logo_url, brand_color, status',
+        'name, city, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, hotel_type, logo_url, brand_color, status, widget_settings',
       )
       .eq('public_widget_key', key)
       .single();
@@ -73,22 +85,27 @@ export class WidgetService {
     }
 
     const brandColor = hotel.brand_color as string | null;
+    const settings = resolveWidgetSettings(hotel.widget_settings);
 
     return {
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       currency: (hotel.default_currency as string) ?? 'EUR',
       amount_per_night: Number(hotel.contribution_amount_per_night),
-      // Override yoksa dokümante placeholder (hotel_type hesaba girmez).
-      estimated_co2_per_night_kg: effectiveCo2PerNight(
-        hotel.estimated_co2_per_night_kg as number | null,
-      ),
+      // Görünürlük kapalıysa yanıltıcı olabilecek sayıyı istemciye HİÇ
+      // gönderme (widget zaten show_estimated_impact ile render etmeyecek —
+      // bu ek bir savunma katmanı, örn. devtools/network'te sızmasın diye).
+      estimated_co2_per_night_kg: settings.showEstimatedImpact
+        ? effectiveCo2PerNight(hotel.estimated_co2_per_night_kg as number | null)
+        : 0,
       // Faz 1'de her zaman true (pazarlama dürüstlüğü — karar #6).
       is_estimated: true,
       logo_url: (hotel.logo_url as string | null) ?? null,
       // Defans: yalnızca katı hex geçir (DB'ye zaten doğrulanmış yazılıyor).
       brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
       hotel_type: normalizeHotelType(hotel.hotel_type),
+      show_estimated_impact: settings.showEstimatedImpact,
+      content_overrides: settings.contentOverrides,
     };
   }
 
@@ -106,7 +123,7 @@ export class WidgetService {
 
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
-      .select('id, status')
+      .select('id, status, widget_settings')
       .eq('public_widget_key', key)
       .single();
 
@@ -116,6 +133,22 @@ export class WidgetService {
 
     if (hotel.status !== 'active') {
       throw new ForbiddenException('Widget aktif değil.');
+    }
+
+    const settings = resolveWidgetSettings(hotel.widget_settings);
+    const nowMonth = new Date().toISOString().slice(0, 7);
+
+    // Görünürlük kapalıysa carbon-summary'yi hesaba bile gerek yok —
+    // istemciye her zaman sıfırlanmış (yanıltmayan) sayılar dön. Widget
+    // zaten estimated_co2_kg > 0 değilse satırı gizler.
+    if (!settings.showEstimatedImpact) {
+      return {
+        month: nowMonth,
+        estimated_co2_kg: 0,
+        tree_equivalent: 0,
+        contributions_count: 0,
+        is_estimated: true,
+      };
     }
 
     // Bu ay (otel tz'inde). Panel carbon-summary ile AYNI mantık.
@@ -144,7 +177,7 @@ export class WidgetService {
     // 2. hotels'ta public_widget_key = header ara. Yoksa -> 403
     const { data: hotel, error: hotelError } = await this.supabase.db
       .from('hotels')
-      .select('id, status')
+      .select('id, status, widget_settings')
       .eq('public_widget_key', widgetKey)
       .single();
 
@@ -158,7 +191,7 @@ export class WidgetService {
       throw new ForbiddenException('Widget aktif değil.');
     }
 
-    // 3. event_type üç izinli değerden biri değilse -> 400
+    // 3. event_type izinli değerlerden biri değilse -> 400
     //    (ValidationPipe zaten reddeder; bu servis-içi savunma katmanıdır.)
     if (
       !WIDGET_EVENT_TYPES.includes(dto?.event_type as WidgetEventType)
@@ -166,6 +199,19 @@ export class WidgetService {
       throw new BadRequestException(
         `event_type şunlardan biri olmalı: ${WIDGET_EVENT_TYPES.join(', ')}`,
       );
+    }
+
+    // 3b. booking_engine_clicked: otel bazlı feature flag KAPALIYSA (varsayılan
+    // kapalı) bu event tipi bu otel için "bilinmiyor" muamelesi görür -> 400,
+    // hiçbir satır insert edilmez. Diğer otellerin bayrağı bundan etkilenmez
+    // (izolasyon: yalnızca BU widgetKey'in oteli okunur).
+    if (dto.event_type === 'booking_engine_clicked') {
+      const settings = resolveWidgetSettings(hotel.widget_settings);
+      if (!settings.enableBookingClickTracking) {
+        throw new BadRequestException(
+          'booking_engine_clicked bu otel için etkin değil.',
+        );
+      }
     }
 
     // 4. widget_events'e insert (idempotent).
