@@ -31,9 +31,20 @@ export function configureApp(app: INestApplication): void {
   app.useGlobalFilters(new AllExceptionsFilter());
 }
 
-/** Yapılandırılmış ama HENÜZ dinlemeyen bir Nest uygulaması oluşturur. */
+/**
+ * Yapılandırılmış ama HENÜZ dinlemeyen bir Nest uygulaması oluşturur.
+ *
+ * `rawBody: true` — Faz 2 webhook ingestion (src/integrations/webhook-ingestion.controller.ts)
+ * imza doğrulaması için HAM body bytes'a ihtiyaç duyar (parse edilmiş JSON
+ * üzerinden HMAC yeniden hesaplamak güvenilmezdir — encoding/key-order farkları
+ * imzayı bozar). Bu seçenek platform-express ile standart body-parser'ı
+ * DEĞİŞTİRMEZ; yalnızca `req.rawBody` (Buffer) alanını EK OLARAK doldurur —
+ * mevcut `/dashboard`, `/widget` uçları etkilenmez. Serverless girişiyle
+ * (api/index.js: app.init(), app.listen DEĞİL) de uyumludur çünkü bu seçenek
+ * yalnızca body-parser kurulumunu etkiler, dinleme modeliyle ilgisizdir.
+ */
 export async function createApp(): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   configureApp(app);
   return app;
 }

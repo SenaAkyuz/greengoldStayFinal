@@ -61,9 +61,23 @@ key**, **embed kodu** ve **davet linki**.
 Yönetici panele girip **Ayarlar → izin verilen alan adları**'na otelin sitesini
 ekler (ör. `https://denizotel.com`). En az bir geçerli domain zorunludur.
 
-### 3) Embed kodunu siteye yapıştır
+### 3) Faz 1 widget'ını siteye yerleştir
 
-Script'in bastığı embed kodunu otelin **ödeme (checkout)** sayfasına koyun.
+Script'in bastığı embed kodunu otelin sitesine koyun.
+
+> **⚠️ Faz 1 widget ≠ Faz 2 booking-engine entegrasyonu.** Bu ikisi AYRI
+> adımlardır ve karıştırılmamalıdır:
+>
+> | | **Faz 1 — widget** | **Faz 2 — booking engine optional extra** |
+> |---|---|---|
+> | Nereye | Otelin kendi sitesi (ör. WordPress) | Booking engine'in KENDİ ürün kataloğu |
+> | Ne yapar | Tercih/analitik sinyali toplar | Gerçek, tahsil edilen bir kalem ekler |
+> | Kurulum | `<script>` + `<green-gold-widget>` | `npm run create-integration` + sağlayıcı tarafı |
+> | Ödeme | **YOK** — buton tıklaması ödeme DEĞİLDİR | Otelin payment gateway'inde tek tahsilat |
+>
+> Widget'ı booking engine'in checkout sayfasına gömmek **Faz 2 entegrasyonu
+> yerine geçmez** — widget booking total'ını değiştirmez ve değiştirmemelidir.
+> Faz 2 için aşağıdaki "Booking engine entegrasyonu" bölümüne bakın.
 
 ### 4) Oteli aktive et
 
@@ -173,10 +187,123 @@ uygulandıktan sonra AÇIKÇA açın:
 npm run set-widget-settings -- --key <demo_public_widget_key> --show-estimated-impact true
 ```
 
+## Booking engine entegrasyonu (Faz 2) — ayrı yaşam döngüsü
+
+**Entegrasyon oluşturma, otel oluşturmadan AYRIDIR.** Otel yaratılırken
+provider / external property ID / product code çoğunlukla henüz bilinmez ve
+bir otelin birden fazla provider/environment entegrasyonu olabilir. Bu yüzden
+`create-hotel` bu alanları **istemez**; `webhook_routing_id` ve `secret_ref`
+create-hotel'e ait değildir.
+
+### 1) Entegrasyon kaydı oluştur
+
+```bash
+npm run create-integration -- \
+  --hotel-key <public_widget_key veya hotel_code> \
+  --provider generic_signed_webhook \
+  --environment sandbox \
+  --external-property-id <sağlayıcının property id'si> \
+  --product-code <booking engine'deki ürün kodu> \
+  --secret-ref PRINCES_PALACE_SANDBOX \
+  --dry-run
+```
+
+| Bayrak | Zorunlu | Açıklama |
+| --- | --- | --- |
+| `--hotel-key` | evet | **TAM eşleşme** (`public_widget_key` veya `hotel_code`). İsim/LIKE araması YOK. |
+| `--provider` | evet | `generic_signed_webhook` \| `synxis` (registry allowlist) |
+| `--environment` | hayır | `sandbox` (varsayılan) \| `production` |
+| `--external-property-id` | evet | Sağlayıcının property/hotel kimliği |
+| `--product-code` | evet | Booking engine'deki gerçek optional-extra ürün kodu |
+| `--secret-ref` | evet | **Opak referans** — secret'ın KENDİSİ değil. Format: `^[A-Z][A-Z0-9_]{2,63}$` |
+| `--generate-secret` | hayır | Yalnızca sandbox. 32 byte rastgele secret üretir, **bir kez** gösterir |
+| `--dry-run` | hayır | Hiçbir yazma yapmadan planı ve çakışmaları gösterir |
+
+- Kayıt **her zaman `pending`** doğar. Aktivasyon ayrı bir kapıdır.
+- Aynı kapsamda (`hotel + provider + environment + property`) ikinci kayıt
+  **reddedilir**; çakışmada yarım kayıt oluşmaz.
+- `webhook_routing_id` DB tarafında `gen_random_uuid()` ile üretilir ve
+  **bir kez** ekrana basılır.
+- **⚠️ Routing ID bir kimlik doğrulama DEĞİLDİR.** Yalnızca hangi entegrasyona
+  ait olduğunu söyler; gerçek doğrulama **imza** ile yapılır. Panel ve public
+  API `secret_ref`'i de routing ID'yi de **döndürmez**.
+
+### 2) Secret'ı kaydet
+
+Script secret'ı **DB'ye asla yazmaz**. `--generate-secret` kullandıysanız değer
+terminalde **bir kez** gösterilir; hiçbir log/rapor/dry-run çıktısına düşmez ve
+`.env` **otomatik değiştirilmez**. Değeri gösterilen anahtar adıyla
+(`INTEGRATION_SECRET_<REF>`) kendiniz kaydedin ve aynı değeri sağlayıcıya
+güvenli kanaldan iletin.
+
+> **⚠️ Production blocker:** env tabanlı secret çözümü **yalnızca
+> local/sandbox** içindir. Production için gerçek bir secrets manager
+> (Vault / AWS Secrets Manager / per-integration KMS) **henüz yoktur** ve
+> `UnavailableProductionSecretResolver` bilinçli olarak **fail-closed**tır:
+> production entegrasyonlar secret çözemez, webhook imzası doğrulanamaz ve
+> aktivasyon reddedilir. Bu bir hata değil, açık bir kapıdır.
+
+### 3) Sandbox doğrulama eventi gönder
+
+Sağlayıcı (veya sandbox test aracınız) imzalı bir test eventi göndermeli ve bu
+event `processed` olarak işlenmelidir. Aktivasyon kapısı bunu arar.
+
+### 4) Entegrasyonu aktive et
+
+```bash
+npm run activate-integration -- --integration-id <uuid> --dry-run
+```
+
+Aktivasyon **tüm** şu kapıları doğrular (hepsi geçmeden `active` olmaz):
+
+| Kapı | Ne kontrol eder |
+| --- | --- |
+| `adapter_configured` | Provider adapter'ı gerçekten yapılandırılmış mı (SynXis `not_configured` iken **ASLA**) |
+| `resolver_allowed_for_environment` | Bu environment için meşru bir secret resolver var mı (**production → RED**) |
+| `secret_resolvable` | `secret_ref` gerçek bir secret'a çözülebiliyor mu |
+| `property_and_product_present` | `external_property_id` ve `product_code` dolu mu |
+| `verification_delivery` | Başarıyla işlenmiş (`processed`) bir doğrulama eventi var mı |
+
+- `--override-verification` **yalnızca** son kapıyı atlar. Güvenlik kapıları
+  (adapter, resolver, secret) **atlanamaz**.
+- **Otelin `active` olması entegrasyonu otomatik aktive ETMEZ.**
+
+### 5) Secret rotasyonu (iki aşamalı, overlap'li)
+
+Tek `secret_ref` kolonuyla zero-downtime rotasyon **mümkün değildir** — bu
+yüzden migration `0014` `previous_secret_ref` + `previous_secret_expires_at`
+ekler ve rotasyon iki aşamada yapılır:
+
+```bash
+# 0) Yeni secret üret (HİÇBİR kayıt yazılmaz — değer bir kez gösterilir)
+npm run rotate-integration-secret -- --integration-id <uuid> \
+  --phase begin --new-secret-ref PILOT_SANDBOX_V2 --generate-secret
+
+# 1) Değeri INTEGRATION_SECRET_PILOT_SANDBOX_V2 olarak kaydedin, sonra:
+npm run rotate-integration-secret -- --integration-id <uuid> \
+  --phase begin --new-secret-ref PILOT_SANDBOX_V2 --overlap-minutes 60
+
+#    -> Bu pencerede ESKİ ve YENİ secret'ın İKİSİ de kabul edilir.
+#    2) Sağlayıcı kendi tarafındaki secret'ı günceller.
+
+# 3) Rotasyonu tamamla (eski secret geçersiz olur)
+npm run rotate-integration-secret -- --integration-id <uuid> --phase complete
+```
+
+- `begin`, yeni secret **kaydedilmemişse** reddedilir (aksi halde pencere
+  dolunca entegrasyon tamamen kırılırdı).
+- `complete`, yeni secret çözülemiyorsa reddedilir (aynı sebep).
+- `secret_last_rotated_at` **yalnızca `complete`'te** set edilir — yarım kalmış
+  bir rotasyon "tamamlanmış" görünmez.
+- Süresi dolmuş `previous_secret_ref` **kabul edilmez** (expiry zorlayıcıdır).
+
 ## Güvenlik notları
 
 - Yeni kullanıcı **yalnızca kendi** otelini görür (tenant izolasyonu: profil
   satırı otelin `hotel_id`'sine bağlanır, AuthGuard bunu çözer).
+- **Gerçek secret hiçbir zaman DB'ye yazılmaz** — yalnızca opak `secret_ref`.
+  Secret değeri hiçbir API cevabında, logda, panelde veya rapor çıktısında
+  görünmez; yalnızca üretildiği anda CLI'da bir kez gösterilir.
 - `create-hotel` yazmadan önce **pre-flight** yapar: e-posta hem `auth.users`
   hem `public.users`'ta, otel adı `hotels`'ta kontrol edilir; çakışma varsa net
   mesajla çıkar, yarım kayıt bırakmaz.

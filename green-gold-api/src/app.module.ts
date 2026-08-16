@@ -6,6 +6,7 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { HealthModule } from './health/health.module';
 import { WidgetModule } from './widget/widget.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { IntegrationsModule } from './integrations/integrations.module';
 import { AuthGuard } from './common/auth.guard';
 import { DemoReadOnlyGuard } from './common/demo-readonly.guard';
 import { DistributedThrottlerStorage } from './common/distributed-throttler.storage';
@@ -24,6 +25,7 @@ import { DistributedThrottlerStorage } from './common/distributed-throttler.stor
     HealthModule,
     WidgetModule,
     DashboardModule,
+    IntegrationsModule,
   ],
   // Global guard sırası ÖNEMLİ: önce AuthGuard (req.auth'ı doldurur / @Public'i
   // atlar), sonra DemoReadOnlyGuard (rolü çözülmüş kullanıcıda yazmayı reddeder).

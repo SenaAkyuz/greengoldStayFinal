@@ -3,8 +3,19 @@
  * bellek-içi sahte istemci. Gerçek DB'ye ihtiyaç duymadan, filtreleri (eq/gte/lt)
  * gerçekten uygulayarak tenant izolasyonunu ve dedup mantığını doğrulamayı sağlar.
  *
- * Desteklenen zincir: from().select().eq().gte().lt().order().single() ve
- * await (thenable) ile dizi sonucu; ayrıca insert().select().single().
+ * Desteklenen zincir: from().select().eq().neq().in().gte().lt().order().limit().single()
+ * ve await (thenable) ile dizi sonucu; ayrıca insert().select().single(),
+ * update().eq().select().single().
+ *
+ * ⚠️ rpc() DESTEĞİNİN SINIRI: `db.rpc(name, args)` yalnızca çağrının YAPILDIĞINI
+ * ve hangi ARGÜMANLARLA yapıldığını kaydeder; test yazarının verdiği sahte
+ * sonucu döndürür. Postgres TRANSACTION semantiğini (atomiklik, advisory lock,
+ * satır kilidi, rollback, serialization failure) TAKLİT ETMEZ ve EDEMEZ.
+ * Bu yüzden `ingest_reservation_event` fonksiyonunun atomiklik davranışı
+ * BU SAHTE İSTEMCİYLE KANITLANAMAZ — gerçek Postgres gerektirir
+ * (bkz. test/staging/README.md ve ingest-reservation-event.acceptance.sql).
+ * Buradaki rpc testleri yalnızca UYGULAMA TARAFININ çağrı sözleşmesini
+ * (doğru argümanlar, doğru sonuç/hata ele alışı) doğrular.
  */
 
 export type Row = Record<string, any>;
@@ -28,9 +39,12 @@ function nextId(): string {
 
 class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
   private eqFilters: { col: string; val: unknown }[] = [];
+  private neqFilters: { col: string; val: unknown }[] = [];
+  private inFilters: { col: string; vals: unknown[] }[] = [];
   private gteFilters: { col: string; val: string }[] = [];
   private ltFilters: { col: string; val: string }[] = [];
   private orderBy: { col: string; ascending: boolean }[] = [];
+  private limitVal: number | null = null;
   private insertedRows: Row[] | null = null;
 
   private insertError: { code: string; message: string } | null = null;
@@ -47,6 +61,21 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
 
   eq(col: string, val: unknown): this {
     this.eqFilters.push({ col, val });
+    return this;
+  }
+
+  neq(col: string, val: unknown): this {
+    this.neqFilters.push({ col, val });
+    return this;
+  }
+
+  in(col: string, vals: unknown[]): this {
+    this.inFilters.push({ col, vals });
+    return this;
+  }
+
+  limit(n: number): this {
+    this.limitVal = n;
     return this;
   }
 
@@ -120,6 +149,12 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     for (const f of this.eqFilters) {
       rows = rows.filter((r) => r[f.col] === f.val);
     }
+    for (const f of this.neqFilters) {
+      rows = rows.filter((r) => r[f.col] !== f.val);
+    }
+    for (const f of this.inFilters) {
+      rows = rows.filter((r) => f.vals.includes(r[f.col]));
+    }
     for (const f of this.gteFilters) {
       rows = rows.filter((r) => String(r[f.col]) >= f.val);
     }
@@ -134,6 +169,9 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
         const cmp = av < bv ? -1 : 1;
         return o.ascending ? cmp : -cmp;
       });
+    }
+    if (this.limitVal !== null) {
+      rows = rows.slice(0, this.limitVal);
     }
     return rows;
   }
@@ -162,9 +200,23 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
   }
 }
 
+export interface FakeRpcCall {
+  name: string;
+  args: Row;
+}
+
+export type FakeRpcHandler = (
+  args: Row,
+) => FakeResult<any> | Promise<FakeResult<any>>;
+
 export interface FakeSupabase {
-  db: { from(table: string): FakeQueryBuilder };
+  db: {
+    from(table: string): FakeQueryBuilder;
+    rpc(name: string, args: Row): Promise<FakeResult<any>>;
+  };
   dataset: FakeDataset;
+  /** Yapılan rpc çağrıları (argüman sözleşmesini doğrulamak için). */
+  rpcCalls: FakeRpcCall[];
   getUserFromToken: (
     token: string,
   ) => Promise<{ data: { user: { id: string } | null }; error: unknown }>;
@@ -173,6 +225,11 @@ export interface FakeSupabase {
 export interface FakeOptions {
   /** Tablo başına unique anahtar kolonları (idempotency/23505 taklidi). */
   uniqueBy?: Record<string, string[]>;
+  /**
+   * Fonksiyon adı -> sahte sonuç üreten handler. TRANSACTION TAKLİDİ DEĞİLDİR
+   * (bkz. dosya başı uyarısı) — yalnızca çağrı sözleşmesini test etmek için.
+   */
+  rpc?: Record<string, FakeRpcHandler>;
 }
 
 /** Sahte SupabaseService (servislere `as any` ile enjekte edilir). */
@@ -180,11 +237,24 @@ export function makeFakeSupabase(
   dataset: FakeDataset = {},
   options: FakeOptions = {},
 ): FakeSupabase {
+  const rpcCalls: FakeRpcCall[] = [];
   return {
     dataset,
+    rpcCalls,
     db: {
       from(table: string) {
         return new FakeQueryBuilder(table, dataset, options.uniqueBy?.[table]);
+      },
+      rpc: async (name: string, args: Row) => {
+        rpcCalls.push({ name, args });
+        const handler = options.rpc?.[name];
+        if (!handler) {
+          return {
+            data: null,
+            error: { message: `rpc handler tanimsiz: ${name}` },
+          };
+        }
+        return handler(args);
       },
     },
     getUserFromToken: (_token: string) =>
