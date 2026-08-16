@@ -12,6 +12,8 @@ dist/
 out/
 build/
 *.tsbuildinfo
+/output/
+/tmp/
 
 # Test / coverage
 coverage/
