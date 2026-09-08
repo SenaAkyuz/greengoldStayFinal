@@ -63,6 +63,18 @@ export function IntegrationCard({
         <code>{embedCode}</code>
       </pre>
 
+      <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-600">
+        <strong className="font-semibold text-neutral-800">
+          Otel geliştiricisi için:
+        </strong>{' '}
+        Misafir oda/gece seçtikçe <code>data-rooms</code> ve{' '}
+        <code>data-nights</code> değerlerini rezervasyon formundan güncelleyin
+        (varsayılan 1). Misafir katkıyı onaylayınca widget{' '}
+        <code>greengold:contribution-selected</code> event&apos;ini fırlatır (
+        <code>detail.amount_total</code>); bu tutarı kendi checkout sepetinize
+        ekstra satır olarak ekleyin. Ödeme sizin mevcut altyapınızdan alınır.
+      </div>
+
       {!widgetSrcConfigured && (
         <div
           role="alert"

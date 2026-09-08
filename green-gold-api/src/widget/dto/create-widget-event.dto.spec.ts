@@ -15,9 +15,41 @@ describe('CreateWidgetEventDto (#9 runtime DTO doğrulama)', () => {
     const errs = await errorsFor({
       event_type: 'katki_ekle_butonuna_basildi',
       session_ref: 'sess-1',
+      metadata: { nights: 3, rooms: 2, amount_total: 30 },
+    });
+    expect(errs).toHaveLength(0);
+  });
+
+  it('rooms opsiyonel — göndermeyen eski widget kurulumu geçerli kalır', async () => {
+    const errs = await errorsFor({
+      event_type: 'checkbox_secildi',
       metadata: { nights: 3, amount_total: 9 },
     });
     expect(errs).toHaveLength(0);
+  });
+
+  it('sınır aşan rooms reddedilir — 1001', async () => {
+    const errs = await errorsFor({
+      event_type: 'checkbox_secildi',
+      metadata: { nights: 2, rooms: 1001 },
+    });
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it('rooms < 1 reddedilir', async () => {
+    const errs = await errorsFor({
+      event_type: 'checkbox_secildi',
+      metadata: { nights: 2, rooms: 0 },
+    });
+    expect(errs.length).toBeGreaterThan(0);
+  });
+
+  it('tam sayı olmayan rooms reddedilir', async () => {
+    const errs = await errorsFor({
+      event_type: 'checkbox_secildi',
+      metadata: { nights: 2, rooms: 1.5 },
+    });
+    expect(errs.length).toBeGreaterThan(0);
   });
 
   it('metadata olmadan da geçerli (opsiyonel)', async () => {
