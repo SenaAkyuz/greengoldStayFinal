@@ -211,7 +211,8 @@ describe('green-gold-widget', () => {
     expect(detail).not.toBeNull();
     expect(detail!).toMatchObject({
       nights: 3,
-      amount_total: 9, // 3 gece × 3/gece
+      rooms: 1, // data-rooms verilmedi -> varsayılan 1 (geriye uyum)
+      amount_total: 9, // 1 oda × 3 gece × 3/oda-gece
       currency: 'EUR',
     });
     expect(typeof detail!.session_ref).toBe('string');
@@ -467,5 +468,95 @@ describe("green-gold-widget — journey_id (Princes' Palace Hedef 4)", () => {
     await flush();
     const views = eventCalls.filter((e) => e.event_type === 'widget_goruntulendi');
     expect(views[0].session_ref).not.toBe('x'.repeat(101));
+  });
+});
+
+describe('green-gold-widget — oda-gece hesabı (rooms × nights × oran)', () => {
+  it('data-rooms=2 + data-nights=3 -> toplam 2 × 3 × oran ve alt etiket oda içerir', async () => {
+    installFetch();
+    const el = await mountWidget({ ...baseAttrs(), 'data-rooms': '2' });
+
+    const sub = el.shadowRoot!.querySelector('.row-sub')!.textContent ?? '';
+    expect(sub).toContain('2 oda');
+    expect(sub).toContain('3 gece');
+
+    const input = el.shadowRoot!.querySelector('input[type=checkbox]') as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+
+    // Toplam satırı: 2 oda × 3 gece × 3 EUR = 18
+    const total = el.shadowRoot!.querySelector('.line-value')!.textContent ?? '';
+    expect(total).toContain('18');
+
+    // checkbox_secildi metadata'sında rooms + oda-gece tutarı.
+    const select = eventCalls.find((e) => e.event_type === 'checkbox_secildi')!;
+    expect(select.metadata).toMatchObject({ nights: 3, rooms: 2, amount_total: 18 });
+
+    let detail: Record<string, unknown> | null = null;
+    document.addEventListener(
+      'greengold:contribution-selected',
+      (e) => {
+        detail = (e as CustomEvent).detail;
+      },
+      { once: true },
+    );
+    (el.shadowRoot!.querySelector('button') as HTMLButtonElement).click();
+    await flush();
+
+    expect(detail!).toMatchObject({ rooms: 2, nights: 3, amount_total: 18, currency: 'EUR' });
+
+    const press = eventCalls.find((e) => e.event_type === 'katki_ekle_butonuna_basildi')!;
+    expect(press.metadata).toMatchObject({ nights: 3, rooms: 2, amount_total: 18 });
+  });
+
+  it('data-rooms yok -> varsayılan 1; davranış eskisiyle birebir aynı (geriye uyum)', async () => {
+    installFetch();
+    const el = await mountWidget(baseAttrs());
+
+    const sub = el.shadowRoot!.querySelector('.row-sub')!.textContent ?? '';
+    expect(sub).toContain('3 gece');
+    expect(sub).not.toContain('oda'); // tek odada oda ifadesi gösterilmez
+
+    const input = el.shadowRoot!.querySelector('input[type=checkbox]') as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+
+    // 1 oda × 3 gece × 3 EUR = 9 (eski davranış)
+    expect(el.shadowRoot!.querySelector('.line-value')!.textContent).toContain('9');
+    const select = eventCalls.find((e) => e.event_type === 'checkbox_secildi')!;
+    expect(select.metadata).toMatchObject({ nights: 3, rooms: 1, amount_total: 9 });
+  });
+
+  it('geçersiz data-rooms (0 / metin) -> güvenle 1e düşer, host sayfa bozulmaz', async () => {
+    installFetch();
+    const el = await mountWidget({ ...baseAttrs(), 'data-rooms': 'abc' });
+    const input = el.shadowRoot!.querySelector('input[type=checkbox]') as HTMLInputElement;
+    input.checked = true;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    await flush();
+    expect(eventCalls.find((e) => e.event_type === 'checkbox_secildi')!.metadata).toMatchObject({
+      rooms: 1,
+      amount_total: 9,
+    });
+  });
+
+  it('data-rooms canlı güncellenince yeniden çizer (observedAttributes)', async () => {
+    installFetch();
+    const el = await mountWidget(baseAttrs());
+    el.setAttribute('data-rooms', '4');
+    await flush();
+
+    const sub = el.shadowRoot!.querySelector('.row-sub')!.textContent ?? '';
+    expect(sub).toContain('4 oda');
+  });
+
+  it('EN: birden çok oda için "rooms" ifadesi gösterilir', async () => {
+    installFetch();
+    const el = await mountWidget({ ...baseAttrs(), 'data-lang': 'en', 'data-rooms': '2' });
+    const sub = el.shadowRoot!.querySelector('.row-sub')!.textContent ?? '';
+    expect(sub).toContain('2 rooms');
+    expect(sub).toContain('3 nights');
   });
 });

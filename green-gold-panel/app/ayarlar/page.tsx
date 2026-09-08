@@ -35,7 +35,7 @@ export default async function SettingsPage() {
             Ayarlar
           </h1>
           <p className="gg-subtitle">
-            Otel bilgileri ve gece başı katkı tutarı
+            Otel bilgileri ve oda-gece başı katkı tutarı
           </p>
         </div>
 

@@ -120,11 +120,12 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
       <section className="gg-card p-6">
         <h2 className="text-sm font-semibold text-neutral-900">Katkı ayarı</h2>
         <p className="mt-1 text-xs text-neutral-500">
-          Misafirin widget&apos;ta göreceği gece başı katkı tutarı.
+          Misafirin widget&apos;ta göreceği oda-gece başı katkı tutarı (oda ×
+          gece ile çarpılır).
         </p>
         <div className="mt-4 max-w-xs">
           <Field
-            label="Gece başı katkı tutarı"
+            label="Oda-gece başı katkı tutarı"
             htmlFor="amount"
             hint="Değişiklik, widget yeniden yüklendiğinde (yeni açılışta) geçerli olur."
           >

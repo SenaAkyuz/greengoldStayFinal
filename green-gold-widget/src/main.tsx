@@ -12,6 +12,11 @@ function parseNights(raw: string | null): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
+function parseRooms(raw: string | null): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
 function parseLang(raw: string | null): Lang {
   return raw === 'en' ? 'en' : 'tr';
 }
@@ -57,7 +62,7 @@ function resolveJourneyId(attrValue: string | null): string {
 
 class GreenGoldWidget extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['data-nights', 'data-lang'];
+    return ['data-nights', 'data-rooms', 'data-lang'];
   }
 
   private mount?: HTMLDivElement;
@@ -151,9 +156,9 @@ class GreenGoldWidget extends HTMLElement {
   }
 
   attributeChangedCallback(name: string): void {
-    // data-nights / data-lang host tarafından güncellenirse yeniden çiz.
+    // data-nights / data-rooms / data-lang host tarafından güncellenirse yeniden çiz.
     if (
-      (name === 'data-nights' || name === 'data-lang') &&
+      (name === 'data-nights' || name === 'data-rooms' || name === 'data-lang') &&
       this.config &&
       this.mount
     ) {
@@ -169,6 +174,11 @@ class GreenGoldWidget extends HTMLElement {
     return parseNights(this.getAttribute('data-nights'));
   }
 
+  /** Oda sayısı — host rezervasyon formundan besler; yoksa 1 (geriye uyum). */
+  private rooms(): number {
+    return parseRooms(this.getAttribute('data-rooms'));
+  }
+
   private rerender(): void {
     if (!this.config || !this.mount) return;
     const lang = parseLang(this.getAttribute('data-lang'));
@@ -176,10 +186,12 @@ class GreenGoldWidget extends HTMLElement {
       <Widget
         config={this.config}
         nights={this.nights()}
+        rooms={this.rooms()}
         lang={lang}
         onSelect={(amountTotal) =>
           this.sendOnce('checkbox_secildi', {
             nights: this.nights(),
+            rooms: this.rooms(),
             amount_total: amountTotal,
           })
         }
@@ -199,6 +211,7 @@ class GreenGoldWidget extends HTMLElement {
   private handleAdd(amountTotal: number): void {
     this.sendOnce('katki_ekle_butonuna_basildi', {
       nights: this.nights(),
+      rooms: this.rooms(),
       amount_total: amountTotal,
     });
     this.dispatchEvent(
@@ -208,6 +221,7 @@ class GreenGoldWidget extends HTMLElement {
         detail: {
           session_ref: this.sessionRef,
           nights: this.nights(),
+          rooms: this.rooms(),
           amount_total: amountTotal,
           currency: this.config?.currency ?? null,
         },

@@ -49,7 +49,7 @@ export default async function IntegrationPage() {
 
   const embedCode = hotel
     ? `<script src="${widgetSrc}"></script>
-<green-gold-widget data-key="${hotel.public_widget_key}" data-nights="1" data-lang="tr"
+<green-gold-widget data-key="${hotel.public_widget_key}" data-rooms="1" data-nights="1" data-lang="tr"
     data-api="${apiBaseUrl}"></green-gold-widget>`
     : '';
 
