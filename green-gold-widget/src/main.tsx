@@ -57,7 +57,7 @@ function resolveJourneyId(attrValue: string | null): string {
 
 class GreenGoldWidget extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['data-nights', 'data-lang'];
+    return ['data-nights', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'];
   }
 
   private mount?: HTMLDivElement;
@@ -119,7 +119,7 @@ class GreenGoldWidget extends HTMLElement {
     if (!this.config) {
       const config = await fetchConfig(this.apiBase, this.key);
       if (!config) return; // geçersiz key / hata -> sessizce render etme
-      this.config = config;
+      this.config = this.withPreviewOverride(config);
     }
 
     this.rerender();
@@ -153,7 +153,7 @@ class GreenGoldWidget extends HTMLElement {
   attributeChangedCallback(name: string): void {
     // data-nights / data-lang host tarafından güncellenirse yeniden çiz.
     if (
-      (name === 'data-nights' || name === 'data-lang') &&
+      ['data-nights', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'].includes(name) &&
       this.config &&
       this.mount
     ) {
@@ -167,6 +167,23 @@ class GreenGoldWidget extends HTMLElement {
 
   private nights(): number {
     return parseNights(this.getAttribute('data-nights'));
+  }
+
+  private withPreviewOverride(config: WidgetConfig): WidgetConfig {
+    if (!this.preview) return config;
+    const amount = Number(this.getAttribute('data-preview-amount'));
+    const co2 = Number(this.getAttribute('data-preview-co2'));
+    const currency = this.getAttribute('data-preview-currency');
+    const source = this.getAttribute('data-preview-source') === 'regional' ? 'regional' : 'hotel';
+    if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(co2) || co2 <= 0 || !currency) return config;
+    return {
+      ...config,
+      amount_per_night: amount,
+      estimated_co2_per_night_kg: co2,
+      currency,
+      carbon_pricing_demo: true,
+      carbon_estimate_source: source,
+    };
   }
 
   private rerender(): void {
@@ -239,3 +256,4 @@ class GreenGoldWidget extends HTMLElement {
 if (!customElements.get(TAG)) {
   customElements.define(TAG, GreenGoldWidget);
 }
+

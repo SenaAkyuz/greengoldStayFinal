@@ -148,18 +148,19 @@ export function Widget({
         </span>
       </label>
 
+      {config.carbon_pricing_demo && <p class="co2-note">{lang === 'tr' ? (config.carbon_estimate_source === 'hotel' ? 'Otel verileriyle tahmin · Temsili fiyat · 1 oda' : 'Bölgesel tahmin · Temsili fiyat · 1 oda') : (config.carbon_estimate_source === 'hotel' ? 'Hotel-based estimate · Indicative price · 1 room' : 'Regional estimate · Indicative price · 1 room')}</p>}
       {checked && !confirmed && (
         <div class="details" aria-live="polite">
           <div class="line">
             <span class="line-label">{t.totalLabel}</span>
             <span class="line-value">{money(amountTotal)}</span>
           </div>
-          {config.show_estimated_impact && (
+          {(config.show_estimated_impact || config.carbon_pricing_demo) && (
             <>
               <div class="line">
                 <span class="line-label">{t.co2Label}</span>
                 <span class="line-value co2-value">
-                  <span>≈ {co2Total} kg CO₂</span>
+                  <span>≈ {co2Total} kg CO₂e</span>
                   {config.is_estimated && (
                     <span class="badge">{t.estimatedBadge}</span>
                   )}

@@ -1,3 +1,4 @@
+import { WidgetService } from '../widget/widget.service';
 import { DashboardService } from './dashboard.service';
 import { makeFakeSupabase, type FakeDataset } from '../../test/fake-supabase';
 
@@ -379,5 +380,63 @@ describe('DashboardService — etkileşim hunisi & tutarlılık', () => {
     expect(s.views).toBe(3);
     expect(s.selections).toBe(2);
     expect(s.add_clicks).toBe(1);
+  });
+});
+
+
+describe('carbon pricing settings integration', () => {
+  it('persists the computed price and coefficient for only the authenticated hotel', async () => {
+    const db: FakeDataset = { hotels: [hotel('A', { widget_settings: { version: 1, pilot_mode: true } }), hotel('B')] };
+    const service = new DashboardService(makeFakeSupabase(db) as never);
+    const result = await service.updateHotel('A', { carbon_country: 'Turkey', carbon_state: '', carbon_hotel_class: '5 Star' });
+    expect(result.amount_per_night).toBe(1.09);
+    expect(result.estimated_co2_per_night_kg).toBe(43.442576);
+    expect(result.carbon_pricing?.country).toBe('Turkey');
+    const widget = new WidgetService(makeFakeSupabase(db) as never, service);
+    const config = await widget.getConfig('key-A');
+    expect(config.amount_per_night).toBe(1.09);
+    expect(config.estimated_co2_per_night_kg).toBe(43.442576);
+    expect(config.carbon_pricing_demo).toBe(true);
+    expect(db.hotels![0].widget_settings).toMatchObject({ pilot_mode: true });
+    expect(db.hotels![1].contribution_amount_per_night).toBe(3);
+    await expect(service.updateHotel('A', { contribution_amount_per_night: 999 })).rejects.toThrow();
+  });
+  it('rejects mixed manual and calculated prices without writing', async () => {
+    const db: FakeDataset = { hotels: [hotel('A')] };
+    const service = new DashboardService(makeFakeSupabase(db) as never);
+    await expect(service.updateHotel('A', { carbon_country: 'Turkey', carbon_hotel_class: '5 Star', contribution_amount_per_night: 99 })).rejects.toThrow();
+    expect(db.hotels![0].contribution_amount_per_night).toBe(3);
+  });
+});
+
+
+describe('hotel calculation documents', () => {
+  const input = { mode: 'report', country: 'Turkey', period_start: '2025-01-01', period_end: '2025-12-31', rooms: 100, occupied_room_nights: 20000, total_area_m2: 10000, guestrooms_area_m2: 6000, meeting_area_m2: 2000, report_tonnes: 100, report_basis: 'hotel_total', report_reference: 'R-2025', assessor: 'Hotel report' };
+  it('archives immutable results, deduplicates identical saves and updates only the owning widget', async () => {
+    const db: FakeDataset = { hotels: [hotel('A'), hotel('B')] };
+    const service = new DashboardService(makeFakeSupabase(db) as never);
+    const first = await service.updateHotel('A', { hotel_carbon: input });
+    expect(first.amount_per_night).toBe(0.09);
+    expect(first.carbon_reports).toHaveLength(1);
+    const id = first.carbon_reports[0].id;
+    const repeated = await service.updateHotel('A', { hotel_carbon: input });
+    expect(repeated.carbon_reports).toHaveLength(1);
+    const second = await service.updateHotel('A', { hotel_carbon: { ...input, report_tonnes: 200 } });
+    expect(second.carbon_reports).toHaveLength(2);
+    expect(second.carbon_reports.find(r => r.id === id)?.result.coefficient_kg).toBe(3.75);
+    const widget = new WidgetService(makeFakeSupabase(db) as never, service);
+    const config = await widget.getConfig('key-A');
+    expect(config.carbon_estimate_source).toBe('hotel');
+    expect(config.estimated_co2_per_night_kg).toBe(7.5);
+    expect(config.amount_per_night).toBe(0.19);
+    expect((await service.getHotel('B')).carbon_reports).toEqual([]);
+    expect(db.hotels![1].contribution_amount_per_night).toBe(3);
+  });
+  it('rejects mixed providers and leaves stored values unchanged on validation failure', async () => {
+    const db: FakeDataset = { hotels: [hotel('A')] };
+    const service = new DashboardService(makeFakeSupabase(db) as never);
+    await expect(service.updateHotel('A', { hotel_carbon: input, carbon_country: 'Turkey' })).rejects.toThrow();
+    await expect(service.updateHotel('A', { hotel_carbon: { ...input, occupied_room_nights: 999999 } })).rejects.toThrow();
+    expect(db.hotels![0].contribution_amount_per_night).toBe(3);
   });
 });

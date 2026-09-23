@@ -1,3 +1,9 @@
+import { createHash } from 'node:crypto';
+import { calculateHotelCarbon, type HotelCarbonResult } from '../common/hotel-carbon';
+import {
+  calculateCarbonPricing,
+  type CarbonPricing,
+} from '../common/carbon-pricing';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { resolveRange, ymdInTz, type RangeParams } from './date-range.util';
@@ -19,7 +25,10 @@ export interface WidgetEventsSummary {
   conversion_rate_pct: number;
 }
 
+export interface CarbonReport { id: string; hotel_name: string; city: string | null; result: HotelCarbonResult }
 export interface HotelInfo {
+  carbon_reports: CarbonReport[];
+  carbon_pricing: CarbonPricing | HotelCarbonResult | null;
   hotel_name: string;
   city: string | null;
   status: string;
@@ -93,7 +102,7 @@ export class DashboardService {
     const { data: hotel, error } = await this.supabase.db
       .from('hotels')
       .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color',
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color, widget_settings',
       )
       .eq('id', hotelId)
       .single();
@@ -108,6 +117,10 @@ export class DashboardService {
   private toHotelInfo(hotel: Record<string, unknown>): HotelInfo {
     const brandColor = hotel.brand_color as string | null;
     return {
+      carbon_reports: ((hotel.widget_settings as Record<string, unknown> | null)?.carbon_reports as CarbonReport[]) ?? [],
+      carbon_pricing:
+        ((hotel.widget_settings as Record<string, unknown> | null)
+          ?.carbon_pricing as CarbonPricing | HotelCarbonResult) ?? null,
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       status: hotel.status as string,
@@ -123,7 +136,9 @@ export class DashboardService {
       allowed_origins: (hotel.allowed_origins as string[] | null) ?? [],
       hotel_type: normalizeHotelType(hotel.hotel_type),
       logo_url: (hotel.logo_url as string | null) ?? null,
-      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
+      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '')
+        ? brandColor
+        : null,
     };
   }
 
@@ -132,11 +147,51 @@ export class DashboardService {
    * (tenant izolasyonu). DTO whitelist'i sayesinde korumalı alanlar buraya ulaşamaz.
    * Yalnızca gelen alanlar yazılır; updated_at tazelenir. Güncellenmiş otel dönülür.
    */
-  async updateHotel(
-    hotelId: string,
-    dto: UpdateHotelDto,
-  ): Promise<HotelInfo> {
+  async updateHotel(hotelId: string, dto: UpdateHotelDto): Promise<HotelInfo> {
     const patch: Record<string, unknown> = {};
+    let expectedRevision: string | undefined;
+    const hasCarbon =
+      dto.carbon_country !== undefined ||
+      dto.carbon_state !== undefined ||
+      dto.carbon_hotel_class !== undefined;
+    if (dto.hotel_carbon !== undefined && hasCarbon) throw new BadRequestException('Tek hesap yöntemi seçin.');
+    if (hasCarbon || dto.hotel_carbon !== undefined) {
+      if (dto.contribution_amount_per_night !== undefined)
+        throw new BadRequestException('Hesaplanan fiyat elle değiştirilemez.');
+      const { data: current, error } = await this.supabase.db
+        .from('hotels')
+        .select('name, city, default_currency, widget_settings, updated_at')
+        .eq('id', hotelId)
+        .single();
+      if (error || !current) throw new BadRequestException('Otel bulunamadı.');
+      expectedRevision = typeof current.updated_at === 'string' ? current.updated_at : undefined;
+      const pricing = dto.hotel_carbon !== undefined
+        ? calculateHotelCarbon(dto.hotel_carbon, current.default_currency as string)
+        : calculateCarbonPricing(dto.carbon_country ?? '', dto.carbon_state ?? '', dto.carbon_hotel_class ?? '', current.default_currency as string);
+      const settings = (current.widget_settings as Record<string, unknown>) ?? {};
+      let reports = (settings.carbon_reports as CarbonReport[]) ?? [];
+      if ('input' in pricing) {
+        const fingerprint = { hotelId, hotelName: current.name, city: current.city, ...pricing, calculated_at: undefined };
+        const id = 'GG-' + createHash('sha256').update(JSON.stringify(fingerprint)).digest('hex').slice(0, 20).toUpperCase();
+        if (!reports.some(report => report.id === id)) {
+          if (reports.length >= 50) throw new BadRequestException('Belge arşivi dolu. Yeni kayıt için destek ekibiyle iletişime geçin.');
+          reports = [{ id, hotel_name: current.name as string, city: current.city as string | null, result: pricing }, ...reports];
+        }
+      }
+      patch.contribution_amount_per_night = pricing.amount_per_night;
+      patch.estimated_co2_per_night_kg = pricing.coefficient_kg;
+      patch.widget_settings = {
+        ...((current.widget_settings as Record<string, unknown>) ?? {}),
+        carbon_pricing: pricing,
+        carbon_reports: reports,
+      };
+    } else if (dto.contribution_amount_per_night !== undefined) {
+      const existing = await this.getHotel(hotelId);
+      if (existing.carbon_pricing)
+        throw new BadRequestException(
+          'Katkı tutarını değiştirmek için karbon hesabını güncelleyin.',
+        );
+    }
     if (dto.name !== undefined) patch.name = dto.name;
     if (dto.city !== undefined) patch.city = dto.city;
     if (dto.timezone !== undefined) patch.timezone = dto.timezone;
@@ -156,17 +211,15 @@ export class DashboardService {
 
     patch.updated_at = new Date().toISOString();
 
-    const { data: hotel, error } = await this.supabase.db
-      .from('hotels')
-      .update(patch)
-      .eq('id', hotelId)
-      .select(
-        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color',
+    let update = this.supabase.db.from('hotels').update(patch).eq('id', hotelId);
+    if (expectedRevision) update = update.eq('updated_at', expectedRevision);
+    const { data: hotel, error } = await update.select(
+        'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color, widget_settings',
       )
       .single();
 
     if (error || !hotel) {
-      throw new BadRequestException(error?.message ?? 'Otel güncellenemedi.');
+      throw new BadRequestException(error?.message ?? 'Ayarlar başka bir işlemde değişti. Sayfayı yenileyip tekrar deneyin.');
     }
 
     return this.toHotelInfo(hotel);
@@ -482,7 +535,13 @@ export class DashboardService {
     rows.push(['Dönem', range.fromLabel, range.toLabel]);
     rows.push([]);
     rows.push(['Günlük etkileşim']);
-    rows.push(['Tarih', 'Görüntülenme', 'Seçim', 'Katkı butonu', 'Tekil session']);
+    rows.push([
+      'Tarih',
+      'Görüntülenme',
+      'Seçim',
+      'Katkı butonu',
+      'Tekil session',
+    ]);
     for (const day of days) {
       const b = byDay.get(day)!;
       rows.push([day, b.views, b.selections, b.clicks, b.sessions.size]);

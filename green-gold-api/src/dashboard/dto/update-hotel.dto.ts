@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   IsUrl,
@@ -25,6 +26,25 @@ const trim = ({ value }: { value: unknown }) =>
  * hotel_id ASLA gövdeden okunmaz (yalnızca token'dan).
  */
 export class UpdateHotelDto {
+  @IsOptional()
+  @IsObject()
+  hotel_carbon?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  carbon_country?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  carbon_state?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  carbon_hotel_class?: string;
+
   // Otel adı: trim sonrası boş olamaz ("   " reddedilir).
   @IsOptional()
   @Transform(trim)

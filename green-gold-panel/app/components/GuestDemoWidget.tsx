@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 
 // Dev'de widget bundle panel public'ten servis edilir; prod'da CDN adresi verilir.
 const WIDGET_SRC =
-  process.env.NEXT_PUBLIC_WIDGET_SRC ?? '/green-gold-widget.v1.js';
+  process.env.NEXT_PUBLIC_WIDGET_SRC ?? '/green-gold-widget.v1.js?v=20260922-1';
 
 const TAG = 'green-gold-widget';
 // Script yüklendi ama custom element hâlâ tanımlı değilse bu süre sonunda hata
@@ -12,19 +12,50 @@ const TAG = 'green-gold-widget';
 const DEFINE_TIMEOUT_MS = 8000;
 
 type LoadState = 'loading' | 'ready' | 'error';
+type PreviewOverride = {
+  amount_per_night: number;
+  estimated_co2_per_night_kg: number;
+  currency: string;
+  source?: 'hotel' | 'regional';
+};
+
+const subscribePreview = () => () => {};
+const readPreview = () => {
+  try { return window.sessionStorage.getItem('greengold_demo_carbon_preview'); }
+  catch { return null; }
+};
+const readServerPreview = () => null;
+
+function parsePreview(raw: string | null): PreviewOverride | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw) as Partial<PreviewOverride>;
+    return Number.isFinite(value.amount_per_night) && Number(value.amount_per_night) >= 0 &&
+      Number.isFinite(value.estimated_co2_per_night_kg) && Number(value.estimated_co2_per_night_kg) > 0 &&
+      typeof value.currency === 'string'
+      ? value as PreviewOverride
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 export function GuestDemoWidget({
   publicKey,
   apiBase,
+  allowStoredPreview,
 }: {
   publicKey: string;
   apiBase: string;
+  allowStoredPreview: boolean;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const elRef = useRef<HTMLElement | null>(null);
   const [nights, setNights] = useState(1);
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [loadState, setLoadState] = useState<LoadState>('loading');
+  const storedPreview = parsePreview(useSyncExternalStore(subscribePreview, readPreview, readServerPreview));
+  const previewOverride = allowStoredPreview ? storedPreview : null;
   // Yeniden dene: script'i baştan enjekte etmek için sayaç.
   const [attempt, setAttempt] = useState(0);
 
@@ -57,7 +88,7 @@ export function GuestDemoWidget({
       existing.addEventListener('error', onFail);
     } else if (!customElements.get(TAG)) {
       const s = document.createElement('script');
-      s.src = attempt === 0 ? WIDGET_SRC : `${WIDGET_SRC}?retry=${attempt}`;
+      s.src = attempt === 0 ? WIDGET_SRC : `${WIDGET_SRC}${WIDGET_SRC.includes('?') ? '&' : '?'}retry=${attempt}`;
       s.async = true;
       s.dataset.ggwPreview = 'true';
       s.addEventListener('error', onFail);
@@ -91,6 +122,12 @@ export function GuestDemoWidget({
     el.setAttribute('data-preview', 'true');
     el.setAttribute('data-nights', String(nights));
     el.setAttribute('data-lang', lang);
+    if (previewOverride) {
+      el.setAttribute('data-preview-amount', String(previewOverride.amount_per_night));
+      el.setAttribute('data-preview-co2', String(previewOverride.estimated_co2_per_night_kg));
+      el.setAttribute('data-preview-currency', previewOverride.currency);
+      el.setAttribute('data-preview-source', previewOverride.source === 'regional' ? 'regional' : 'hotel');
+    }
     host.appendChild(el);
     elRef.current = el;
     return () => {
@@ -99,7 +136,7 @@ export function GuestDemoWidget({
     };
     // nights/lang bilerek dışarıda: onları setAttribute ile canlı güncelliyoruz.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [publicKey, apiBase, loadState]);
+  }, [publicKey, apiBase, loadState, previewOverride]);
 
   // Seçiciler attribute'ları canlı değiştirir (öğe yeniden çizilir).
   useEffect(() => {
@@ -113,7 +150,7 @@ export function GuestDemoWidget({
     <div className="mt-7 grid gap-6 xl:grid-cols-[230px_1fr]">
       {/* Kontroller */}
       <div className="gg-card h-fit p-5">
-        <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#347866]">Demo kontrolleri</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#347866]">Önizleme kontrolleri</div>
         <h2 className="mt-2 font-[Georgia] text-xl font-medium text-[#102b22]">Önizleme ayarları</h2>
 
         <div className="mt-4">

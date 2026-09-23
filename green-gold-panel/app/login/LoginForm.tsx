@@ -5,6 +5,7 @@ import { useFormStatus } from 'react-dom';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeEmailInput } from '@/lib/email';
 import { demoLogin, type DemoLoginState } from './actions';
 
 export default function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
@@ -29,9 +30,11 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    const normalizedEmail = normalizeEmailInput(email);
+    setEmail(normalizedEmail);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
     if (error) {
@@ -126,7 +129,9 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.currentTarget.value)}
+                onChange={(e) =>
+                  setEmail(normalizeEmailInput(e.currentTarget.value))
+                }
                 className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
               />
             </div>

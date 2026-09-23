@@ -6,7 +6,7 @@ import { signOut } from '../actions';
 
 export type ActivePage =
   | 'overview'
-  | 'guest-demo'
+  | 'guest-preview'
   | 'reservations'
   | 'payments'
   | 'carbon'
@@ -26,7 +26,7 @@ type NavItem = {
 // Ana/aktif ürün alanları — pilotta gerçek işlevi olan 7 sekme.
 const NAV_PRIMARY: NavItem[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/', icon: <GridIcon /> },
-  { key: 'guest-demo', label: 'Misafir Demo', href: '/misafir-demo', icon: <EyeIcon /> },
+  { key: 'guest-preview', label: 'Misafir Önizleme', href: '/misafir-onizleme', icon: <EyeIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
   { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
   { key: 'reports', label: 'Raporlar', href: '/raporlar', icon: <ReportIcon /> },

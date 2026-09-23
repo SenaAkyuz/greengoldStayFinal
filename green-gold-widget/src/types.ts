@@ -11,6 +11,8 @@ export interface ContentOverrides {
 }
 
 export interface WidgetConfig {
+  carbon_pricing_demo?: boolean;
+  carbon_estimate_source?: 'hotel' | 'regional';
   hotel_name: string;
   city: string | null;
   currency: string;

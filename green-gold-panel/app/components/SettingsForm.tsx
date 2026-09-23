@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import type { HotelInfo } from '@/lib/api';
+import { CarbonSettings } from './CarbonSettings';
+import type { CarbonOptions, HotelInfo } from '@/lib/api';
 import { saveSettings, type SettingsState } from '../ayarlar/actions';
 
 const COMMON_TZ = [
@@ -17,7 +18,7 @@ const COMMON_TZ = [
 
 const initialState: SettingsState = { status: 'idle', message: '' };
 
-export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
+export function SettingsForm({ hotel, carbonOptions }: { hotel: HotelInfo; carbonOptions: CarbonOptions | null }) {
   const [state, formAction, isPending] = useActionState(
     saveSettings,
     initialState,
@@ -54,10 +55,11 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
           role="status"
           className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
         >
-          Demo modu — salt okunur. Ayarları görüntüleyebilirsiniz ama
-          değişiklikler kaydedilmez.
+          Görüntüleme hesabı · değişiklikler kaydedilmez.
         </div>
       )}
+
+      <CarbonSettings hotel={hotel} options={carbonOptions} disabled={isPending} />
 
       {/* fieldset disabled: demo modunda tüm form kontrollerini tek yerden kapatır */}
       <fieldset
@@ -112,36 +114,6 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
                 <option key={tz} value={tz} />
               ))}
             </datalist>
-          </Field>
-        </div>
-      </section>
-
-      {/* Katkı ayarı — ayrı bölüm, otel bilgilerinden ayrıştırıldı */}
-      <section className="gg-card p-6">
-        <h2 className="text-sm font-semibold text-neutral-900">Katkı ayarı</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Misafirin widget&apos;ta göreceği gece başı katkı tutarı.
-        </p>
-        <div className="mt-4 max-w-xs">
-          <Field
-            label="Gece başı katkı tutarı"
-            htmlFor="amount"
-            hint="Değişiklik, widget yeniden yüklendiğinde (yeni açılışta) geçerli olur."
-          >
-            <div className="flex items-center gap-2">
-              <input
-                id="amount"
-                name="contribution_amount_per_night"
-                type="number"
-                min={0}
-                max={1000}
-                step="0.01"
-                required
-                defaultValue={hotel.amount_per_night}
-                className={inputCls}
-              />
-              <span className="text-sm text-neutral-500">{hotel.currency}</span>
-            </div>
           </Field>
         </div>
       </section>
@@ -326,9 +298,9 @@ export function SettingsForm({ hotel }: { hotel: HotelInfo }) {
             note="Tanımlayıcı alan (şehir/premium ayrımı); Green Gold belirler."
           />
           <ReadOnlyField
-            label="Tahmini CO₂ katsayısı"
-            value={`${hotel.estimated_co2_per_night_kg.toLocaleString('tr-TR')} kg/gece`}
-            note="Tahmini — Green Gold metodoloji onayı bekliyor; onay öncesi gerçek otele sunulmamalı."
+            label="Kayıtlı tahmini CO₂e katsayısı"
+            value={`${hotel.estimated_co2_per_night_kg.toLocaleString('tr-TR')} kgCO₂e/oda-gece`}
+            note={hotel.carbon_pricing ? "Son kaydedilen hesap." : "Henüz Greenview hesabı kaydedilmedi; mevcut geçici katsayı."}
           />
           <ReadOnlyField
             label="Widget anahtarı"

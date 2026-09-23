@@ -91,7 +91,7 @@ export default function DemoPage() {
         {/* Canlı önizleme veya nazik "kullanılamıyor" mesajı */}
         {demoKey ? (
           <div className="mt-8">
-            <GuestDemoWidget publicKey={demoKey} apiBase={apiBase} />
+            <GuestDemoWidget publicKey={demoKey} apiBase={apiBase} allowStoredPreview={false} />
           </div>
         ) : (
           <div className="mt-8 rounded-2xl border border-[#dbe4dd] bg-white p-8 text-center">

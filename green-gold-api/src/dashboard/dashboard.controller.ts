@@ -1,3 +1,6 @@
+import { BadRequestException } from '@nestjs/common';
+import { calculateHotelCarbon } from '../common/hotel-carbon';
+import { carbonOptions } from '../common/carbon-pricing';
 import { Body, Controller, Get, Patch, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import type { AuthenticatedRequest } from '../common/auth.guard';
@@ -12,6 +15,20 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   // GET /dashboard/hotel (auth'lı) — giriş yapan kullanıcının otel bilgisi + rolü
+  @Get('carbon-preview')
+  async carbonPreview(@Req() req: AuthenticatedRequest, @Query('input') input?: string) {
+    if (!input || input.length > 6000) throw new BadRequestException('Hesap bilgileri geçersiz.');
+    let parsed: unknown;
+    try { parsed = JSON.parse(input); } catch { throw new BadRequestException('Hesap bilgileri okunamadı.'); }
+    const hotel = await this.dashboardService.getHotel(req.auth.hotelId);
+    return calculateHotelCarbon(parsed, hotel.currency);
+  }
+
+  @Get('carbon-options')
+  carbonOptions() {
+    return carbonOptions();
+  }
+
   @Get('hotel')
   async hotel(@Req() req: AuthenticatedRequest) {
     const hotel = await this.dashboardService.getHotel(req.auth.hotelId);

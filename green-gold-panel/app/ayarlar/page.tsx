@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getHotel } from '@/lib/api';
+import { getHotel, getCarbonOptions } from '@/lib/api';
 import { AppShell } from '../components/AppShell';
 import { SettingsForm } from '../components/SettingsForm';
 
@@ -18,7 +18,7 @@ export default async function SettingsPage() {
   const token = session?.access_token;
   if (!token) redirect('/login');
 
-  const hotelRes = await getHotel(token);
+  const [hotelRes, optionsRes] = await Promise.all([getHotel(token), getCarbonOptions(token)]);
   const hotel = hotelRes.data;
 
   return (
@@ -35,7 +35,7 @@ export default async function SettingsPage() {
             Ayarlar
           </h1>
           <p className="gg-subtitle">
-            Otel bilgileri ve gece başı katkı tutarı
+            Otel bilgileri, karbon tahmini ve oda-gece başına katkı hesabı
           </p>
         </div>
 
@@ -46,7 +46,7 @@ export default async function SettingsPage() {
           </div>
         )}
 
-        {hotel && <SettingsForm hotel={hotel} />}
+        {hotel && <SettingsForm hotel={hotel} carbonOptions={optionsRes.data} />}
       </main>
     </AppShell>
   );

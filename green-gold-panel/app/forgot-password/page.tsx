@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { normalizeEmailInput } from '@/lib/email';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,8 @@ export default function ForgotPasswordPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    const normalizedEmail = normalizeEmailInput(email);
+    setEmail(normalizedEmail);
 
     const supabase = createClient();
     // Prod'da güvenilir origin env'den; yoksa tarayıcı origin'i (dev).
@@ -19,7 +22,7 @@ export default function ForgotPasswordPage() {
       process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
 
     // Hatayı yut: kayıtlı/kayıtsız ayrımını sızdırmamak için (enumeration önleme).
-    await supabase.auth.resetPasswordForEmail(email, {
+    await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${origin}/auth/callback?next=/reset-password`,
     });
 
@@ -84,7 +87,9 @@ export default function ForgotPasswordPage() {
                   required
                   autoComplete="email"
                   value={email}
-                  onChange={(e) => setEmail(e.currentTarget.value)}
+                  onChange={(e) =>
+                    setEmail(normalizeEmailInput(e.currentTarget.value))
+                  }
                   className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
                 />
               </div>

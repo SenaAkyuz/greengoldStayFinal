@@ -19,6 +19,8 @@ import {
 } from '../common/widget-settings';
 
 export interface WidgetConfig {
+  carbon_pricing_demo?: boolean;
+  carbon_estimate_source?: 'hotel' | 'regional';
   hotel_name: string;
   city: string | null;
   currency: string;
@@ -86,23 +88,34 @@ export class WidgetService {
 
     const brandColor = hotel.brand_color as string | null;
     const settings = resolveWidgetSettings(hotel.widget_settings);
+    const carbonDemo =
+      (hotel.widget_settings as Record<string, { provider?: string }> | null)?.carbon_pricing
+        ?.provider === 'greenview-demo';
 
+    const hotelEstimate = (hotel.widget_settings as Record<string, { provider?: string }> | null)?.carbon_pricing?.provider === 'hotel-input-demo';
     return {
+      carbon_estimate_source: hotelEstimate ? 'hotel' : carbonDemo ? 'regional' : undefined,
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       currency: (hotel.default_currency as string) ?? 'EUR',
+      carbon_pricing_demo: carbonDemo || hotelEstimate,
       amount_per_night: Number(hotel.contribution_amount_per_night),
       // Görünürlük kapalıysa yanıltıcı olabilecek sayıyı istemciye HİÇ
       // gönderme (widget zaten show_estimated_impact ile render etmeyecek —
       // bu ek bir savunma katmanı, örn. devtools/network'te sızmasın diye).
-      estimated_co2_per_night_kg: settings.showEstimatedImpact
-        ? effectiveCo2PerNight(hotel.estimated_co2_per_night_kg as number | null)
-        : 0,
+      estimated_co2_per_night_kg:
+        settings.showEstimatedImpact || carbonDemo || hotelEstimate
+          ? effectiveCo2PerNight(
+              hotel.estimated_co2_per_night_kg as number | null,
+            )
+          : 0,
       // Faz 1'de her zaman true (pazarlama dürüstlüğü — karar #6).
       is_estimated: true,
       logo_url: (hotel.logo_url as string | null) ?? null,
       // Defans: yalnızca katı hex geçir (DB'ye zaten doğrulanmış yazılıyor).
-      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '') ? brandColor : null,
+      brand_color: /^#[0-9a-fA-F]{6}$/.test(brandColor ?? '')
+        ? brandColor
+        : null,
       hotel_type: normalizeHotelType(hotel.hotel_type),
       show_estimated_impact: settings.showEstimatedImpact,
       content_overrides: settings.contentOverrides,
@@ -193,9 +206,7 @@ export class WidgetService {
 
     // 3. event_type izinli değerlerden biri değilse -> 400
     //    (ValidationPipe zaten reddeder; bu servis-içi savunma katmanıdır.)
-    if (
-      !WIDGET_EVENT_TYPES.includes(dto?.event_type as WidgetEventType)
-    ) {
+    if (!WIDGET_EVENT_TYPES.includes(dto?.event_type as WidgetEventType)) {
       throw new BadRequestException(
         `event_type şunlardan biri olmalı: ${WIDGET_EVENT_TYPES.join(', ')}`,
       );

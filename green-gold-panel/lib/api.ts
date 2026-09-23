@@ -11,7 +11,26 @@ export interface WidgetEventsSummary {
   conversion_rate_pct: number;
 }
 
+export interface CarbonRow { country: string; state: string; class: string; room: number; room_method: string | null }
+export interface CarbonOptions { source: { version: string; data_year: number; url: string }; rows: CarbonRow[]; demo_price_per_tonne: number }
+export interface HotelCarbonInput {
+ mode: 'consumption' | 'report'; country: string; period_start: string; period_end: string;
+ rooms: number; occupied_room_nights: number; total_area_m2: number; guestrooms_area_m2: number; meeting_area_m2: number;
+ electricity_connection?: 'distribution' | 'transmission'; electricity_kwh?: number; gas_kwh?: number; diesel_litres?: number;
+ other_emissions_kg?: number; other_reference?: string; report_tonnes?: number; report_basis?: 'hotel_total' | 'guestrooms'; report_reference?: string; assessor?: string;
+}
+export interface HotelCarbonResult extends CarbonPricing {
+ input: HotelCarbonInput; total_kg: number; guestrooms_kg: number; room_share: number; occupancy_percent: number; intensity_kg_m2: number;
+ factors: { value: number; unit: string; year: number; source: string; url: string }[];
+ breakdown: { label: string; kg: number }[]; verification: 'unverified'; scope: string;
+}
+export interface CarbonReport { id: string; hotel_name: string; city: string | null; result: HotelCarbonResult }
+export interface CarbonPricing { provider?: string; input?: HotelCarbonInput; version?: string; calculation_method?: string; country: string; state: string; hotel_class: string; coefficient_kg: number; amount_per_night: number; currency: string; price_per_tonne: number; calculated_at: string }
+export function getCarbonOptions(token: string) { return apiGet<CarbonOptions>('/dashboard/carbon-options', token); }
+
 export interface HotelInfo {
+  carbon_reports?: CarbonReport[];
+  carbon_pricing?: CarbonPricing | null;
   hotel_name: string;
   city: string | null;
   status: string;
@@ -30,6 +49,10 @@ export interface HotelInfo {
 }
 
 export interface HotelUpdate {
+  hotel_carbon?: HotelCarbonInput;
+  carbon_country?: string;
+  carbon_state?: string;
+  carbon_hotel_class?: string;
   name?: string;
   city?: string;
   timezone?: string;
@@ -235,3 +258,5 @@ export function getWidgetEmbedSrc() {
   if (site) return `${site.replace(/\/+$/, '')}/green-gold-widget.v1.js`;
   return 'https://<panel-domain>/green-gold-widget.v1.js';
 }
+
+export function previewCarbon(token: string, input: HotelCarbonInput) { return apiGet<HotelCarbonResult>('/dashboard/carbon-preview?input=' + encodeURIComponent(JSON.stringify(input)), token); }

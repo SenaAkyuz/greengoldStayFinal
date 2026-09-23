@@ -2,7 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { updateHotel, type HotelUpdate } from '@/lib/api';
+import {
+  updateHotel,
+  previewCarbon,
+  type HotelCarbonInput,
+  type HotelCarbonResult,
+  type HotelUpdate,
+} from '@/lib/api';
 
 export type SettingsState = {
   status: 'idle' | 'success' | 'error';
@@ -40,13 +46,14 @@ export async function saveSettings(
       .map((v) => v.toString().trim())
       .filter((v) => v !== ''),
   };
-  const amountRaw = str('contribution_amount_per_night');
-  if (amountRaw !== '') {
-    const amount = Number(amountRaw);
-    if (!Number.isFinite(amount)) {
-      return { status: 'error', message: 'Gece başı tutar sayı olmalı.' };
-    }
-    patch.contribution_amount_per_night = amount;
+  if (str('carbon_mode') === 'hotel') {
+    const raw = str('hotel_carbon');
+    if (!raw) return { status: 'error', message: 'Kaydetmeden önce karbon hesabını tamamlayın.' };
+    try { patch.hotel_carbon = JSON.parse(raw); } catch { return { status: 'error', message: 'Hesap bilgileri okunamadı.' }; }
+  } else if (str('carbon_country')) {
+    patch.carbon_country = str('carbon_country');
+    patch.carbon_state = str('carbon_state');
+    patch.carbon_hotel_class = str('carbon_hotel_class');
   }
 
   // Marka: boş -> null (temizle), dolu -> değer. Değer client'ta ön-doğrulanır;
@@ -62,5 +69,37 @@ export async function saveSettings(
   }
 
   revalidatePath('/ayarlar');
+  revalidatePath('/misafir-onizleme');
+  revalidatePath('/karbon');
+  revalidatePath('/sertifikalar');
   return { status: 'success', message: 'Ayarlar kaydedildi.' };
+}
+
+export async function previewHotelCarbon(input: HotelCarbonInput) {
+  const supabase = await createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
+  return previewCarbon(session.access_token, input);
+}
+
+export async function calculateAndApplyHotelCarbon(input: HotelCarbonInput) {
+  const supabase = await createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
+
+  const response = await updateHotel(session.access_token, { hotel_carbon: input });
+  if (response.error || !response.data) {
+    return { data: null, error: response.error ?? 'Karbon hesabı kaydedilemedi.' };
+  }
+
+  const pricing = response.data.carbon_pricing;
+  if (!pricing || pricing.provider !== 'hotel-input-demo' || !pricing.input) {
+    return { data: null, error: 'Kaydedilen karbon hesabı okunamadı.' };
+  }
+
+  revalidatePath('/ayarlar');
+  revalidatePath('/misafir-onizleme');
+  revalidatePath('/karbon');
+  revalidatePath('/sertifikalar');
+  return { data: pricing as HotelCarbonResult, error: null };
 }
