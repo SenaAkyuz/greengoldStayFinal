@@ -4,27 +4,20 @@ import type { CarbonProviderStatus, HotelInfo } from '@/lib/api';
 import { startProviderMeasurement } from '../ayarlar/actions';
 
 /**
- * 3pmetrics ölçüm akışı (Faz 1 + Faz 2).
+ * 3pmetrics ölçüm akışı — OTEL YÖNETİCİSİNE görünen ekran.
  *
- * DÜRÜSTLÜK KURALI: sağlayıcı sözleşmesi (API dokümanı, kimlik doğrulama
- * yöntemi, webhook dokümanı, örnek JSON, test erişimi) elimize geçmeden bu ekran
- * "bağlı" görünmez. `provider_configured=false` iken butonlar pasiftir ve eksik
- * olanın NE olduğu açıkça yazılır — aynı desen SynXis entegrasyonunda da
- * kullanılıyor (bkz. Entegrasyon ekranı).
+ * DİL KURALI: bu ekran otel müşterisine bakar, geliştirme ekibine değil.
+ * Sağlayıcı sözleşmesinin hangi maddelerini beklediğimiz, migration numarası,
+ * "Faz 1/Faz 2" gibi proje içi terimler BURAYA YAZILMAZ — onların yeri
+ * 3PMETRICS_ENTEGRASYON_RAPORU.md.
+ *
+ * DÜRÜSTLÜK KURALI (korunur): entegrasyon devreye alınmadan ekran "bağlı"
+ * görünmez ve ölçüm sonucu için doğrulanmış dengeleme/sertifika iddiası
+ * kurulmaz. Aynı ilke SynXis entegrasyonunda da geçerli.
  */
 
 const inputClass =
   'mt-1.5 w-full rounded-lg border border-[#d8e1da] bg-white px-3 py-2.5 text-sm text-[#17372d] focus:outline-none focus:ring-2 focus:ring-emerald-200';
-
-const REQUIRED_FROM_PROVIDER = [
-  'API dokümanı ve kimlik doğrulama yöntemi',
-  'Ölçüm oturumu oluşturma ucu (tesis kimliği, ölçüm kimliği, dönem, dönüş adresi → süreli form bağlantısı)',
-  'Form verilerini alma ucu (alan tanımı, birim, dönem; oda sayısı, doluluk, dolu oda-gece/misafir-gece, tüketimler)',
-  'Hesaplama sonucu ucu (toplam emisyon, birim, dönem, kapsam, yöntem/sürüm, sonuç durumu, rapor bağlantısı)',
-  'Webhook dokümanı (form gönderildi / ölçüm tamamlandı / kayıt güncellendi) ve imza şeması',
-  'Faz 2: yetkili tesisleri listeleme, tesisin ölçümlerini listeleme, ölçüm detayı, güncellenen kayıtları sorgulama',
-  'Sandbox/test erişimi ve örnek form + sonuç JSON’ları',
-];
 
 export function CarbonProviderPanel({
   hotel,
@@ -82,43 +75,39 @@ export function CarbonProviderPanel({
       </header>
 
       <div className="space-y-6 p-6">
-        {!ready && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-900">
-              Sağlayıcı bağlantısı henüz açılmadı.
+        {(!ready || (status !== null && !status.schema_ready)) && (
+          <div className="rounded-xl border border-[#d8e1da] bg-[#f6f9f6] p-4">
+            <p className="text-sm font-semibold text-[#17372d]">
+              3pmetrics bağlantısı hazırlanıyor
             </p>
-            <p className="mt-2 text-sm text-amber-800">
-              3pmetrics tarafından paylaşılması beklenenler:
+            <p className="mt-2 text-sm text-neutral-600">
+              Ölçüm entegrasyonu devreye alındığında bu ekrandan yeni ölçüm
+              başlatabilir veya mevcut 3pmetrics hesabınızı bağlayabilirsiniz.
+              Devreye alındığında sizi bilgilendireceğiz.
             </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-amber-800">
-              {REQUIRED_FROM_PROVIDER.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs text-amber-700">
-              Bu bilgiler gelmeden akış &quot;bağlı&quot; gösterilmez; uydurulmuş
-              bir uç noktaya bağlanmaz.
+            <p className="mt-2 text-sm text-neutral-600">
+              O zamana kadar karbon hesabınızı{' '}
+              <strong className="font-medium text-[#17372d]">
+                Otele özgü hesap
+              </strong>{' '}
+              veya{' '}
+              <strong className="font-medium text-[#17372d]">
+                Bölgesel tahmin
+              </strong>{' '}
+              sekmesinden oluşturabilirsiniz; widget fiyatınız oradan güncellenir.
             </p>
           </div>
         )}
 
-        {status && !status.schema_ready && (
-          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
-            Ölçüm kayıt tabloları henüz oluşturulmadı (migration{' '}
-            <code className="font-mono text-xs">0015</code> uygulanmalı). Bu
-            adıma kadar ölçüm geçmişi saklanamaz.
-          </div>
-        )}
-
-        {/* Faz 1 — Ölçüme başla */}
+        {/* Yeni ölçüm başlat */}
         <div>
           <h3 className="text-sm font-semibold text-[#17372d]">
-            Faz 1 · Yeni ölçüm
+            Yeni ölçüm başlat
           </h3>
           <p className="mt-1 text-xs text-neutral-500">
-            Dönem bilgisiyle otele özel bir form bağlantısı açılır. Sonuç
-            sunucular arasında aktarılır — otel sayfayı kapatsa bile ölçüm bize
-            ulaşır.
+            Ölçüm dönemini seçtiğinizde tesisinize özel bir form bağlantısı
+            açılır. Formu tamamladıktan sonra sonuç panele otomatik işlenir;
+            sayfayı kapatmanız sonucu etkilemez.
           </p>
           <fieldset
             disabled={disabled || pending || !ready || isDemo}
@@ -162,15 +151,16 @@ export function CarbonProviderPanel({
           )}
         </div>
 
-        {/* Faz 2 — mevcut hesabı bağla */}
+        {/* Mevcut hesabı bağla */}
         <div className="border-t border-neutral-100 pt-6">
           <h3 className="text-sm font-semibold text-[#17372d]">
-            Faz 2 · Mevcut 3pmetrics hesabı
+            Mevcut 3pmetrics hesabınız
           </h3>
           <p className="mt-1 text-xs text-neutral-500">
-            Halihazırda ölçümü olan oteller formu yeniden doldurmaz. Yetki
-            verildikten sonra tesis seçilir, geçmiş ölçümler içeri aktarılır.
-            3pmetrics şifresi GreenGold Stay tarafından İSTENMEZ.
+            3pmetrics&apos;te ölçümünüz zaten varsa formu yeniden doldurmanız
+            gerekmez. Erişim izni verdikten sonra tesisinizi seçersiniz; geçmiş
+            ölçümleriniz ve raporlarınız panele aktarılır. 3pmetrics şifreniz
+            GreenGold Stay tarafından istenmez.
           </p>
           {status?.link ? (
             <div className="mt-4 rounded-xl border border-emerald-100 p-4 text-sm">
@@ -186,11 +176,7 @@ export function CarbonProviderPanel({
             <button
               type="button"
               disabled
-              title={
-                ready
-                  ? 'Yetkilendirme akışı hazırlanıyor.'
-                  : 'Sağlayıcı yetkilendirme yöntemi bekleniyor.'
-              }
+              title="Hesap bağlama yakında kullanıma açılacak."
               className="mt-4 rounded-lg border border-neutral-200 px-5 py-2.5 text-sm font-medium text-neutral-500 disabled:opacity-60"
             >
               Mevcut 3pmetrics hesabımı bağla
@@ -238,9 +224,12 @@ export function CarbonProviderPanel({
           </p>
         )}
 
+        {/* Doğruluk ibaresi KORUNUR: ölçüm ile kredi itfası ayrı süreçlerdir,
+            ölçüm kaydı dengeleme sertifikası yerine geçmez. Profesyonel dille
+            yazılır, ama iddia büyütülmez. */}
         <p className="text-xs text-neutral-500">
-          Ölçüm sonucu bir hesaplama kaydıdır; doğrulanmış karbon dengelemesi
-          veya kredi itfası değildir.
+          Ölçüm sonucu, tesisinizin dönemsel emisyon hesabını belgeler. Karbon
+          kredisi itfası ve dengeleme sertifikası ayrı süreçlerdir.
         </p>
       </div>
     </section>

@@ -317,7 +317,7 @@ export function SettingsForm({
           <ReadOnlyField
             label="Kayıtlı tahmini CO₂e katsayısı"
             value={`${hotel.estimated_co2_per_night_kg.toLocaleString('tr-TR')} kgCO₂e/oda-gece`}
-            note={hotel.carbon_pricing ? "Son kaydedilen hesap." : "Henüz Greenview hesabı kaydedilmedi; mevcut geçici katsayı."}
+            note={hotel.carbon_pricing ? "Son kaydedilen hesap." : "Karbon hesabı henüz oluşturulmadı; varsayılan katsayı kullanılıyor."}
           />
           <ReadOnlyField
             label="Widget anahtarı"

@@ -118,8 +118,11 @@ Uygulanan güvenlik kararları:
 ### 3.5 Panel
 
 - `app/components/CarbonProviderPanel.tsx` — yeni. 3pmetrics akışı; sağlayıcı
-  hazır olmadığında **3pmetrics'ten beklenenlerin listesi** ekranda görünür,
-  butonlar pasif. "Bağlı" izlenimi verilmez.
+  hazır olmadığında "bağlantı hazırlanıyor" durumu gösterilir ve otel alternatif
+  sekmelere yönlendirilir, butonlar pasif. "Bağlı" izlenimi verilmez.
+  Ekran **otel yöneticisine** bakar: sağlayıcıdan beklediğimiz maddeler, migration
+  numarası, "Faz 1/Faz 2" gibi proje içi terimler bu ekranda YER ALMAZ — onların
+  yeri bu rapor ve `output/3pmetrics-bilgi-talebi.pdf`.
 - `app/components/CarbonSettings.tsx` — iki sekme yerine üç sekme
   (3pmetrics / otele özgü / bölgesel). Varsayılan sekme otelin **o an kullandığı**
   kaynak → mevcut oteller için davranış değişmedi.
