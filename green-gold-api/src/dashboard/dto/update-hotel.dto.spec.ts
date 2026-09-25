@@ -40,7 +40,9 @@ describe('UpdateHotelDto', () => {
   });
 
   it('geçerli IANA timezone kabul edilir', async () => {
-    expect(await errorsFor({ timezone: 'America/Los_Angeles' })).toHaveLength(0);
+    expect(await errorsFor({ timezone: 'America/Los_Angeles' })).toHaveLength(
+      0,
+    );
   });
 
   it('tutar sınır dışı reddedilir (-5 ve 9999)', async () => {
@@ -53,15 +55,13 @@ describe('UpdateHotelDto', () => {
   });
 
   it('geçerli tutar kabul edilir (5)', async () => {
-    expect(
-      await errorsFor({ contribution_amount_per_night: 5 }),
-    ).toHaveLength(0);
+    expect(await errorsFor({ contribution_amount_per_night: 5 })).toHaveLength(
+      0,
+    );
   });
 
   it('korumalı alan commission_rate -> 400 (forbidNonWhitelisted)', async () => {
-    expect(
-      (await errorsFor({ commission_rate: 0 })).length,
-    ).toBeGreaterThan(0);
+    expect((await errorsFor({ commission_rate: 0 })).length).toBeGreaterThan(0);
   });
 
   it('korumalı alan estimated_co2_per_night_kg -> 400', async () => {
@@ -70,7 +70,7 @@ describe('UpdateHotelDto', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('gövdede hotel_id -> KESİN 400 (yalnızca token\'dan gelir)', async () => {
+  it("gövdede hotel_id -> KESİN 400 (yalnızca token'dan gelir)", async () => {
     const errs = await errorsFor({ hotel_id: 'baska-otel' });
     expect(errs.length).toBeGreaterThan(0);
     expect(errs[0].property).toBe('hotel_id');
@@ -92,7 +92,8 @@ describe('UpdateHotelDto', () => {
         (await errorsFor({ allowed_origins: ['*'] })).length,
       ).toBeGreaterThan(0);
       expect(
-        (await errorsFor({ allowed_origins: ['https://*.example.com'] })).length,
+        (await errorsFor({ allowed_origins: ['https://*.example.com'] }))
+          .length,
       ).toBeGreaterThan(0);
     });
 
@@ -109,8 +110,11 @@ describe('UpdateHotelDto', () => {
       ).toBeGreaterThan(0);
     });
 
-    it('10\'dan fazla origin reddedilir', async () => {
-      const many = Array.from({ length: 11 }, (_, i) => `https://o${i}.example`);
+    it("10'dan fazla origin reddedilir", async () => {
+      const many = Array.from(
+        { length: 11 },
+        (_, i) => `https://o${i}.example`,
+      );
       expect(
         (await errorsFor({ allowed_origins: many })).length,
       ).toBeGreaterThan(0);
@@ -146,20 +150,25 @@ describe('UpdateHotelDto', () => {
     });
 
     it('hex olmayan / kısa / injection reddedilir', async () => {
-      expect((await errorsFor({ brand_color: 'red' })).length).toBeGreaterThan(0);
-      expect((await errorsFor({ brand_color: '#abc' })).length).toBeGreaterThan(0);
+      expect((await errorsFor({ brand_color: 'red' })).length).toBeGreaterThan(
+        0,
+      );
+      expect((await errorsFor({ brand_color: '#abc' })).length).toBeGreaterThan(
+        0,
+      );
       expect(
         (await errorsFor({ brand_color: '#12345g' })).length,
       ).toBeGreaterThan(0);
       expect(
-        (await errorsFor({ brand_color: 'red;}body{background:url(x)' })).length,
+        (await errorsFor({ brand_color: 'red;}body{background:url(x)' }))
+          .length,
       ).toBeGreaterThan(0);
     });
   });
 
   it('korumalı alan hotel_type -> 400 (otel değiştiremez)', async () => {
-    expect(
-      (await errorsFor({ hotel_type: 'resort' })).length,
-    ).toBeGreaterThan(0);
+    expect((await errorsFor({ hotel_type: 'resort' })).length).toBeGreaterThan(
+      0,
+    );
   });
 });

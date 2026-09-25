@@ -235,7 +235,7 @@ describe('WebhookIngestionService.ingest', () => {
     );
   });
 
-  it('TENANT BAĞI: hotel_id ve provider RPC\'ye GÖNDERİLMEZ (RPC kendisi türetir)', async () => {
+  it("TENANT BAĞI: hotel_id ve provider RPC'ye GÖNDERİLMEZ (RPC kendisi türetir)", async () => {
     const { service, fake } = makeService({
       hotel_integrations: [integrationRow()],
     });

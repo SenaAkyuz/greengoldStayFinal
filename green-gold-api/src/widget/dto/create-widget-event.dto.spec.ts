@@ -63,7 +63,7 @@ describe('CreateWidgetEventDto (#9 runtime DTO doğrulama)', () => {
     expect(errs[0].property).toBe('event_type');
   });
 
-  it('booking_engine_clicked DTO seviyesinde kabul edilir (otel bazlı feature flag WidgetService\'te)', async () => {
+  it("booking_engine_clicked DTO seviyesinde kabul edilir (otel bazlı feature flag WidgetService'te)", async () => {
     const errs = await errorsFor({
       event_type: 'booking_engine_clicked',
       session_ref: 'sess-journey-1',

@@ -63,9 +63,21 @@ describe('room-night totals', () => {
     const { service } = makeService({
       hotels: [hotel('A'), hotel('B')],
       widget_events: [
-        event('A', 'katki_ekle_butonuna_basildi', 'multi', '2026-07-10T09:00:00Z', { nights: 3, rooms: 2 }),
+        event(
+          'A',
+          'katki_ekle_butonuna_basildi',
+          'multi',
+          '2026-07-10T09:00:00Z',
+          { nights: 3, rooms: 2 },
+        ),
         pressEvent('A', 'legacy', 2, '2026-07-11T09:00:00Z'),
-        event('B', 'katki_ekle_butonuna_basildi', 'other', '2026-07-10T09:00:00Z', { nights: 3, rooms: 100 }),
+        event(
+          'B',
+          'katki_ekle_butonuna_basildi',
+          'other',
+          '2026-07-10T09:00:00Z',
+          { nights: 3, rooms: 100 },
+        ),
       ],
     });
     const result = await service.getCarbonSummary('A', RANGE);
@@ -133,7 +145,9 @@ describe('DashboardService — tenant izolasyonu (a)', () => {
 describe('DashboardService.getHotel / updateHotel', () => {
   it('getHotel timezone + commission_rate döner', async () => {
     const { service } = makeService({
-      hotels: [hotel('A', { timezone: 'America/Los_Angeles', commission_rate: 15 })],
+      hotels: [
+        hotel('A', { timezone: 'America/Los_Angeles', commission_rate: 15 }),
+      ],
     });
     const h = await service.getHotel('A');
     expect(h.timezone).toBe('America/Los_Angeles');
@@ -142,7 +156,10 @@ describe('DashboardService.getHotel / updateHotel', () => {
 
   it('updateHotel yalnızca gelen alanları yazar + updated_at tazeler', async () => {
     const { service, fake } = makeService({ hotels: [hotel('A')] });
-    const res = await service.updateHotel('A', { name: 'Deniz Otel', city: 'İzmir' });
+    const res = await service.updateHotel('A', {
+      name: 'Deniz Otel',
+      city: 'İzmir',
+    });
     expect(res.hotel_name).toBe('Deniz Otel');
     expect(res.city).toBe('İzmir');
     const row = fake.dataset.hotels!.find((h) => h.id === 'A')!;
@@ -206,7 +223,10 @@ describe('DashboardService.getCarbonSummary — dedup & doğruluk (g)', () => {
   });
 
   it('boş aralık -> sıfırlar, is_estimated true', async () => {
-    const { service } = makeService({ hotels: [hotel('A')], widget_events: [] });
+    const { service } = makeService({
+      hotels: [hotel('A')],
+      widget_events: [],
+    });
     const r = await service.getCarbonSummary('A', {
       from: '2026-08-01',
       to: '2026-08-31',
@@ -237,7 +257,9 @@ describe('DashboardService — report & CSV export (11E)', () => {
     expect(r.summary.views).toBe(2);
     expect(r.funnel.stages.viewed).toBe(2);
     expect(r.carbon.contributions_count).toBe(1);
-    expect(r.summary.conversion_rate_pct).toBe(r.funnel.rates.view_to_select_pct);
+    expect(r.summary.conversion_rate_pct).toBe(
+      r.funnel.rates.view_to_select_pct,
+    );
   });
 
   it('exportCsv: tenant-scoped, günlük satırlar + özet + injection kaçışı', async () => {
@@ -306,7 +328,7 @@ describe('DashboardService — katsayı placeholder & marka (11C)', () => {
     expect(h.brand_color).toBe('#aabbcc');
   });
 
-  it('getHotel: DB\'deki geçersiz brand_color -> null (defans)', async () => {
+  it("getHotel: DB'deki geçersiz brand_color -> null (defans)", async () => {
     const { service } = makeService({
       hotels: [hotel('A', { brand_color: 'red' })],
     });
@@ -352,7 +374,10 @@ describe('DashboardService — etkileşim hunisi & tutarlılık', () => {
   });
 
   it('payda 0 -> oran 0 (viewed=0)', async () => {
-    const { service } = makeService({ hotels: [hotel('A')], widget_events: [] });
+    const { service } = makeService({
+      hotels: [hotel('A')],
+      widget_events: [],
+    });
     const f = await service.getFunnel('A', RANGE);
     expect(f.stages.viewed).toBe(0);
     expect(f.rates.view_to_select_pct).toBe(0);
@@ -400,12 +425,20 @@ describe('DashboardService — etkileşim hunisi & tutarlılık', () => {
   });
 });
 
-
 describe('carbon pricing settings integration', () => {
   it('persists the computed price and coefficient for only the authenticated hotel', async () => {
-    const db: FakeDataset = { hotels: [hotel('A', { widget_settings: { version: 1, pilot_mode: true } }), hotel('B')] };
+    const db: FakeDataset = {
+      hotels: [
+        hotel('A', { widget_settings: { version: 1, pilot_mode: true } }),
+        hotel('B'),
+      ],
+    };
     const service = new DashboardService(makeFakeSupabase(db) as never);
-    const result = await service.updateHotel('A', { carbon_country: 'Turkey', carbon_state: '', carbon_hotel_class: '5 Star' });
+    const result = await service.updateHotel('A', {
+      carbon_country: 'Turkey',
+      carbon_state: '',
+      carbon_hotel_class: '5 Star',
+    });
     expect(result.amount_per_night).toBe(1.09);
     expect(result.estimated_co2_per_night_kg).toBe(43.442576);
     expect(result.carbon_pricing?.country).toBe('Turkey');
@@ -416,19 +449,40 @@ describe('carbon pricing settings integration', () => {
     expect(config.carbon_pricing_demo).toBe(true);
     expect(db.hotels![0].widget_settings).toMatchObject({ pilot_mode: true });
     expect(db.hotels![1].contribution_amount_per_night).toBe(3);
-    await expect(service.updateHotel('A', { contribution_amount_per_night: 999 })).rejects.toThrow();
+    await expect(
+      service.updateHotel('A', { contribution_amount_per_night: 999 }),
+    ).rejects.toThrow();
   });
   it('rejects mixed manual and calculated prices without writing', async () => {
     const db: FakeDataset = { hotels: [hotel('A')] };
     const service = new DashboardService(makeFakeSupabase(db) as never);
-    await expect(service.updateHotel('A', { carbon_country: 'Turkey', carbon_hotel_class: '5 Star', contribution_amount_per_night: 99 })).rejects.toThrow();
+    await expect(
+      service.updateHotel('A', {
+        carbon_country: 'Turkey',
+        carbon_hotel_class: '5 Star',
+        contribution_amount_per_night: 99,
+      }),
+    ).rejects.toThrow();
     expect(db.hotels![0].contribution_amount_per_night).toBe(3);
   });
 });
 
-
 describe('hotel calculation documents', () => {
-  const input = { mode: 'report', country: 'Turkey', period_start: '2025-01-01', period_end: '2025-12-31', rooms: 100, occupied_room_nights: 20000, total_area_m2: 10000, guestrooms_area_m2: 6000, meeting_area_m2: 2000, report_tonnes: 100, report_basis: 'hotel_total', report_reference: 'R-2025', assessor: 'Hotel report' };
+  const input = {
+    mode: 'report',
+    country: 'Turkey',
+    period_start: '2025-01-01',
+    period_end: '2025-12-31',
+    rooms: 100,
+    occupied_room_nights: 20000,
+    total_area_m2: 10000,
+    guestrooms_area_m2: 6000,
+    meeting_area_m2: 2000,
+    report_tonnes: 100,
+    report_basis: 'hotel_total',
+    report_reference: 'R-2025',
+    assessor: 'Hotel report',
+  };
   it('archives immutable results, deduplicates identical saves and updates only the owning widget', async () => {
     const db: FakeDataset = { hotels: [hotel('A'), hotel('B')] };
     const service = new DashboardService(makeFakeSupabase(db) as never);
@@ -438,9 +492,13 @@ describe('hotel calculation documents', () => {
     const id = first.carbon_reports[0].id;
     const repeated = await service.updateHotel('A', { hotel_carbon: input });
     expect(repeated.carbon_reports).toHaveLength(1);
-    const second = await service.updateHotel('A', { hotel_carbon: { ...input, report_tonnes: 200 } });
+    const second = await service.updateHotel('A', {
+      hotel_carbon: { ...input, report_tonnes: 200 },
+    });
     expect(second.carbon_reports).toHaveLength(2);
-    expect(second.carbon_reports.find(r => r.id === id)?.result.coefficient_kg).toBe(3.75);
+    expect(
+      second.carbon_reports.find((r) => r.id === id)?.result.coefficient_kg,
+    ).toBe(3.75);
     const widget = new WidgetService(makeFakeSupabase(db) as never, service);
     const config = await widget.getConfig('key-A');
     expect(config.carbon_estimate_source).toBe('hotel');
@@ -452,8 +510,17 @@ describe('hotel calculation documents', () => {
   it('rejects mixed providers and leaves stored values unchanged on validation failure', async () => {
     const db: FakeDataset = { hotels: [hotel('A')] };
     const service = new DashboardService(makeFakeSupabase(db) as never);
-    await expect(service.updateHotel('A', { hotel_carbon: input, carbon_country: 'Turkey' })).rejects.toThrow();
-    await expect(service.updateHotel('A', { hotel_carbon: { ...input, occupied_room_nights: 999999 } })).rejects.toThrow();
+    await expect(
+      service.updateHotel('A', {
+        hotel_carbon: input,
+        carbon_country: 'Turkey',
+      }),
+    ).rejects.toThrow();
+    await expect(
+      service.updateHotel('A', {
+        hotel_carbon: { ...input, occupied_room_nights: 999999 },
+      }),
+    ).rejects.toThrow();
     expect(db.hotels![0].contribution_amount_per_night).toBe(3);
   });
 });

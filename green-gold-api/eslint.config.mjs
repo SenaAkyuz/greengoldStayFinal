@@ -38,4 +38,16 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // Sahte supabase istemcisi TİPSİZ bir dış API'yi (supabase-js query
+    // builder) BİLEREK taklit eder: testler rastgele tablo/kolon şekilleri
+    // kurduğu için satırlar `Record<string, any>` olmak ZORUNDA. Buradaki
+    // `any` bir kaza değil, dosyanın var oluş sebebi — bu yüzden kural
+    // yalnızca BU dosyada kapatılır, üretim kodunda açık kalır.
+    files: ['test/fake-supabase.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
 );

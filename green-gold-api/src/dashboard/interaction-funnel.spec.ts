@@ -54,7 +54,7 @@ describe('distinctSessionStages — sıralı cohort', () => {
     expect(s.selected).toBeGreaterThanOrEqual(s.clicked);
   });
 
-  it('select olmadan click, clicked cohort\'a girmez', () => {
+  it("select olmadan click, clicked cohort'a girmez", () => {
     const rows = [
       row('widget_goruntulendi', 's1'),
       row('checkbox_secildi', 's1'),

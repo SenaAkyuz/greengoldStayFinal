@@ -81,7 +81,9 @@ export function assertValidOverrideText(field: string, value: string): void {
   }
 }
 
-function sanitizeOverrideGroup(raw: unknown): ContentOverrideStrings | undefined {
+function sanitizeOverrideGroup(
+  raw: unknown,
+): ContentOverrideStrings | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const r = raw as Record<string, unknown>;
   const out: ContentOverrideStrings = {};

@@ -3,10 +3,7 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { DemoReadOnlyGuard } from './demo-readonly.guard';
 
-function ctx(
-  method: string,
-  role: string | undefined,
-): ExecutionContext {
+function ctx(method: string, role: string | undefined): ExecutionContext {
   const req = { method, auth: role ? { role } : undefined };
   return {
     switchToHttp: () => ({ getRequest: () => req }),

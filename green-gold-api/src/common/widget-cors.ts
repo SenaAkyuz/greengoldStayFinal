@@ -54,7 +54,9 @@ export function createWidgetCors(supabase: SupabaseService) {
     return set;
   }
 
-  async function hotelOrigins(key: string | undefined): Promise<Set<string> | null> {
+  async function hotelOrigins(
+    key: string | undefined,
+  ): Promise<Set<string> | null> {
     if (!key) return null;
     const { data } = await supabase.db
       .from('hotels')
@@ -76,7 +78,10 @@ export function createWidgetCors(supabase: SupabaseService) {
     // Preflight: global birleşim üzerinden geçir (asıl yetki gerçek istekte).
     if (req.method === 'OPTIONS') {
       void (async () => {
-        if (origin && (isDevLocalhost(origin) || (await globalOrigins()).has(origin))) {
+        if (
+          origin &&
+          (isDevLocalhost(origin) || (await globalOrigins()).has(origin))
+        ) {
           setCorsHeaders(res, origin);
         }
         res.status(204).end();

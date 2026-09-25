@@ -9,7 +9,6 @@ import { SupabaseService } from '../supabase/supabase.service';
 import {
   CreateWidgetEventDto,
   WIDGET_EVENT_TYPES,
-  WidgetEventType,
 } from './dto/create-widget-event.dto';
 import { effectiveCo2PerNight, normalizeHotelType } from '../common/hotel-type';
 import { DashboardService } from '../dashboard/dashboard.service';
@@ -89,12 +88,18 @@ export class WidgetService {
     const brandColor = hotel.brand_color as string | null;
     const settings = resolveWidgetSettings(hotel.widget_settings);
     const carbonDemo =
-      (hotel.widget_settings as Record<string, { provider?: string }> | null)?.carbon_pricing
-        ?.provider === 'greenview-demo';
+      (hotel.widget_settings as Record<string, { provider?: string }> | null)
+        ?.carbon_pricing?.provider === 'greenview-demo';
 
-    const hotelEstimate = (hotel.widget_settings as Record<string, { provider?: string }> | null)?.carbon_pricing?.provider === 'hotel-input-demo';
+    const hotelEstimate =
+      (hotel.widget_settings as Record<string, { provider?: string }> | null)
+        ?.carbon_pricing?.provider === 'hotel-input-demo';
     return {
-      carbon_estimate_source: hotelEstimate ? 'hotel' : carbonDemo ? 'regional' : undefined,
+      carbon_estimate_source: hotelEstimate
+        ? 'hotel'
+        : carbonDemo
+          ? 'regional'
+          : undefined,
       hotel_name: hotel.name as string,
       city: (hotel.city as string | null) ?? null,
       currency: (hotel.default_currency as string) ?? 'EUR',
@@ -206,7 +211,7 @@ export class WidgetService {
 
     // 3. event_type izinli değerlerden biri değilse -> 400
     //    (ValidationPipe zaten reddeder; bu servis-içi savunma katmanıdır.)
-    if (!WIDGET_EVENT_TYPES.includes(dto?.event_type as WidgetEventType)) {
+    if (!WIDGET_EVENT_TYPES.includes(dto?.event_type)) {
       throw new BadRequestException(
         `event_type şunlardan biri olmalı: ${WIDGET_EVENT_TYPES.join(', ')}`,
       );

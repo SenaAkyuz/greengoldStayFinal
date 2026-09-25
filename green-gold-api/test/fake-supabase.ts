@@ -105,9 +105,7 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
         const keys = this.uniqueBy;
         const anyNull = keys.some((k) => r[k] === null || r[k] === undefined);
         if (!anyNull) {
-          const clash = existing.some((e) =>
-            keys.every((k) => e[k] === r[k]),
-          );
+          const clash = existing.some((e) => keys.every((k) => e[k] === r[k]));
           if (clash) {
             this.insertError = { code: '23505', message: 'duplicate key' };
             return this;
@@ -192,21 +190,28 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     });
   }
 
-  /** supabase .single(): 0 satır -> error, aksi halde ilk satır. */
-  async single(): Promise<FakeResult<Row>> {
-    if (this.insertError) return { data: null, error: this.insertError };
+  /**
+   * supabase .single(): 0 satır -> error, aksi halde ilk satır.
+   * `async` DEĞİL (await'i yok) — Promise elle döner, davranış aynıdır.
+   */
+  single(): Promise<FakeResult<Row>> {
+    if (this.insertError) {
+      return Promise.resolve({ data: null, error: this.insertError });
+    }
     const rows = this.resolveRows();
     if (rows.length === 0) {
-      return { data: null, error: { message: 'Row not found' } };
+      return Promise.resolve({
+        data: null,
+        error: { message: 'Row not found' },
+      });
     }
-    return { data: rows[0], error: null };
+    return Promise.resolve({ data: rows[0], error: null });
   }
 
   // Thenable: `await builder` -> { data: Row[], error: null }
   then<TResult1 = FakeResult<Row[]>, TResult2 = never>(
     onfulfilled?:
-      | ((value: FakeResult<Row[]>) => TResult1 | PromiseLike<TResult1>)
-      | null,
+      ((value: FakeResult<Row[]>) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     const result: FakeResult<Row[]> = this.insertError

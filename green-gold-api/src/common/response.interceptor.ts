@@ -18,23 +18,26 @@ export interface ResponseEnvelope<T> {
  * Handler zaten zarf döndürdüyse (success alanı varsa) tekrar sarmaz.
  */
 @Injectable()
-export class ResponseInterceptor<T>
-  implements NestInterceptor<T, ResponseEnvelope<T> | T>
-{
+export class ResponseInterceptor<T> implements NestInterceptor<
+  T,
+  ResponseEnvelope<T> | T
+> {
   intercept(
     _context: ExecutionContext,
     next: CallHandler,
   ): Observable<ResponseEnvelope<T> | T> {
+    // `CallHandler.handle()` Observable<any> döner; parametreyi T olarak
+    // tiplemek zarfın içeriğini derleyici için görünür kılar (no-unsafe-*).
     return next.handle().pipe(
-      map((data) => {
+      map((data: T) => {
         if (
           data !== null &&
           typeof data === 'object' &&
           'success' in (data as Record<string, unknown>)
         ) {
-          return data as T;
+          return data;
         }
-        return { success: true, data, error: null } as ResponseEnvelope<T>;
+        return { success: true, data, error: null };
       }),
     );
   }
