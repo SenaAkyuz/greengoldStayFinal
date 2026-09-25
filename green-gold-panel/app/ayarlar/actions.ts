@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   updateHotel,
   previewCarbon,
+  startCarbonMeasurement,
   type HotelCarbonInput,
   type HotelCarbonResult,
   type HotelUpdate,
@@ -73,6 +74,30 @@ export async function saveSettings(
   revalidatePath('/karbon');
   revalidatePath('/sertifikalar');
   return { status: 'success', message: 'Ayarlar kaydedildi.' };
+}
+
+/**
+ * Faz 1 — "Ölçüme başla". Sağlayıcı sözleşmesi gelene kadar API 503
+ * 'carbon_provider_not_configured' döner; mesaj kullanıcıya AYNEN yansıtılır
+ * (başarılıymış gibi davranılmaz).
+ */
+export async function startProviderMeasurement(input: {
+  period_start: string;
+  period_end: string;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
+
+  const response = await startCarbonMeasurement(session.access_token, {
+    ...input,
+    // Panel içi YOL — origin'i API kendi PANEL_BASE_URL'inden ekler.
+    return_path: '/ayarlar',
+  });
+  if (response.data) revalidatePath('/ayarlar');
+  return response;
 }
 
 export async function previewHotelCarbon(input: HotelCarbonInput) {

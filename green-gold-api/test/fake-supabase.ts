@@ -176,6 +176,22 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     return rows;
   }
 
+  /**
+   * supabase .maybeSingle(): 0 satır -> data null + error null (hata DEĞİL).
+   * `async` DEĞİL (await'i yok) — komşu `single()` gibi yazmak
+   * @typescript-eslint/require-await hatası üretirdi; Promise elle döner.
+   */
+  maybeSingle(): Promise<FakeResult<Row>> {
+    if (this.insertError) {
+      return Promise.resolve({ data: null, error: this.insertError });
+    }
+    const rows = this.resolveRows();
+    return Promise.resolve({
+      data: rows.length ? rows[0] : null,
+      error: null,
+    });
+  }
+
   /** supabase .single(): 0 satır -> error, aksi halde ilk satır. */
   async single(): Promise<FakeResult<Row>> {
     if (this.insertError) return { data: null, error: this.insertError };
