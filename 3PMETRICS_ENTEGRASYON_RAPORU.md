@@ -133,7 +133,8 @@ Uygulanan güvenlik kararları:
 ### 3.6 Migration
 
 `green-gold-api/supabase/migrations/0015_carbon_measurement_provider.sql`
-— **henüz uygulanmadı**, gözden geçirmeniz için hazır.
+— **uygulandı** (Supabase SQL editor, 25 Eylül 2026). Beş tablonun da varlığı
+PostgREST üzerinden doğrulandı.
 
 | Tablo | Amaç |
 |---|---|
@@ -243,18 +244,20 @@ Adapter'ı tamamlamak için gereken minimum — her biri
 
 ## 6. Bekleyen işler
 
+Tamamlananlar: migration 0015 uygulandı; kod `main`'e merge edilip production'a
+deploy edildi (PR #3 `e06f4f2`, PR #4 `4127d06`).
+
 | # | İş | Bloker |
 |---|---|---|
-| 1 | Migration 0015'i uygula | Sizin onayınız |
-| 2 | `PANEL_BASE_URL` env değişkenini API'ye ekle (Vercel) | — |
-| 3 | Adapter'ı gerçek uçlara bağla, `configured = true` | 3pmetrics dokümanı |
-| 4 | Webhook ingestion ucu + imza doğrulama + idempotency | 3pmetrics webhook/imza şeması |
-| 5 | Ölçüm → oda-gece katsayısı → widget fiyatı yazma akışı | 3. ve 8. madde (dağıtım mutabakatı) |
-| 6 | Periyodik kontrol (webhook yoksa `updatedSince` polling) | 3pmetrics listeleme ucu |
-| 7 | Faz 2 yetkilendirme akışı (OAuth) + tesis seçimi ekranı | 3pmetrics auth yöntemi |
-| 8 | Production secrets manager | Altyapı kararı — Faz 2 production blokerı |
-| 9 | Rezervasyon `rooms` alanı (çok odalı rezervasyon tahmini) | Booking engine event kontratı |
-| 10 | `carbon_provider_deliveries` / `integration_deliveries` saklama süresi politikası | Cron altyapısı yok |
+| 1 | `PANEL_BASE_URL` env değişkenini API projesine ekle (Vercel) | — |
+| 2 | Adapter'ı gerçek uçlara bağla, `configured = true` | 3pmetrics dokümanı |
+| 3 | Webhook ingestion ucu + imza doğrulama + idempotency | 3pmetrics webhook/imza şeması |
+| 4 | Ölçüm → oda-gece katsayısı → widget fiyatı yazma akışı | 2. madde + dağıtım mutabakatı (bkz. §5.8) |
+| 5 | Periyodik kontrol (webhook yoksa `updatedSince` polling) | 3pmetrics listeleme ucu |
+| 6 | Faz 2 yetkilendirme akışı (OAuth) + tesis seçimi ekranı | 3pmetrics auth yöntemi |
+| 7 | Production secrets manager | Altyapı kararı — Faz 2 production blokerı |
+| 8 | Rezervasyon `rooms` alanı (çok odalı rezervasyon tahmini) | Booking engine event kontratı |
+| 9 | `carbon_provider_deliveries` / `integration_deliveries` saklama süresi politikası | Cron altyapısı yok |
 
 ## 7. Doğrulama
 
@@ -262,18 +265,25 @@ Bu oturumda çalıştırıldı:
 
 - API TypeScript derlemesi: temiz.
 - API test paketi: **386 test / 31 paket geçti** (öncesi 343 — 43 yeni test).
-- API ESLint (`src/carbon/**`): temiz.
-- API production derlemesi (`nest build`): geçti.
+- API ESLint: **0 hata** (tüm repo; öncesi 60 hata — bkz. §8).
+- API production derlemesi (`nest build` + `verify-dist`): geçti.
 - Panel TypeScript: temiz. Panel testleri: 12 test geçti. Panel ESLint: temiz.
 - Panel production derlemesi (`next build`): 21 route derlendi, geçti.
+- Widget: 34 test geçti; `check:widget` hash eşleşmesi doğrulandı.
+- Migration 0015: beş tablonun varlığı PostgREST üzerinden doğrulandı.
+- Canlı: yeni uçlar auth'suz 401 döndürüyor; prod smoke testi 11/11 geçti;
+  API `/internal/health` 200.
 
 Yapılmayanlar:
 
-- Migration 0015 **uygulanmadı** — canlı/staging veritabanına dokunulmadı.
 - Gerçek 3pmetrics çağrısı yapılmadı (sözleşme yok). Adapter testleri, sözleşme
   geldiğinde yerine geçecek bir sahte adapter ile seam'in çalıştığını kanıtlar;
   3pmetrics'in gerçek yanıt şeması hakkında hiçbir iddia içermez.
-- İnteraktif tarayıcı testi yapılmadı.
+- `reservation_carbon_estimates` tablosu oluşturuldu ama **henüz doldurulmuyor** —
+  rezervasyon bazlı snapshot yazımı 6. bölümdeki 4. maddeye bağlı.
+- Smoke script'inin manuel bıraktığı 9 madde (gerçek kullanıcı girişi, şifre
+  sıfırlama e2e, demo salt-okunurluk, CSV tenant kapsamı, gerçek mobil cihaz,
+  Upstash bağlantısı) elle doğrulanmadı.
 
 ## 8. Değişen dosyalar
 
@@ -300,6 +310,23 @@ Düzenlenen (küçük, geri alınabilir):
 - `green-gold-panel/app/components/SettingsForm.tsx` — prop geçişi
 - `green-gold-panel/app/components/CarbonSettings.tsx` — üçüncü sekme
 
-Dokunulmayanlar: `common/carbon-pricing.ts`, `common/hotel-carbon.ts`,
-`common/hft-rows.ts`, `dashboard.service.ts` karbon mantığı, `widget.service.ts`,
-`lib/carbon-document.ts`, sertifika ekranı, widget paketi, mevcut migration'lar.
+Sonradan eklenen (PR #3 ikinci commit + PR #4):
+
+- API lint borcu temizliği — `dashboard.service.ts`, `integrations-read.service.ts`,
+  `http-exception.filter.ts`, `response.interceptor.ts`, `supabase.service.ts`,
+  `widget.service.ts`, `test/fake-supabase.ts`, `eslint.config.mjs`.
+  60 hatanın 35'i tek kök sebepten geliyordu: `let range;` tip annotation'sız
+  yazıldığı için örtük `any` oluyordu. Ayrıca gerçek bir bug düzeltildi —
+  `http-exception.filter.ts` hata gövdesi nesne olduğunda istemciye
+  `'[object Object]'` döndürüyordu.
+- Panel dili — `CarbonProviderPanel.tsx`, `karbon/page.tsx`,
+  `CarbonPricingCalculator.tsx`, `SettingsForm.tsx`: proje içi terimler
+  (sağlayıcıdan beklenenler listesi, migration numarası, "Faz 1/Faz 2",
+  "pilot varsayılanı") otel ekranından çıkarıldı. Doğruluk ibareleri korundu.
+- `login/LoginForm.tsx` — auth hata mesajları ayrıştırıldı; kimlik bilgisi
+  hataları hesap sayımına izin vermemek için tek genel mesajda bırakıldı.
+
+Dokunulmayanlar (karbon mantığı): `common/carbon-pricing.ts`,
+`common/hotel-carbon.ts`, `common/hft-rows.ts`, `dashboard.service.ts` karbon
+hesap akışı, `widget.service.ts` fiyat aktarımı, `lib/carbon-document.ts`,
+sertifika ekranı, widget paketi, 0001–0014 migration'ları.
