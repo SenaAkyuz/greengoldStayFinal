@@ -9,12 +9,20 @@ describe('Greenview demo pricing', () => {
     expect(result.data_year).toBe(2024);
   });
   it('uses the country aggregate, not an average of star classes', () => {
-    expect(calculateCarbonPricing('Turkey', '', 'All Hotels', 'EUR').coefficient_kg).toBe(29.638204);
+    expect(
+      calculateCarbonPricing('Turkey', '', 'All Hotels', 'EUR').coefficient_kg,
+    ).toBe(29.638204);
   });
   it('rejects invented locations, unsupported classes and currencies', () => {
-    expect(() => calculateCarbonPricing('Turkey', 'Istanbul', '5 Star', 'EUR')).toThrow();
-    expect(() => calculateCarbonPricing('Turkey', '', 'resort', 'EUR')).toThrow();
+    expect(() =>
+      calculateCarbonPricing('Turkey', 'Istanbul', '5 Star', 'EUR'),
+    ).toThrow();
+    expect(() =>
+      calculateCarbonPricing('Turkey', '', 'resort', 'EUR'),
+    ).toThrow();
     expect(() => calculateCarbonPricing('', '', 'All Hotels', 'EUR')).toThrow();
-    expect(() => calculateCarbonPricing('Turkey', '', '5 Star', 'JPY')).toThrow();
+    expect(() =>
+      calculateCarbonPricing('Turkey', '', '5 Star', 'JPY'),
+    ).toThrow();
   });
 });

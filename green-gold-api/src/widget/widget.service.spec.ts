@@ -25,7 +25,11 @@ function hotelRow(over: Record<string, unknown> = {}) {
 function makeService(dataset: FakeDataset) {
   const fake = makeFakeSupabase(dataset);
   const dashboard = new DashboardService(fake as never);
-  return { service: new WidgetService(fake as never, dashboard), fake, dashboard };
+  return {
+    service: new WidgetService(fake as never, dashboard),
+    fake,
+    dashboard,
+  };
 }
 
 describe('WidgetService.getConfig', () => {
@@ -38,7 +42,9 @@ describe('WidgetService.getConfig', () => {
 
   it('suspended otel -> 403 (c)', async () => {
     const { service } = makeService({
-      hotels: [hotelRow({ status: 'suspended', public_widget_key: 'key-susp' })],
+      hotels: [
+        hotelRow({ status: 'suspended', public_widget_key: 'key-susp' }),
+      ],
     });
     await expect(service.getConfig('key-susp')).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -70,7 +76,10 @@ describe('WidgetService.getConfig', () => {
   it('config marka alanlarını döner; geçersiz brand_color -> null (11C)', async () => {
     const okHotel = makeService({
       hotels: [
-        hotelRow({ logo_url: 'https://cdn.example/l.png', brand_color: '#1a7f5a' }),
+        hotelRow({
+          logo_url: 'https://cdn.example/l.png',
+          brand_color: '#1a7f5a',
+        }),
       ],
     });
     const cfg = await okHotel.service.getConfig('key-active');
@@ -85,7 +94,7 @@ describe('WidgetService.getConfig', () => {
   });
 });
 
-describe('WidgetService.getConfig — show_estimated_impact & content_overrides (Princes\' Palace pilot)', () => {
+describe("WidgetService.getConfig — show_estimated_impact & content_overrides (Princes' Palace pilot)", () => {
   it('widget_settings yoksa -> show_estimated_impact varsayılan false, CO2 katsayısı 0 (yanıltıcı sayı sızmaz)', async () => {
     const { service } = makeService({ hotels: [hotelRow()] });
     const cfg = await service.getConfig('key-active');
@@ -160,7 +169,9 @@ describe('WidgetService.getImpact (11D)', () => {
 
   it('suspended otel -> 403', async () => {
     const { service } = makeService({
-      hotels: [hotelRow({ status: 'suspended', public_widget_key: 'key-susp' })],
+      hotels: [
+        hotelRow({ status: 'suspended', public_widget_key: 'key-susp' }),
+      ],
     });
     await expect(service.getImpact('key-susp')).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -169,9 +180,7 @@ describe('WidgetService.getImpact (11D)', () => {
 
   it('show_estimated_impact true -> sayılar carbon-summary ile birebir tutarlı', async () => {
     const dataset: FakeDataset = {
-      hotels: [
-        hotelRow({ widget_settings: { show_estimated_impact: true } }),
-      ],
+      hotels: [hotelRow({ widget_settings: { show_estimated_impact: true } })],
       widget_events: [
         {
           id: 'e1',
@@ -206,7 +215,7 @@ describe('WidgetService.getImpact (11D)', () => {
     expect(impact.contributions_count).toBe(0);
   });
 
-  it('show_estimated_impact false (varsayılan) -> gerçek event olsa bile sıfır döner (pilot: Princes\' Palace)', async () => {
+  it("show_estimated_impact false (varsayılan) -> gerçek event olsa bile sıfır döner (pilot: Princes' Palace)", async () => {
     const dataset: FakeDataset = {
       hotels: [hotelRow()], // widget_settings yok -> varsayılan false
       widget_events: [
@@ -237,9 +246,9 @@ describe('WidgetService.recordEvent', () => {
 
   it('X-Widget-Key yoksa -> 401', async () => {
     const { service } = makeService({ hotels: [hotelRow()] });
-    await expect(service.recordEvent(undefined, validDto)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
+    await expect(
+      service.recordEvent(undefined, validDto),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('bilinmeyen key -> 403', async () => {
@@ -251,7 +260,9 @@ describe('WidgetService.recordEvent', () => {
 
   it('suspended otel event gönderemez -> 403 (#2, c)', async () => {
     const { service } = makeService({
-      hotels: [hotelRow({ status: 'suspended', public_widget_key: 'key-susp' })],
+      hotels: [
+        hotelRow({ status: 'suspended', public_widget_key: 'key-susp' }),
+      ],
     });
     await expect(
       service.recordEvent('key-susp', validDto),
@@ -269,7 +280,9 @@ describe('WidgetService.recordEvent', () => {
   it('idempotency: aynı (hotel,session,type) iki kez -> tek satır, ikisi de başarı', async () => {
     const fake = makeFakeSupabase(
       { hotels: [hotelRow()], widget_events: [] },
-      { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
+      {
+        uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] },
+      },
     );
     const service = new WidgetService(
       fake as never,
@@ -285,7 +298,9 @@ describe('WidgetService.recordEvent', () => {
   it('session_ref null -> idempotency yok, her insert ayrı satır', async () => {
     const fake = makeFakeSupabase(
       { hotels: [hotelRow()], widget_events: [] },
-      { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
+      {
+        uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] },
+      },
     );
     const service = new WidgetService(
       fake as never,
@@ -326,7 +341,7 @@ describe("WidgetService.recordEvent — booking_engine_clicked otel bazlı featu
     );
   });
 
-  it('tenant izolasyonu: Otel A açık / Otel B kapalı — A kabul, B ret; B\'nin config\'i A\'yı etkilemez', async () => {
+  it("tenant izolasyonu: Otel A açık / Otel B kapalı — A kabul, B ret; B'nin config'i A'yı etkilemez", async () => {
     const { service, fake } = makeService({
       hotels: [
         hotelRow({
@@ -358,7 +373,9 @@ describe("WidgetService.recordEvent — booking_engine_clicked otel bazlı featu
         ],
         widget_events: [],
       },
-      { uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] } },
+      {
+        uniqueBy: { widget_events: ['hotel_id', 'session_ref', 'event_type'] },
+      },
     );
     const service = new WidgetService(
       fake as never,

@@ -11,15 +11,16 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
  */
 @Injectable()
 export class SupabaseService implements OnModuleInit {
-  private client!: SupabaseClient;
+  // `createClient`'ın döndürdüğü generic imza ile birebir aynı tip — çıplak
+  // `SupabaseClient` yazmak generic parametreleri farklı çözüp unsafe-assignment
+  // üretiyordu.
+  private client!: ReturnType<typeof createClient>;
 
   constructor(private readonly config: ConfigService) {}
 
   onModuleInit() {
     const url = this.config.get<string>('SUPABASE_URL');
-    const serviceRoleKey = this.config.get<string>(
-      'SUPABASE_SERVICE_ROLE_KEY',
-    );
+    const serviceRoleKey = this.config.get<string>('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!url || !serviceRoleKey) {
       throw new Error(

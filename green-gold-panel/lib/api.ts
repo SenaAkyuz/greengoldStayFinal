@@ -260,3 +260,132 @@ export function getWidgetEmbedSrc() {
 }
 
 export function previewCarbon(token: string, input: HotelCarbonInput) { return apiGet<HotelCarbonResult>('/dashboard/carbon-preview?input=' + encodeURIComponent(JSON.stringify(input)), token); }
+
+// --- Harici karbon ölçüm sağlayıcısı (3pmetrics) -----------------------------
+// Faz 1 + Faz 2. Bkz. green-gold-api/src/carbon/*. Sağlayıcı sözleşmesi
+// (API dokümanı / auth yöntemi / webhook) gelene kadar POST uçları 503
+// 'carbon_provider_not_configured' döner; panel bunu DÜRÜST bir "bekleniyor"
+// durumu olarak gösterir, bağlıymış gibi davranmaz.
+
+export interface CarbonProviderLinkView {
+  id: string;
+  provider: string;
+  environment: string;
+  status: string;
+  external_property_id: string;
+  external_property_name: string | null;
+  linked_at: string | null;
+  revoked_at: string | null;
+}
+
+export interface CarbonMeasurementView {
+  id: string;
+  external_measurement_id: string;
+  external_version: string;
+  period_start: string;
+  period_end: string;
+  result_status: string;
+  total_emissions: number | null;
+  total_emissions_unit: string | null;
+  scope: string | null;
+  methodology: string | null;
+  methodology_version: string | null;
+  verification_status: string | null;
+  report_url: string | null;
+  rooms: number | null;
+  occupied_room_nights: number | null;
+  guest_nights: number | null;
+  room_night_kg: number | null;
+  allocation_method: string | null;
+  is_active: boolean;
+  provider_updated_at: string | null;
+  imported_at: string;
+}
+
+export interface CarbonProviderStatus {
+  provider: string;
+  /** Sağlayıcı sözleşmesi hazır mı (API dokümanı / auth / webhook). */
+  provider_configured: boolean;
+  /** Karbon ölçüm tabloları (migration 0015) uygulanmış mı. */
+  schema_ready: boolean;
+  link: CarbonProviderLinkView | null;
+  measurements_count: number;
+  active_measurement: CarbonMeasurementView | null;
+  active_source:
+    | 'provider_measurement'
+    | 'hotel_input'
+    | 'regional_estimate'
+    | 'none';
+}
+
+export interface StartMeasurementResult {
+  session_id: string;
+  measurement_ref: string;
+  form_url: string;
+  expires_at: string;
+  period: { start: string; end: string };
+}
+
+export function getCarbonProviderStatus(token: string) {
+  return apiGet<CarbonProviderStatus>('/dashboard/carbon-provider/status', token);
+}
+
+export function getCarbonMeasurements(token: string) {
+  return apiGet<{ schema_ready: boolean; items: CarbonMeasurementView[] }>(
+    '/dashboard/carbon-provider/measurements',
+    token,
+  );
+}
+
+/**
+ * Faz 1 "Ölçüme başla". `return_path` panel içi bir YOL'dur (tam URL değil) —
+ * origin'i sunucu PANEL_BASE_URL'den ekler, açık redirect olmaz.
+ */
+export function startCarbonMeasurement(
+  token: string,
+  body: { period_start: string; period_end: string; return_path?: string },
+) {
+  return apiPost<StartMeasurementResult>(
+    '/dashboard/carbon-provider/sessions',
+    token,
+    body,
+  );
+}
+
+export function revokeCarbonProviderLink(token: string, linkId: string) {
+  return apiSend<{ id: string; status: string }>(
+    `/dashboard/carbon-provider/links/${encodeURIComponent(linkId)}`,
+    token,
+    'DELETE',
+  );
+}
+
+function apiPost<T>(path: string, token: string, body: unknown) {
+  return apiSend<T>(path, token, 'POST', body);
+}
+
+async function apiSend<T>(
+  path: string,
+  token: string,
+  method: 'POST' | 'DELETE',
+  body?: unknown,
+): Promise<{ data: T | null; error: string | null }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: 'no-store',
+    });
+    const json = (await res.json()) as Envelope<T>;
+    if (!res.ok || !json.success || json.data === null) {
+      return { data: null, error: json.error?.message ?? `HTTP ${res.status}` };
+    }
+    return { data: json.data, error: null };
+  } catch {
+    return { data: null, error: 'API sunucusuna ulaşılamadı.' };
+  }
+}

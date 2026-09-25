@@ -16,10 +16,18 @@ export class DashboardController {
 
   // GET /dashboard/hotel (auth'lı) — giriş yapan kullanıcının otel bilgisi + rolü
   @Get('carbon-preview')
-  async carbonPreview(@Req() req: AuthenticatedRequest, @Query('input') input?: string) {
-    if (!input || input.length > 6000) throw new BadRequestException('Hesap bilgileri geçersiz.');
+  async carbonPreview(
+    @Req() req: AuthenticatedRequest,
+    @Query('input') input?: string,
+  ) {
+    if (!input || input.length > 6000)
+      throw new BadRequestException('Hesap bilgileri geçersiz.');
     let parsed: unknown;
-    try { parsed = JSON.parse(input); } catch { throw new BadRequestException('Hesap bilgileri okunamadı.'); }
+    try {
+      parsed = JSON.parse(input);
+    } catch {
+      throw new BadRequestException('Hesap bilgileri okunamadı.');
+    }
     const hotel = await this.dashboardService.getHotel(req.auth.hotelId);
     return calculateHotelCarbon(parsed, hotel.currency);
   }

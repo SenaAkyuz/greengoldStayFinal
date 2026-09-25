@@ -1,6 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { resolveRange, type RangeParams } from '../dashboard/date-range.util';
+import {
+  resolveRange,
+  type RangeParams,
+  type ResolvedRange,
+} from '../dashboard/date-range.util';
 
 const MAX_RESERVATIONS = 200;
 
@@ -98,7 +102,7 @@ export class IntegrationsReadService {
     params: RangeParams = {},
   ): Promise<ReservationsPage> {
     const tz = await this.getHotelTz(hotelId);
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {
@@ -181,7 +185,7 @@ export class IntegrationsReadService {
     params: RangeParams = {},
   ): Promise<ContributionsSummary> {
     const tz = await this.getHotelTz(hotelId);
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {

@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getHotel, getCarbonOptions } from '@/lib/api';
+import { getHotel, getCarbonOptions, getCarbonProviderStatus } from '@/lib/api';
 import { AppShell } from '../components/AppShell';
 import { SettingsForm } from '../components/SettingsForm';
 
@@ -18,7 +18,13 @@ export default async function SettingsPage() {
   const token = session?.access_token;
   if (!token) redirect('/login');
 
-  const [hotelRes, optionsRes] = await Promise.all([getHotel(token), getCarbonOptions(token)]);
+  // providerStatus hatası ekranı BOZMAZ: sağlayıcı paneli null durumla
+  // "bekleniyor" gösterir, mevcut hesaplayıcılar etkilenmez.
+  const [hotelRes, optionsRes, providerRes] = await Promise.all([
+    getHotel(token),
+    getCarbonOptions(token),
+    getCarbonProviderStatus(token),
+  ]);
   const hotel = hotelRes.data;
 
   return (
@@ -46,7 +52,13 @@ export default async function SettingsPage() {
           </div>
         )}
 
-        {hotel && <SettingsForm hotel={hotel} carbonOptions={optionsRes.data} />}
+        {hotel && (
+          <SettingsForm
+            hotel={hotel}
+            carbonOptions={optionsRes.data}
+            providerStatus={providerRes.data}
+          />
+        )}
       </main>
     </AppShell>
   );

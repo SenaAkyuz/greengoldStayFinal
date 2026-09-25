@@ -53,8 +53,8 @@ describe('resolveRange (#7 sıkı tarih doğrulama)', () => {
   });
 });
 
-describe('resolveRange (#8 range preset, otel tz\'inde)', () => {
-  it('default (boş) -> içinde bulunulan ay (gün 01\'de başlar)', () => {
+describe("resolveRange (#8 range preset, otel tz'inde)", () => {
+  it("default (boş) -> içinde bulunulan ay (gün 01'de başlar)", () => {
     const r = resolveRange({}, TZ);
     expect(r.fromLabel).toMatch(/^\d{4}-\d{2}-01$/);
     expect(r.startUtc < r.endUtcExclusive).toBe(true);
@@ -74,7 +74,7 @@ describe('resolveRange (#8 range preset, otel tz\'inde)', () => {
     expect(inclusiveDays(r.fromLabel, r.toLabel)).toBe(30);
   });
 
-  it('explicit from/to, range preset\'ini geçersiz kılar (override)', () => {
+  it("explicit from/to, range preset'ini geçersiz kılar (override)", () => {
     const r = resolveRange(
       { range: '7d', from: '2026-01-01', to: '2026-01-31' },
       TZ,

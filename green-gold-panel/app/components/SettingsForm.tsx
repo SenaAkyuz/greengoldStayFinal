@@ -2,7 +2,11 @@
 
 import { useActionState, useState } from 'react';
 import { CarbonSettings } from './CarbonSettings';
-import type { CarbonOptions, HotelInfo } from '@/lib/api';
+import type {
+  CarbonOptions,
+  CarbonProviderStatus,
+  HotelInfo,
+} from '@/lib/api';
 import { saveSettings, type SettingsState } from '../ayarlar/actions';
 
 const COMMON_TZ = [
@@ -18,7 +22,15 @@ const COMMON_TZ = [
 
 const initialState: SettingsState = { status: 'idle', message: '' };
 
-export function SettingsForm({ hotel, carbonOptions }: { hotel: HotelInfo; carbonOptions: CarbonOptions | null }) {
+export function SettingsForm({
+  hotel,
+  carbonOptions,
+  providerStatus,
+}: {
+  hotel: HotelInfo;
+  carbonOptions: CarbonOptions | null;
+  providerStatus: CarbonProviderStatus | null;
+}) {
   const [state, formAction, isPending] = useActionState(
     saveSettings,
     initialState,
@@ -59,7 +71,12 @@ export function SettingsForm({ hotel, carbonOptions }: { hotel: HotelInfo; carbo
         </div>
       )}
 
-      <CarbonSettings hotel={hotel} options={carbonOptions} disabled={isPending} />
+      <CarbonSettings
+        hotel={hotel}
+        options={carbonOptions}
+        providerStatus={providerStatus}
+        disabled={isPending}
+      />
 
       {/* fieldset disabled: demo modunda tüm form kontrollerini tek yerden kapatır */}
       <fieldset

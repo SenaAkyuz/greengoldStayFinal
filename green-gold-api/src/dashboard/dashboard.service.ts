@@ -1,16 +1,25 @@
 import { createHash } from 'node:crypto';
-import { calculateHotelCarbon, type HotelCarbonResult } from '../common/hotel-carbon';
+import {
+  calculateHotelCarbon,
+  type HotelCarbonResult,
+} from '../common/hotel-carbon';
 import {
   calculateCarbonPricing,
   type CarbonPricing,
 } from '../common/carbon-pricing';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { resolveRange, ymdInTz, type RangeParams } from './date-range.util';
+import {
+  resolveRange,
+  ymdInTz,
+  type RangeParams,
+  type ResolvedRange,
+} from './date-range.util';
 import { toCsv, slugify } from './csv.util';
 import {
   distinctSessionStages,
   funnelRates,
+  type FunnelEventRow,
   type FunnelRates,
   type FunnelStages,
 } from './interaction-funnel';
@@ -25,7 +34,12 @@ export interface WidgetEventsSummary {
   conversion_rate_pct: number;
 }
 
-export interface CarbonReport { id: string; hotel_name: string; city: string | null; result: HotelCarbonResult }
+export interface CarbonReport {
+  id: string;
+  hotel_name: string;
+  city: string | null;
+  result: HotelCarbonResult;
+}
 export interface HotelInfo {
   carbon_reports: CarbonReport[];
   carbon_pricing: CarbonPricing | HotelCarbonResult | null;
@@ -65,6 +79,28 @@ export interface DashboardReport {
   summary: WidgetEventsSummary;
   funnel: InteractionFunnel;
   carbon: CarbonSummary;
+}
+
+/**
+ * `updateHotel` karbon dalında okunan otel satırı. supabase-js bu sorguda `any`
+ * döndürdüğü için alanlar burada AÇIKÇA tiplenir — kolon adı değişirse hata
+ * derleme zamanında çıkar, sessizce `undefined` olmaz.
+ */
+interface CarbonHotelRow {
+  name: string;
+  city: string | null;
+  default_currency: string;
+  widget_settings: Record<string, unknown> | null;
+  updated_at: string | null;
+}
+
+/**
+ * supabase-js sonucunu yukarıdaki satır tipine bağlar. Fonksiyon olarak yazılır
+ * çünkü satır içi `as CarbonHotelRow` assertion'ını `eslint --fix` "gereksiz"
+ * sayıp siliyor ve tip sessizce `any`'ye düşüyor.
+ */
+function asCarbonHotelRow(row: unknown): CarbonHotelRow {
+  return row as CarbonHotelRow;
 }
 
 // ~21 kg CO₂ / ağaç / yıl kaba değeri (yaklaşık — panel "yaklaşık" etiketiyle gösterir).
@@ -117,7 +153,9 @@ export class DashboardService {
   private toHotelInfo(hotel: Record<string, unknown>): HotelInfo {
     const brandColor = hotel.brand_color as string | null;
     return {
-      carbon_reports: ((hotel.widget_settings as Record<string, unknown> | null)?.carbon_reports as CarbonReport[]) ?? [],
+      carbon_reports:
+        ((hotel.widget_settings as Record<string, unknown> | null)
+          ?.carbon_reports as CarbonReport[]) ?? [],
       carbon_pricing:
         ((hotel.widget_settings as Record<string, unknown> | null)
           ?.carbon_pricing as CarbonPricing | HotelCarbonResult) ?? null,
@@ -154,34 +192,69 @@ export class DashboardService {
       dto.carbon_country !== undefined ||
       dto.carbon_state !== undefined ||
       dto.carbon_hotel_class !== undefined;
-    if (dto.hotel_carbon !== undefined && hasCarbon) throw new BadRequestException('Tek hesap yöntemi seçin.');
+    if (dto.hotel_carbon !== undefined && hasCarbon)
+      throw new BadRequestException('Tek hesap yöntemi seçin.');
     if (hasCarbon || dto.hotel_carbon !== undefined) {
       if (dto.contribution_amount_per_night !== undefined)
         throw new BadRequestException('Hesaplanan fiyat elle değiştirilemez.');
-      const { data: current, error } = await this.supabase.db
+      const { data, error } = await this.supabase.db
         .from('hotels')
         .select('name, city, default_currency, widget_settings, updated_at')
         .eq('id', hotelId)
         .single();
-      if (error || !current) throw new BadRequestException('Otel bulunamadı.');
-      expectedRevision = typeof current.updated_at === 'string' ? current.updated_at : undefined;
-      const pricing = dto.hotel_carbon !== undefined
-        ? calculateHotelCarbon(dto.hotel_carbon, current.default_currency as string)
-        : calculateCarbonPricing(dto.carbon_country ?? '', dto.carbon_state ?? '', dto.carbon_hotel_class ?? '', current.default_currency as string);
-      const settings = (current.widget_settings as Record<string, unknown>) ?? {};
+      if (error || !data) throw new BadRequestException('Otel bulunamadı.');
+      // supabase-js bu sorguda `any` döner; select ile BİREBİR aynı alanlara
+      // tiplenir ki kolon adı değişirse derleyici yakalasın.
+      const current = asCarbonHotelRow(data);
+      expectedRevision =
+        typeof current.updated_at === 'string' ? current.updated_at : undefined;
+      const pricing =
+        dto.hotel_carbon !== undefined
+          ? calculateHotelCarbon(dto.hotel_carbon, current.default_currency)
+          : calculateCarbonPricing(
+              dto.carbon_country ?? '',
+              dto.carbon_state ?? '',
+              dto.carbon_hotel_class ?? '',
+              current.default_currency,
+            );
+      const settings =
+        (current.widget_settings as Record<string, unknown>) ?? {};
       let reports = (settings.carbon_reports as CarbonReport[]) ?? [];
       if ('input' in pricing) {
-        const fingerprint = { hotelId, hotelName: current.name, city: current.city, ...pricing, calculated_at: undefined };
-        const id = 'GG-' + createHash('sha256').update(JSON.stringify(fingerprint)).digest('hex').slice(0, 20).toUpperCase();
-        if (!reports.some(report => report.id === id)) {
-          if (reports.length >= 50) throw new BadRequestException('Belge arşivi dolu. Yeni kayıt için destek ekibiyle iletişime geçin.');
-          reports = [{ id, hotel_name: current.name as string, city: current.city as string | null, result: pricing }, ...reports];
+        const fingerprint = {
+          hotelId,
+          hotelName: current.name,
+          city: current.city,
+          ...pricing,
+          calculated_at: undefined,
+        };
+        const id =
+          'GG-' +
+          createHash('sha256')
+            .update(JSON.stringify(fingerprint))
+            .digest('hex')
+            .slice(0, 20)
+            .toUpperCase();
+        if (!reports.some((report) => report.id === id)) {
+          if (reports.length >= 50)
+            throw new BadRequestException(
+              'Belge arşivi dolu. Yeni kayıt için destek ekibiyle iletişime geçin.',
+            );
+          reports = [
+            {
+              id,
+              hotel_name: current.name,
+              city: current.city,
+              result: pricing,
+            },
+            ...reports,
+          ];
         }
       }
       patch.contribution_amount_per_night = pricing.amount_per_night;
       patch.estimated_co2_per_night_kg = pricing.coefficient_kg;
       patch.widget_settings = {
-        ...((current.widget_settings as Record<string, unknown>) ?? {}),
+        ...(current.widget_settings ?? {}),
         carbon_pricing: pricing,
         carbon_reports: reports,
       };
@@ -211,15 +284,22 @@ export class DashboardService {
 
     patch.updated_at = new Date().toISOString();
 
-    let update = this.supabase.db.from('hotels').update(patch).eq('id', hotelId);
+    let update = this.supabase.db
+      .from('hotels')
+      .update(patch)
+      .eq('id', hotelId);
     if (expectedRevision) update = update.eq('updated_at', expectedRevision);
-    const { data: hotel, error } = await update.select(
+    const { data: hotel, error } = await update
+      .select(
         'name, city, status, timezone, default_currency, contribution_amount_per_night, estimated_co2_per_night_kg, commission_rate, public_widget_key, allowed_origins, hotel_type, logo_url, brand_color, widget_settings',
       )
       .single();
 
     if (error || !hotel) {
-      throw new BadRequestException(error?.message ?? 'Ayarlar başka bir işlemde değişti. Sayfayı yenileyip tekrar deneyin.');
+      throw new BadRequestException(
+        error?.message ??
+          'Ayarlar başka bir işlemde değişti. Sayfayı yenileyip tekrar deneyin.',
+      );
     }
 
     return this.toHotelInfo(hotel);
@@ -247,7 +327,7 @@ export class DashboardService {
 
     const tz = (hotel.timezone as string) || 'Europe/Istanbul';
 
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {
@@ -266,7 +346,7 @@ export class DashboardService {
       throw new BadRequestException(eventsError.message);
     }
 
-    const rows = events ?? [];
+    const rows = (events ?? []) as FunnelEventRow[];
 
     // Ham sayaçlar (toplam etkileşim) — olduğu gibi kalır.
     let views = 0;
@@ -288,7 +368,7 @@ export class DashboardService {
 
     // Dönüşüm SESSION bazlı: funnel'daki view_to_select_pct ile birebir aynı
     // (ortak helper — iki uç tek kaynaktan beslenir).
-    const stages = distinctSessionStages(rows as never);
+    const stages = distinctSessionStages(rows);
     const conversionRatePct = funnelRates(stages).view_to_select_pct;
 
     return {
@@ -320,7 +400,7 @@ export class DashboardService {
 
     const tz = (hotel.timezone as string) || 'Europe/Istanbul';
 
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {
@@ -338,7 +418,7 @@ export class DashboardService {
       throw new BadRequestException(eventsError.message);
     }
 
-    const stages = distinctSessionStages((events ?? []) as never);
+    const stages = distinctSessionStages(events ?? []);
     return {
       period: { from: range.fromLabel, to: range.toLabel },
       stages,
@@ -374,7 +454,7 @@ export class DashboardService {
       hotel.estimated_co2_per_night_kg as number | null,
     );
 
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {
@@ -414,8 +494,13 @@ export class DashboardService {
     for (const row of rows) {
       const key = (row.session_ref as string | null) ?? (row.id as string);
       if (!perSession.has(key)) {
-        const rawRooms = Number((row.metadata as Record<string, unknown> | null)?.rooms);
-        const rooms = Number.isFinite(rawRooms) && rawRooms >= 1 ? Math.min(Math.floor(rawRooms), 1000) : 1;
+        const rawRooms = Number(
+          (row.metadata as Record<string, unknown> | null)?.rooms,
+        );
+        const rooms =
+          Number.isFinite(rawRooms) && rawRooms >= 1
+            ? Math.min(Math.floor(rawRooms), 1000)
+            : 1;
         perSession.set(key, parseNights(row.metadata) * rooms);
       }
     }
@@ -477,7 +562,7 @@ export class DashboardService {
 
     const tz = (hotel.timezone as string) || 'Europe/Istanbul';
 
-    let range;
+    let range: ResolvedRange;
     try {
       range = resolveRange(params, tz);
     } catch (e) {

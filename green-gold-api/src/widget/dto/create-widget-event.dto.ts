@@ -50,7 +50,7 @@ export class WidgetEventMetadataDto {
 }
 
 export class CreateWidgetEventDto {
-  @IsIn(WIDGET_EVENT_TYPES as unknown as string[])
+  @IsIn(WIDGET_EVENT_TYPES)
   event_type!: WidgetEventType;
 
   @IsOptional()
