@@ -57,7 +57,7 @@ export default async function CarbonPage({
       <main className="gg-page">
         <div className="gg-page-header">
           <div>
-            <div className="gg-kicker">Tahmini etki görünümü</div>
+            <div className="gg-kicker">Karbon etkisi özeti</div>
             <h1 className="gg-title">
               Karbon Etkisi
             </h1>
@@ -96,10 +96,12 @@ export default async function CarbonPage({
                   kg CO₂
                 </span>
               </div>
+              {/* Doğruluk ibaresi KORUNUR — sayı bir tahmindir ve tahsilat
+                  değil tıklama sayar. Dil profesyonelleştirildi, iddia aynı. */}
               <p className="mt-3 max-w-2xl text-sm leading-relaxed text-neutral-600">
-                Bu değer, ödeme/rezervasyon onayı değil; widget&apos;ta katkı
-                butonuna basılmasına dayalı bir tahmindir. Otel başına tahmini
-                bir katsayı kullanılır; doğrulanmış karbon dengelemesi değildir.
+                Misafirlerin widget üzerinden seçtiği katkılara ve otelinizin
+                kayıtlı oda-gece katsayısına dayalı hesaplanır. Tahsil edilmiş
+                tutarları veya doğrulanmış karbon dengelemesini göstermez.
               </p>
             </section>
 
@@ -114,18 +116,18 @@ export default async function CarbonPage({
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <SupportCard
                 value={nf(carbon.contributions_count, 0)}
-                label="katkı butonu tıklaması (tekil session)"
+                label="katkı seçimi (tekil ziyaretçi)"
                 hint={`${nf(carbon.total_selected_nights, 0)} oda-gece toplam`}
               />
               <SupportCard
                 value={`≈ ${nf(carbon.tree_equivalent)}`}
-                label="ağaç-yılı eşdeğeri (yaklaşık)"
-                hint="~21 kg CO₂/ağaç/yıl kaba değeri"
+                label="ağaç-yılı eşdeğeri"
+                hint="21 kg CO₂/ağaç/yıl referans değeriyle"
               />
               <SupportCard
                 value={nf(carbon.co2_per_night_kg, 2)}
                 label="kg CO₂/oda-gece katsayısı"
-                hint="tahmini, pilot varsayılanı"
+                hint="otelinizin kayıtlı katsayısı"
               />
             </div>
           </>

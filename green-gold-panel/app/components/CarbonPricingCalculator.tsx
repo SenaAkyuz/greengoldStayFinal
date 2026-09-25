@@ -80,7 +80,9 @@ export function CarbonPricingCalculator({ hotel, options, disabled }: { hotel: H
           </select>
         </label>
       </div>
-      <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Hesaplama ton fiyatı: <strong>{money(options.demo_price_per_tonne)} / tCO₂e</strong>. Bu değer piyasa fiyatı değildir.</p>
+      {/* Doğruluk ibaresi KORUNUR: bu bir referans fiyattır, güncel karbon
+          piyasası kotasyonu değildir. Dil profesyonelleştirildi. */}
+      <p className="rounded-lg border border-[#d8e1da] bg-[#f6f9f6] p-3 text-sm text-neutral-600">Hesaplamada kullanılan ton fiyatı: <strong className="font-medium text-[#17372d]">{money(options.demo_price_per_tonne)} / tCO₂e</strong>. Sabit referans fiyattır; güncel karbon piyasası kotasyonu değildir.</p>
       <div aria-live="polite">
         {valid && coefficient !== null && amount !== null ? <>
           <div className="grid gap-4 sm:grid-cols-2">

@@ -8,6 +8,28 @@ import { createClient } from '@/lib/supabase/client';
 import { normalizeEmailInput } from '@/lib/email';
 import { demoLogin, type DemoLoginState } from './actions';
 
+/**
+ * Supabase auth hatasını kullanıcıya gösterilecek mesaja çevirir.
+ *
+ * Kimlik bilgisi hataları (kullanıcı yok / şifre yanlış) AYNI genel mesajı
+ * alır — ayırmak, bir e-postanın sistemde kayıtlı olup olmadığını dışarıdan
+ * öğrenmeye izin verirdi. Kimlik dışı sebepler ise ayrı yazılır, çünkü
+ * hepsini "şifre hatalı" göstermek çözülebilir sorunları gizliyordu.
+ */
+function loginErrorMessage(error: { message?: string; status?: number }): string {
+  const raw = (error.message ?? '').toLowerCase();
+  if (raw.includes('email not confirmed')) {
+    return 'E-posta adresiniz henüz doğrulanmamış. Doğrulama bağlantısı için destek ekibiyle iletişime geçin.';
+  }
+  if (error.status === 429 || raw.includes('rate limit') || raw.includes('too many')) {
+    return 'Çok fazla deneme yapıldı. Lütfen birkaç dakika sonra tekrar deneyin.';
+  }
+  if (raw.includes('failed to fetch') || raw.includes('network')) {
+    return 'Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.';
+  }
+  return 'Giriş başarısız. E-posta adresinizi ve şifrenizi kontrol edin.';
+}
+
 export default function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
   return (
     <Suspense fallback={null}>
@@ -37,7 +59,11 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
       password,
     });
     if (error) {
-      setError('Giriş başarısız. E-posta veya şifre hatalı.');
+      // Kimlik bilgisi hataları için TEK ve GENEL mesaj kalır: "kullanıcı yok"
+      // ile "şifre yanlış"ı ayırmak hesap sayımına (enumeration) izin verirdi.
+      // Ama kimlik DIŞI sebepler (onaysız e-posta, deneme limiti) ayrı yazılır —
+      // aksi halde çözülebilir bir sorun "şifre hatalı" diye görünüyordu.
+      setError(loginErrorMessage(error));
       setLoading(false);
       return;
     }
