@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { sessionCookieOptions } from './cookie-policy';
 
 // Sunucu istemcisi — Server Component + Route Handler + Server Action.
 export async function createClient() {
@@ -16,7 +17,7 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              cookieStore.set(name, value, sessionCookieOptions(options)),
             );
           } catch {
             // Server Component'ten çağrıldıysa set edilemez — middleware zaten tazeliyor.

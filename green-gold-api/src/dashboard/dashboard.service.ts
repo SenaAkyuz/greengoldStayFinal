@@ -414,7 +414,9 @@ export class DashboardService {
     for (const row of rows) {
       const key = (row.session_ref as string | null) ?? (row.id as string);
       if (!perSession.has(key)) {
-        perSession.set(key, parseNights(row.metadata));
+        const rawRooms = Number((row.metadata as Record<string, unknown> | null)?.rooms);
+        const rooms = Number.isFinite(rawRooms) && rawRooms >= 1 ? Math.min(Math.floor(rawRooms), 1000) : 1;
+        perSession.set(key, parseNights(row.metadata) * rooms);
       }
     }
 

@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isAuthCookie, sessionCookieOptions } from './cookie-policy';
 
 // Public: oturum gerekmez (giriş, şifre kurtarma, recovery callback, public demo).
 const PUBLIC_PREFIXES = [
@@ -43,7 +44,7 @@ export async function updateSession(request: NextRequest) {
           );
           supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, sessionCookieOptions(options)),
           );
         },
       },
@@ -59,11 +60,28 @@ export async function updateSession(request: NextRequest) {
   const isPublic = matchesPrefix(path, PUBLIC_PREFIXES);
   const isGuestOnly = matchesPrefix(path, GUEST_ONLY_PREFIXES);
 
+  const finish = (response: NextResponse) => {
+    // Migrate existing persistent sessions as soon as they visit the panel.
+    if (user) {
+      for (const { name, value } of request.cookies.getAll()) {
+        if (isAuthCookie(name) && !supabaseResponse.cookies.has(name)) {
+          supabaseResponse.cookies.set(name, value, sessionCookieOptions({ path: '/' }));
+        }
+      }
+    }
+    if (response !== supabaseResponse) {
+      for (const cookie of supabaseResponse.cookies.getAll()) response.cookies.set(cookie);
+    }
+    if (user || !isPublic || isGuestOnly) response.headers.set('Cache-Control', 'private, no-store');
+    return response;
+  };
+
   // Girişsiz kullanıcı korumalı bir sayfaya giderse /login'e at.
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    return NextResponse.redirect(url);
+    url.search = '';
+    return finish(NextResponse.redirect(url));
   }
 
   // Girişliyken yalnızca guest-only sayfada (/login) panele geri al.
@@ -71,8 +89,9 @@ export async function updateSession(request: NextRequest) {
   if (user && isGuestOnly) {
     const url = request.nextUrl.clone();
     url.pathname = '/';
-    return NextResponse.redirect(url);
+    url.search = '';
+    return finish(NextResponse.redirect(url));
   }
 
-  return supabaseResponse;
+  return finish(supabaseResponse);
 }

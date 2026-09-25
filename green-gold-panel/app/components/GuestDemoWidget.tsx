@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 
 // Dev'de widget bundle panel public'ten servis edilir; prod'da CDN adresi verilir.
 const WIDGET_SRC =
@@ -52,9 +52,11 @@ export function GuestDemoWidget({
   const hostRef = useRef<HTMLDivElement>(null);
   const elRef = useRef<HTMLElement | null>(null);
   const [nights, setNights] = useState(1);
+  const [rooms, setRooms] = useState(1);
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [loadState, setLoadState] = useState<LoadState>('loading');
-  const storedPreview = parsePreview(useSyncExternalStore(subscribePreview, readPreview, readServerPreview));
+  const rawPreview = useSyncExternalStore(subscribePreview, readPreview, readServerPreview);
+  const storedPreview = useMemo(() => parsePreview(rawPreview), [rawPreview]);
   const previewOverride = allowStoredPreview ? storedPreview : null;
   // Yeniden dene: script'i baştan enjekte etmek için sayaç.
   const [attempt, setAttempt] = useState(0);
@@ -121,6 +123,7 @@ export function GuestDemoWidget({
     el.setAttribute('data-api', apiBase);
     el.setAttribute('data-preview', 'true');
     el.setAttribute('data-nights', String(nights));
+    el.setAttribute('data-rooms', String(rooms));
     el.setAttribute('data-lang', lang);
     if (previewOverride) {
       el.setAttribute('data-preview-amount', String(previewOverride.amount_per_night));
@@ -134,7 +137,7 @@ export function GuestDemoWidget({
       el.remove();
       elRef.current = null;
     };
-    // nights/lang bilerek dışarıda: onları setAttribute ile canlı güncelliyoruz.
+    // nights/rooms/lang bilerek dışarıda: onları setAttribute ile canlı güncelliyoruz.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [publicKey, apiBase, loadState, previewOverride]);
 
@@ -142,6 +145,9 @@ export function GuestDemoWidget({
   useEffect(() => {
     elRef.current?.setAttribute('data-nights', String(nights));
   }, [nights]);
+  useEffect(() => {
+    elRef.current?.setAttribute('data-rooms', String(rooms));
+  }, [rooms]);
   useEffect(() => {
     elRef.current?.setAttribute('data-lang', lang);
   }, [lang]);
@@ -168,6 +174,26 @@ export function GuestDemoWidget({
             value={nights}
             onChange={(e) =>
               setNights(Math.max(1, Math.floor(Number(e.currentTarget.value) || 1)))
+            }
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+          />
+        </div>
+
+        <div className="mt-4">
+          <label
+            htmlFor="demo-rooms"
+            className="mb-1.5 block text-sm font-medium text-neutral-700"
+          >
+            Oda sayısı
+          </label>
+          <input
+            id="demo-rooms"
+            type="number"
+            min={1}
+            max={20}
+            value={rooms}
+            onChange={(e) =>
+              setRooms(Math.max(1, Math.floor(Number(e.currentTarget.value) || 1)))
             }
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
           />
@@ -225,7 +251,7 @@ export function GuestDemoWidget({
           <div className="mb-5">
             <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#347866]">Rezervasyon özeti</div>
             <h3 className="mt-2 font-[Georgia] text-2xl font-medium text-[#102b22]">Konaklamanızı tamamlayın</h3>
-            <p className="mt-1 text-xs text-[#77847e]">{nights} gece · 2 yetişkin · Vergiler dahil</p>
+            <p className="mt-1 text-xs text-[#77847e]">{rooms} oda · {nights} gece · Vergiler dahil</p>
           </div>
 
           {/* Widget'ın checkout akışındaki yeri — vurgulu çerçeve. */}

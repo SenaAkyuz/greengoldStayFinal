@@ -5,6 +5,8 @@ import { resolveStrings } from './i18n';
 interface Props {
   config: WidgetConfig;
   nights: number;
+  /** Oda sayısı — tutar oda × gece × oran olarak hesaplanır. */
+  rooms: number;
   lang: Lang;
   /** Checkbox İLK kez işaretlendiğinde (açılınca) çağrılır. */
   onSelect: (amountTotal: number) => void;
@@ -83,6 +85,7 @@ function CheckIcon() {
 export function Widget({
   config,
   nights,
+  rooms,
   lang,
   onSelect,
   onAdd,
@@ -100,8 +103,8 @@ export function Widget({
   const [checked, setChecked] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
-  const amountTotal = round2(nights * config.amount_per_night);
-  const co2Total = round2(nights * config.estimated_co2_per_night_kg);
+  const amountTotal = round2(rooms * nights * config.amount_per_night);
+  const co2Total = round2(rooms * nights * config.estimated_co2_per_night_kg);
   const money = (v: number) => formatMoney(v, config.currency, lang);
   const accent = accentStyle(config.brand_color);
   const logo = safeHttpsLogo(config.logo_url);
@@ -143,12 +146,12 @@ export function Widget({
         <span class="row-body">
           <span class="row-label">{t.checkboxLabel}</span>
           <span class="row-sub">
-            {t.perNight(money(config.amount_per_night), nights)}
+            {t.perNight(money(config.amount_per_night), rooms, nights)}
           </span>
         </span>
       </label>
 
-      {config.carbon_pricing_demo && <p class="co2-note">{lang === 'tr' ? (config.carbon_estimate_source === 'hotel' ? 'Otel verileriyle tahmin · Temsili fiyat · 1 oda' : 'Bölgesel tahmin · Temsili fiyat · 1 oda') : (config.carbon_estimate_source === 'hotel' ? 'Hotel-based estimate · Indicative price · 1 room' : 'Regional estimate · Indicative price · 1 room')}</p>}
+      {config.carbon_pricing_demo && <p class="co2-note">{lang === 'tr' ? `${config.carbon_estimate_source === 'hotel' ? 'Otel verileriyle tahmin' : 'Bölgesel tahmin'} · Temsili fiyat · ${rooms} oda` : `${config.carbon_estimate_source === 'hotel' ? 'Hotel-based estimate' : 'Regional estimate'} · Indicative price · ${rooms} room${rooms === 1 ? '' : 's'}`}</p>}
       {checked && !confirmed && (
         <div class="details" aria-live="polite">
           <div class="line">

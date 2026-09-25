@@ -34,6 +34,14 @@ export class WidgetEventMetadataDto {
   @Max(365)
   nights?: number;
 
+  // Oda sayısı (oda-gece hesabı). Opsiyonel -> data-rooms göndermeyen eski
+  // widget kurulumlarıyla geriye tam uyumlu.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  rooms?: number;
+
   @IsOptional()
   @IsNumber()
   @Min(0)

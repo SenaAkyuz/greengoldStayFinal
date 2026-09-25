@@ -7,7 +7,7 @@ interface Strings {
   totalLabel: string;
   co2Label: string;
   estimatedBadge: string;
-  perNight: (amount: string, nights: number) => string;
+  perNight: (amount: string, rooms: number, nights: number) => string;
   addButton: string;
   confirmation: string;
   co2Note: string;
@@ -28,8 +28,10 @@ export const I18N: Record<Lang, Strings> = {
     totalLabel: 'Toplam katkı',
     co2Label: 'Tahmini karbon etkisi',
     estimatedBadge: 'Tahmini',
-    perNight: (amount, nights) =>
-      `${amount} × ${nights} gece`,
+    perNight: (amount, rooms, nights) =>
+      rooms > 1
+        ? `${amount} × ${rooms} oda × ${nights} gece`
+        : `${amount} × ${nights} gece`,
     addButton: 'Tercihimi kaydet',
     confirmation:
       'Tercihinizi kaydettik. Rezervasyonunuza henüz herhangi bir ücret eklenmedi.',
@@ -46,8 +48,10 @@ export const I18N: Record<Lang, Strings> = {
     totalLabel: 'Total contribution',
     co2Label: 'Estimated carbon impact',
     estimatedBadge: 'Estimated',
-    perNight: (amount, nights) =>
-      `${amount} × ${nights} night${nights === 1 ? '' : 's'}`,
+    perNight: (amount, rooms, nights) =>
+      rooms > 1
+        ? `${amount} × ${rooms} rooms × ${nights} night${nights === 1 ? '' : 's'}`
+        : `${amount} × ${nights} night${nights === 1 ? '' : 's'}`,
     addButton: 'Save my preference',
     confirmation:
       'Your preference has been recorded. No charge has been added to your booking.',

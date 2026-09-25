@@ -115,7 +115,7 @@ export default async function CarbonPage({
               <SupportCard
                 value={nf(carbon.contributions_count, 0)}
                 label="katkı butonu tıklaması (tekil session)"
-                hint={`${nf(carbon.total_selected_nights, 0)} gece toplam`}
+                hint={`${nf(carbon.total_selected_nights, 0)} oda-gece toplam`}
               />
               <SupportCard
                 value={`≈ ${nf(carbon.tree_equivalent)}`}
@@ -124,7 +124,7 @@ export default async function CarbonPage({
               />
               <SupportCard
                 value={nf(carbon.co2_per_night_kg, 2)}
-                label="kg CO₂/gece katsayısı"
+                label="kg CO₂/oda-gece katsayısı"
                 hint="tahmini, pilot varsayılanı"
               />
             </div>

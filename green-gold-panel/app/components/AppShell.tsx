@@ -126,6 +126,9 @@ export function AppShell({
           </div>
 
           <div className="flex items-center gap-3">
+            <form action={signOut}>
+              <button type="submit" className="min-h-[44px] rounded-lg px-2 text-xs font-medium text-[#075442] hover:bg-emerald-50">Hesap değiştir</button>
+            </form>
             {isDemo && (
               <span className="hidden items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 sm:inline-flex">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />

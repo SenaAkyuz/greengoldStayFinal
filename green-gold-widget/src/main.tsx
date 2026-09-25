@@ -12,6 +12,11 @@ function parseNights(raw: string | null): number {
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
+function parseRooms(raw: string | null): number {
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+}
+
 function parseLang(raw: string | null): Lang {
   return raw === 'en' ? 'en' : 'tr';
 }
@@ -57,7 +62,7 @@ function resolveJourneyId(attrValue: string | null): string {
 
 class GreenGoldWidget extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['data-nights', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'];
+    return ['data-nights', 'data-rooms', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'];
   }
 
   private mount?: HTMLDivElement;
@@ -119,7 +124,7 @@ class GreenGoldWidget extends HTMLElement {
     if (!this.config) {
       const config = await fetchConfig(this.apiBase, this.key);
       if (!config) return; // geçersiz key / hata -> sessizce render etme
-      this.config = this.withPreviewOverride(config);
+      this.config = config;
     }
 
     this.rerender();
@@ -151,9 +156,9 @@ class GreenGoldWidget extends HTMLElement {
   }
 
   attributeChangedCallback(name: string): void {
-    // data-nights / data-lang host tarafından güncellenirse yeniden çiz.
+    // data-nights / data-rooms / data-lang host tarafından güncellenirse yeniden çiz.
     if (
-      ['data-nights', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'].includes(name) &&
+      GreenGoldWidget.observedAttributes.includes(name) &&
       this.config &&
       this.mount
     ) {
@@ -186,17 +191,24 @@ class GreenGoldWidget extends HTMLElement {
     };
   }
 
+  /** Oda sayısı — host rezervasyon formundan besler; yoksa 1 (geriye uyum). */
+  private rooms(): number {
+    return parseRooms(this.getAttribute('data-rooms'));
+  }
+
   private rerender(): void {
     if (!this.config || !this.mount) return;
     const lang = parseLang(this.getAttribute('data-lang'));
     render(
       <Widget
-        config={this.config}
+        config={this.withPreviewOverride(this.config)}
         nights={this.nights()}
+        rooms={this.rooms()}
         lang={lang}
         onSelect={(amountTotal) =>
           this.sendOnce('checkbox_secildi', {
             nights: this.nights(),
+            rooms: this.rooms(),
             amount_total: amountTotal,
           })
         }
@@ -216,6 +228,7 @@ class GreenGoldWidget extends HTMLElement {
   private handleAdd(amountTotal: number): void {
     this.sendOnce('katki_ekle_butonuna_basildi', {
       nights: this.nights(),
+      rooms: this.rooms(),
       amount_total: amountTotal,
     });
     this.dispatchEvent(
@@ -225,6 +238,7 @@ class GreenGoldWidget extends HTMLElement {
         detail: {
           session_ref: this.sessionRef,
           nights: this.nights(),
+          rooms: this.rooms(),
           amount_total: amountTotal,
           currency: this.config?.currency ?? null,
         },

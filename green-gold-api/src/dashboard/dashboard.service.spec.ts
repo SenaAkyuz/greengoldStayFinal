@@ -58,6 +58,23 @@ function makeService(dataset: FakeDataset) {
   return { service: new DashboardService(fake as never), fake };
 }
 
+describe('room-night totals', () => {
+  it('counts rooms times nights, defaults legacy records to one room, isolates hotels', async () => {
+    const { service } = makeService({
+      hotels: [hotel('A'), hotel('B')],
+      widget_events: [
+        event('A', 'katki_ekle_butonuna_basildi', 'multi', '2026-07-10T09:00:00Z', { nights: 3, rooms: 2 }),
+        pressEvent('A', 'legacy', 2, '2026-07-11T09:00:00Z'),
+        event('B', 'katki_ekle_butonuna_basildi', 'other', '2026-07-10T09:00:00Z', { nights: 3, rooms: 100 }),
+      ],
+    });
+    const result = await service.getCarbonSummary('A', RANGE);
+    expect(result.total_selected_nights).toBe(8);
+    expect(result.estimated_co2_kg).toBe(66.4);
+    expect(result.contributions_count).toBe(2);
+  });
+});
+
 describe('DashboardService — tenant izolasyonu (a)', () => {
   const dataset: FakeDataset = {
     hotels: [hotel('A'), hotel('B')],

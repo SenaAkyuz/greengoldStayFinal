@@ -57,7 +57,11 @@ jobs:
         working-directory: green-gold-panel
         run: npm ci --no-audit --no-fund
 
-      - name: Panel typecheck
+      - name: Panel session tests
+        working-directory: green-gold-panel
+        run: npm test
+
+      - name: Panel TypeScript
         working-directory: green-gold-panel
         run: npx tsc --noEmit
 

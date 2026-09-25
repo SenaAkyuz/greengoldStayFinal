@@ -2,7 +2,7 @@
 
 import { Suspense, useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { normalizeEmailInput } from '@/lib/email';
@@ -17,7 +17,6 @@ export default function LoginForm({ demoEnabled }: { demoEnabled: boolean }) {
 }
 
 function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const resetSuccess = searchParams.get('reset') === 'success';
   const welcome = searchParams.get('welcome') === '1';
@@ -42,8 +41,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
       setLoading(false);
       return;
     }
-    router.push('/');
-    router.refresh();
+    window.location.replace('/');
   }
 
   return (
