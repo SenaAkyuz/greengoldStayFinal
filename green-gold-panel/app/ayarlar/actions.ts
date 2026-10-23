@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server';
 import {
   updateHotel,
   previewCarbon,
-  startCarbonMeasurement,
+  importCarbonMeasurement,
+  activateCarbonMeasurement,
+  type ProviderImportInput,
   type HotelCarbonInput,
   type HotelCarbonResult,
   type HotelUpdate,
@@ -77,26 +79,40 @@ export async function saveSettings(
 }
 
 /**
- * Faz 1 — "Ölçüme başla". Sağlayıcı sözleşmesi gelene kadar API 503
- * 'carbon_provider_not_configured' döner; mesaj kullanıcıya AYNEN yansıtılır
- * (başarılıymış gibi davranılmaz).
+ * "3pmetrics verisini getir". Bağlantı/anahtar yoksa API 503 + açık mesaj
+ * döner; mesaj kullanıcıya AYNEN yansıtılır (başarılıymış gibi davranılmaz).
+ * Widget fiyatı burada DEĞİŞMEZ.
  */
-export async function startProviderMeasurement(input: {
-  period_start: string;
-  period_end: string;
-}) {
+export async function importProviderMeasurement(input: ProviderImportInput) {
   const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
 
-  const response = await startCarbonMeasurement(session.access_token, {
-    ...input,
-    // Panel içi YOL — origin'i API kendi PANEL_BASE_URL'inden ekler.
-    return_path: '/ayarlar',
-  });
+  const response = await importCarbonMeasurement(session.access_token, input);
   if (response.data) revalidatePath('/ayarlar');
+  return response;
+}
+
+/** İçeri alınmış 3pmetrics ölçümünü widget fiyatına uygular. */
+export async function activateProviderMeasurement(measurementId: string) {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
+
+  const response = await activateCarbonMeasurement(
+    session.access_token,
+    measurementId,
+  );
+  if (response.data) {
+    revalidatePath('/ayarlar');
+    revalidatePath('/misafir-onizleme');
+    revalidatePath('/karbon');
+    revalidatePath('/sertifikalar');
+  }
   return response;
 }
 

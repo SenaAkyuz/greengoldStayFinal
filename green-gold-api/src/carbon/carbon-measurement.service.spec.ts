@@ -1,20 +1,30 @@
 import { CarbonMeasurementService } from './carbon-measurement.service';
 import { CarbonProviderRegistryService } from './carbon-provider-registry';
-import { ThreePMetricsNotConfiguredAdapter } from './adapters/threepmetrics.adapter';
 import {
-  CarbonProviderNotConfiguredError,
+  ThreePMetricsAdapter,
+  parseGhgSummary,
+} from './adapters/threepmetrics.adapter';
+import {
+  CarbonProviderRequestError,
   type CarbonProviderAdapter,
-  type CreateMeasurementSessionRequest,
-  type CreateMeasurementSessionResult,
+  type CarbonSummary,
+  type MeasurementPeriod,
+  type ProviderCredentials,
 } from './carbon-provider.interface';
+import {
+  EnvCarbonCredentialResolver,
+  LayeredCarbonCredentialResolver,
+  VaultCarbonCredentialResolver,
+  type CarbonCredentialResolver,
+} from './carbon-credentials';
+import { toKilograms } from './room-night-allocation';
 import { makeFakeSupabase, type FakeDataset } from '../../test/fake-supabase';
 
-const PANEL = 'https://panel.example.com';
+const LINK_ID = '11111111-1111-4111-8111-111111111111';
+const API_KEY = 'test-key-not-real';
 
 function fakeConfig(values: Record<string, string> = {}) {
-  return {
-    get: (key: string) => ({ PANEL_BASE_URL: PANEL, ...values })[key],
-  } as never;
+  return { get: (key: string) => values[key] } as never;
 }
 
 function registryWith(adapter: CarbonProviderAdapter) {
@@ -27,74 +37,127 @@ function registryWith(adapter: CarbonProviderAdapter) {
   } as unknown as CarbonProviderRegistryService;
 }
 
-/** Sözleşme geldiğinde adapter'ın yerine geçecek davranış — seam'i kanıtlar. */
-class FakeConfiguredAdapter implements CarbonProviderAdapter {
+/** Dokümandaki by-ghg yanıt şeması (tonCO2e). */
+const ghgBody = (values = { s1: 120, s2: 280, s3: 100 }) => ({
+  scopes: [
+    {
+      scopeTitle: 'Kapsam 1',
+      scopeLabel: 'scope-1',
+      categories: [
+        {
+          categoryTitle: 'Sabit Yanma',
+          categoryLabel: 'stationary-combustion',
+          emissionSources: [
+            { title: 'Doğalgaz', totalCarbonValue: values.s1, unit: 'tonCO2e' },
+          ],
+        },
+      ],
+    },
+    {
+      scopeTitle: 'Kapsam 2',
+      scopeLabel: 'scope-2',
+      categories: [
+        {
+          categoryTitle: 'Satın Alınan Elektrik',
+          categoryLabel: 'purchased-electricity',
+          emissionSources: [
+            { title: 'Elektrik', totalCarbonValue: values.s2, unit: 'tonCO2e' },
+          ],
+        },
+      ],
+    },
+    {
+      scopeTitle: 'Kapsam 3',
+      scopeLabel: 'scope-3',
+      categories: [
+        {
+          categoryTitle: 'Atık',
+          categoryLabel: 'waste',
+          emissionSources: [
+            { title: 'Atık', totalCarbonValue: values.s3, unit: 'tonCO2e' },
+          ],
+        },
+      ],
+    },
+  ],
+});
+
+/** Gerçek adapter'ın yerine geçen, çağrıları kaydeden sahte sağlayıcı. */
+class FakeAdapter implements CarbonProviderAdapter {
   readonly provider = 'threepmetrics';
-  readonly configured = true;
-  readonly sessionRequests: CreateMeasurementSessionRequest[] = [];
+  readonly summaryCalls: {
+    credentials: ProviderCredentials;
+    period: MeasurementPeriod;
+  }[] = [];
 
   constructor(
-    private readonly sessionResult: Partial<CreateMeasurementSessionResult> = {},
+    readonly configured = true,
+    private readonly body: unknown = ghgBody(),
     private readonly failWith?: Error,
   ) {}
 
-  createSession(
-    request: CreateMeasurementSessionRequest,
-  ): Promise<CreateMeasurementSessionResult> {
-    this.sessionRequests.push(request);
-    if (this.failWith) return Promise.reject(this.failWith);
-    return Promise.resolve({
-      externalSessionId: 'sess-1',
-      formUrl: 'https://forms.example.com/m/abc',
-      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
-      ...this.sessionResult,
-    });
+  listAccounts() {
+    return Promise.resolve([{ externalAccountId: 'otel-a', name: 'Otel A' }]);
   }
-
-  getFormData(): never {
-    throw new Error('kullanılmadı');
-  }
-  getResult(): never {
-    throw new Error('kullanılmadı');
-  }
-  listProperties() {
+  listUnits() {
     return Promise.resolve([
-      { externalPropertyId: 'prop-1', name: 'Otel A' },
-      { externalPropertyId: 'prop-2', name: 'Otel B' },
+      { externalUnitId: 'merkez', name: 'Merkez', type: 'Other' },
     ]);
   }
-  listMeasurements() {
-    return Promise.resolve([]);
-  }
-  verifyWebhookSignature(): boolean {
-    return false;
-  }
-  parseWebhookEvent(): never {
-    throw new Error('kullanılmadı');
+  getCarbonSummary(
+    credentials: ProviderCredentials,
+    period: MeasurementPeriod,
+  ): Promise<CarbonSummary> {
+    this.summaryCalls.push({ credentials, period });
+    if (this.failWith) return Promise.reject(this.failWith);
+    return Promise.resolve(parseGhgSummary(this.body, period));
   }
 }
 
+const fixedCredentials = (
+  key: string | null = API_KEY,
+): CarbonCredentialResolver => ({
+  name: 'test',
+  supportedEnvironments: ['sandbox'],
+  resolve: () => Promise.resolve(key ? { apiKey: key } : null),
+  has: () => Promise.resolve(key !== null),
+});
+
 function makeService(
   dataset: FakeDataset,
-  adapter: CarbonProviderAdapter = new ThreePMetricsNotConfiguredAdapter(),
+  adapter: CarbonProviderAdapter = new FakeAdapter(),
+  credentials: CarbonCredentialResolver = fixedCredentials(),
   config = fakeConfig(),
 ) {
   const fake = makeFakeSupabase(dataset);
-  return {
-    service: new CarbonMeasurementService(
-      fake as never,
-      registryWith(adapter),
-      config,
-    ),
-    fake,
-    adapter,
-  };
+  const service = new CarbonMeasurementService(
+    fake as never,
+    registryWith(adapter),
+    config,
+  );
+  service.credentials = credentials;
+  return { service, fake, adapter };
 }
 
 const hotelRow = (over: Record<string, unknown> = {}) => ({
   id: 'hotel-A',
   name: 'Otel A',
+  default_currency: 'EUR',
   widget_settings: null,
+  ...over,
+});
+
+const linkRow = (over: Record<string, unknown> = {}) => ({
+  id: LINK_ID,
+  hotel_id: 'hotel-A',
+  provider: 'threepmetrics',
+  environment: 'sandbox',
+  status: 'active',
+  external_property_id: 'otel-a',
+  external_property_name: 'Otel A',
+  authorization_ref: 'PILOT_HOTEL',
+  linked_at: '2026-10-01T00:00:00.000Z',
+  revoked_at: null,
   ...over,
 });
 
@@ -102,79 +165,324 @@ const measurementRow = (over: Record<string, unknown> = {}) => ({
   id: 'm1',
   hotel_id: 'hotel-A',
   provider: 'threepmetrics',
-  external_measurement_id: 'EXT-1',
-  external_version: '1',
+  external_measurement_id: 'ghg:otel-a:2025-01-01:2025-12-31',
+  external_version: 'abc',
   period_start: '2025-01-01',
   period_end: '2025-12-31',
   result_status: 'completed',
-  total_emissions: 1500,
-  total_emissions_unit: 'tCO2e',
-  scope: 'guestrooms',
-  methodology: 'HCMI',
-  methodology_version: '1.2',
+  total_emissions: 500,
+  total_emissions_unit: 'tonCO2e',
+  scope: 'hotel_total',
+  methodology: 'GHG Protocol',
+  methodology_version: '1.0',
   verification_status: 'unverified',
   report_url: null,
   rooms: 200,
   occupied_room_nights: 50_000,
-  guest_nights: 90_000,
-  room_night_kg: 30,
-  allocation_method: 'guestrooms',
+  guest_nights: null,
+  room_night_kg: 8,
+  allocation_method: 'x',
   is_active: true,
   provider_updated_at: null,
   imported_at: '2026-01-05T00:00:00.000Z',
   ...over,
 });
 
+/** 200 oda, %68 doluluk, oda alanı payı 0.8. */
+const importInput = (over: Record<string, unknown> = {}) => ({
+  period_start: '2025-01-01',
+  period_end: '2025-12-31',
+  country: 'Turkey',
+  rooms: 200,
+  occupied_room_nights: 50_000,
+  total_area_m2: 20_000,
+  guestrooms_area_m2: 8_000,
+  meeting_area_m2: 2_000,
+  ...over,
+});
+
+// ---------------------------------------------------------------------------
+
+describe('parseGhgSummary (3pmetrics by-ghg şeması)', () => {
+  const period = { start: '2025-01-01', end: '2025-12-31' };
+
+  it('kaynak satırlarını toplar ve kapsam toplamlarını çıkarır', () => {
+    const summary = parseGhgSummary(ghgBody(), period);
+    expect(summary.totalEmissions).toBe(500);
+    expect(summary.totalEmissionsUnit).toBe('tonCO2e');
+    expect(summary.scopes.map((s) => [s.scopeLabel, s.total])).toEqual([
+      ['scope-1', 120],
+      ['scope-2', 280],
+      ['scope-3', 100],
+    ]);
+    expect(summary.lines).toHaveLength(3);
+  });
+
+  it('beklenmeyen birimi TAHMİN ETMEZ, özeti reddeder', () => {
+    const body = ghgBody();
+    body.scopes[0].categories[0].emissionSources[0].unit = 'kgCO2e';
+    expect(() => parseGhgSummary(body, period)).toThrow(
+      CarbonProviderRequestError,
+    );
+  });
+
+  it('şema dışı yanıtı reddeder', () => {
+    expect(() => parseGhgSummary({ categories: [] }, period)).toThrow(/scopes/);
+    const body = ghgBody();
+    (
+      body.scopes[1].categories[0].emissionSources[0] as Record<string, unknown>
+    ).totalCarbonValue = '280';
+    expect(() => parseGhgSummary(body, period)).toThrow(/sayı değil/);
+  });
+
+  it('boş hesap 0 toplam döner (hata değil; servis bunu "veri yok" sayar)', () => {
+    expect(parseGhgSummary({ scopes: [] }, period).totalEmissions).toBe(0);
+  });
+});
+
+describe('ThreePMetricsAdapter', () => {
+  const okFetch = (body: unknown, status = 200) => {
+    const calls: { url: string; headers: Record<string, string> }[] = [];
+    const fetchImpl = (
+      url: string,
+      init: { headers: Record<string, string> },
+    ) => {
+      calls.push({ url, headers: init.headers });
+      return Promise.resolve({
+        status,
+        ok: status >= 200 && status < 300,
+        json: () => Promise.resolve(body),
+      });
+    };
+    return { calls, fetchImpl };
+  };
+
+  it('dokümandaki uca, anahtarı X-Integration-Api-Key ile gönderir', async () => {
+    const { calls, fetchImpl } = okFetch(ghgBody());
+    const adapter = new ThreePMetricsAdapter({
+      baseUrl: 'https://connect-test.3pmetrics.io/',
+      fetchImpl,
+    });
+    const summary = await adapter.getCarbonSummary(
+      { apiKey: API_KEY },
+      { start: '2025-01-01', end: '2025-12-31' },
+    );
+    expect(summary.totalEmissions).toBe(500);
+    expect(calls[0].url).toBe(
+      'https://connect-test.3pmetrics.io/cca/carbon-summary/by-ghg?language=tr&dateFrom=2025-01-01&dateTo=2025-12-31',
+    );
+    expect(calls[0].headers['X-Integration-Api-Key']).toBe(API_KEY);
+    // İki kimlik yöntemi aynı anda gönderilmez.
+    expect(calls[0].headers.Authorization).toBeUndefined();
+  });
+
+  it.each([
+    [401, 'unauthorized'],
+    [403, 'forbidden'],
+    [404, 'no_data'],
+    [422, 'invalid_request'],
+    [500, 'unavailable'],
+  ])('HTTP %i -> %s', async (status, reason) => {
+    const { fetchImpl } = okFetch({}, status);
+    const adapter = new ThreePMetricsAdapter({
+      baseUrl: 'https://connect-test.3pmetrics.io',
+      fetchImpl,
+    });
+    await expect(
+      adapter.getCarbonSummary(
+        { apiKey: API_KEY },
+        { start: '2025-01-01', end: '2025-01-31' },
+      ),
+    ).rejects.toMatchObject({ reason });
+  });
+
+  it('müşteri ve birim listesini kontrata çevirir', async () => {
+    const { fetchImpl, calls } = okFetch([{ name: 'Otel A', slug: 'otel-a' }]);
+    const adapter = new ThreePMetricsAdapter({
+      baseUrl: 'https://connect-test.3pmetrics.io',
+      fetchImpl,
+    });
+    await expect(adapter.listAccounts({ apiKey: API_KEY })).resolves.toEqual([
+      { externalAccountId: 'otel-a', name: 'Otel A' },
+    ]);
+    expect(calls[0].url).toBe(
+      'https://connect-test.3pmetrics.io/cca/customers',
+    );
+  });
+
+  it('base URL yoksa yapılandırılmamış sayılır ve çağrı yapmaz', async () => {
+    const { fetchImpl, calls } = okFetch(ghgBody());
+    const adapter = new ThreePMetricsAdapter({ baseUrl: '', fetchImpl });
+    expect(adapter.configured).toBe(false);
+    await expect(adapter.listAccounts({ apiKey: API_KEY })).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('EnvCarbonCredentialResolver', () => {
+  const env = { CARBON_PROVIDER_SECRET_PILOT_HOTEL: API_KEY };
+
+  it('sandbox referansını env değişkeninden çözer', async () => {
+    const resolver = new EnvCarbonCredentialResolver(env);
+    await expect(resolver.resolve('PILOT_HOTEL', 'sandbox')).resolves.toEqual({
+      apiKey: API_KEY,
+    });
+  });
+
+  it('production için env çözmez (fail closed)', async () => {
+    const resolver = new EnvCarbonCredentialResolver(env);
+    await expect(
+      resolver.resolve('PILOT_HOTEL', 'production'),
+    ).resolves.toBeNull();
+    await expect(resolver.has('PILOT_HOTEL', 'production')).resolves.toBe(
+      false,
+    );
+  });
+
+  it('güvensiz referans biçimini reddeder', async () => {
+    const resolver = new EnvCarbonCredentialResolver(env);
+    await expect(
+      resolver.resolve('pilot-hotel', 'sandbox'),
+    ).resolves.toBeNull();
+    await expect(resolver.resolve(undefined, 'sandbox')).resolves.toBeNull();
+  });
+});
+
+describe('VaultCarbonCredentialResolver', () => {
+  const vault = (secrets: Record<string, string>, fail = false) => {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
+    const db = {
+      rpc: (fn: string, args: Record<string, unknown>) => {
+        calls.push({ fn, args });
+        if (fail) {
+          return Promise.resolve({
+            data: null,
+            error: { message: 'function does not exist' },
+          });
+        }
+        const value = secrets[args.p_ref as string];
+        return Promise.resolve({
+          data:
+            fn === 'carbon_provider_secret_exists'
+              ? value !== undefined
+              : (value ?? null),
+          error: null,
+        });
+      },
+    };
+    return { db, calls };
+  };
+
+  it('production anahtarını Vault fonksiyonundan çözer', async () => {
+    const { db, calls } = vault({ GREENGOLD: API_KEY });
+    const resolver = new VaultCarbonCredentialResolver(db);
+    await expect(resolver.resolve('GREENGOLD', 'production')).resolves.toEqual({
+      apiKey: API_KEY,
+    });
+    expect(calls[0]).toEqual({
+      fn: 'carbon_provider_secret_get',
+      args: { p_ref: 'GREENGOLD' },
+    });
+  });
+
+  it('varlık kontrolünde şifre çözmez', async () => {
+    const { db, calls } = vault({ GREENGOLD: API_KEY });
+    const resolver = new VaultCarbonCredentialResolver(db);
+    await expect(resolver.has('GREENGOLD', 'production')).resolves.toBe(true);
+    expect(calls.map((c) => c.fn)).toEqual(['carbon_provider_secret_exists']);
+  });
+
+  it('güvensiz referansla Vault çağrısı yapmaz', async () => {
+    const { db, calls } = vault({});
+    const resolver = new VaultCarbonCredentialResolver(db);
+    await expect(
+      resolver.resolve("x'; drop", 'production'),
+    ).resolves.toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('Vault hatasında (migration yok) null döner, env yedeğine düşer — yalnızca sandbox', async () => {
+    const layered = new LayeredCarbonCredentialResolver([
+      new VaultCarbonCredentialResolver(vault({}, true).db),
+      new EnvCarbonCredentialResolver({
+        CARBON_PROVIDER_SECRET_GREENGOLD: API_KEY,
+      }),
+    ]);
+    await expect(layered.resolve('GREENGOLD', 'sandbox')).resolves.toEqual({
+      apiKey: API_KEY,
+    });
+    await expect(
+      layered.resolve('GREENGOLD', 'production'),
+    ).resolves.toBeNull();
+  });
+});
+
+describe('toKilograms', () => {
+  it("3pmetrics birimi 'tonCO2e'yi tona göre çevirir", () => {
+    expect(toKilograms(1.5, 'tonCO2e')).toBe(1500);
+  });
+});
+
 describe('CarbonMeasurementService.getStatus', () => {
-  it('sağlayıcı yapılandırılmadığında bunu DÜRÜSTÇE bildirir', async () => {
+  it('bağlantı yoksa anahtar hazır görünmez', async () => {
     const { service } = makeService({
       hotels: [hotelRow()],
       carbon_provider_links: [],
       carbon_measurements: [],
     });
     const status = await service.getStatus('hotel-A');
-    expect(status.provider_configured).toBe(false);
+    expect(status.provider_configured).toBe(true);
+    expect(status.credentials_ready).toBe(false);
+    expect(status.link).toBeNull();
     expect(status.active_measurement).toBeNull();
-    expect(status.measurements_count).toBe(0);
+  });
+
+  it('aktif bağlantı + çözülebilir anahtar -> credentials_ready', async () => {
+    const { service } = makeService({
+      hotels: [hotelRow()],
+      carbon_provider_links: [linkRow()],
+      carbon_measurements: [],
+    });
+    const status = await service.getStatus('hotel-A');
+    expect(status.credentials_ready).toBe(true);
+    expect(status.link?.external_property_name).toBe('Otel A');
+    // authorization_ref panele ASLA dönmez.
+    expect(JSON.stringify(status)).not.toContain('PILOT_HOTEL');
+  });
+
+  it('anahtar çözülemezse bağlantı hazır görünmez', async () => {
+    const { service } = makeService(
+      {
+        hotels: [hotelRow()],
+        carbon_provider_links: [linkRow()],
+        carbon_measurements: [],
+      },
+      new FakeAdapter(),
+      fixedCredentials(null),
+    );
+    expect((await service.getStatus('hotel-A')).credentials_ready).toBe(false);
   });
 
   it('yalnızca kendi otelinin ölçümlerini sayar (tenant izolasyonu)', async () => {
     const { service } = makeService({
-      hotels: [hotelRow()],
+      hotels: [
+        hotelRow({
+          widget_settings: { carbon_pricing: { provider: 'threepmetrics' } },
+        }),
+      ],
       carbon_provider_links: [],
       carbon_measurements: [
         measurementRow(),
-        measurementRow({ id: 'm2', hotel_id: 'hotel-B', is_active: true }),
+        measurementRow({ id: 'm2', hotel_id: 'hotel-B' }),
       ],
     });
     const status = await service.getStatus('hotel-A');
     expect(status.measurements_count).toBe(1);
     expect(status.active_measurement?.id).toBe('m1');
+    expect(status.active_source).toBe('provider_measurement');
   });
 
-  it('kaldırılmış bağlantıyı aktif bağlantı gibi göstermez', async () => {
-    const { service } = makeService({
-      hotels: [hotelRow()],
-      carbon_provider_links: [
-        {
-          id: 'l1',
-          hotel_id: 'hotel-A',
-          provider: 'threepmetrics',
-          environment: 'sandbox',
-          status: 'revoked',
-          external_property_id: 'prop-1',
-          external_property_name: 'Otel A',
-          linked_at: null,
-          revoked_at: '2026-02-01T00:00:00.000Z',
-        },
-      ],
-      carbon_measurements: [],
-    });
-    const status = await service.getStatus('hotel-A');
-    expect(status.link).toBeNull();
-  });
-
-  it('sağlayıcı ölçümü yoksa mevcut hesap kaynağını bildirir', async () => {
+  it('otel başka hesap yöntemine geçtiyse 3pmetrics ölçümünü aktif göstermez', async () => {
     const { service } = makeService({
       hotels: [
         hotelRow({
@@ -182,9 +490,10 @@ describe('CarbonMeasurementService.getStatus', () => {
         }),
       ],
       carbon_provider_links: [],
-      carbon_measurements: [],
+      carbon_measurements: [measurementRow()],
     });
     const status = await service.getStatus('hotel-A');
+    expect(status.active_measurement).toBeNull();
     expect(status.active_source).toBe('hotel_input');
   });
 
@@ -203,328 +512,244 @@ describe('CarbonMeasurementService.getStatus', () => {
     );
   });
 
-  it('migration uygulanmadıysa 500 üretmez, schema_ready:false döner', async () => {
-    // Karbon tabloları YOK (42P01), `hotels` var: panel iki durumu ayırt edebilsin.
-    const undefinedTable = { data: null, error: { code: '42P01' } };
-    const builder = (table: string) => {
-      const result =
-        table === 'hotels'
-          ? { data: { widget_settings: null }, error: null }
-          : undefinedTable;
-      const chain: Record<string, unknown> = {
-        select: () => chain,
-        eq: () => chain,
-        neq: () => chain,
-        limit: () => chain,
-        single: () => Promise.resolve(result),
-        then: (onfulfilled: (v: unknown) => unknown) =>
-          Promise.resolve(result).then(onfulfilled),
-      };
-      return chain;
-    };
-    const service = new CarbonMeasurementService(
-      { db: { from: builder } } as never,
-      registryWith(new ThreePMetricsNotConfiguredAdapter()),
-      fakeConfig(),
-    );
+  it('kaldırılmış bağlantıyı aktif bağlantı gibi göstermez', async () => {
+    const { service } = makeService({
+      hotels: [hotelRow()],
+      carbon_provider_links: [
+        linkRow({ status: 'revoked', revoked_at: '2026-02-01T00:00:00.000Z' }),
+      ],
+      carbon_measurements: [],
+    });
     const status = await service.getStatus('hotel-A');
-    expect(status.schema_ready).toBe(false);
-    expect(status.active_source).toBe('none');
+    expect(status.link).toBeNull();
+    expect(status.credentials_ready).toBe(false);
   });
 });
 
-describe('CarbonMeasurementService.startMeasurement', () => {
-  const validPeriod = { period_start: '2025-01-01', period_end: '2025-12-31' };
-
-  it('sağlayıcı hazır olmasa bile GEÇERSİZ dönemi reddeder', async () => {
-    const { service } = makeService({ hotels: [hotelRow()] });
-    await expect(
-      service.startMeasurement('hotel-A', {
-        period_start: '2025-13-01',
-        period_end: '2025-12-31',
-      }),
-    ).rejects.toThrow('Geçerli bir ölçüm dönemi girin.');
+describe('CarbonMeasurementService.importMeasurement', () => {
+  const dataset = (): FakeDataset => ({
+    hotels: [hotelRow()],
+    carbon_provider_links: [linkRow()],
+    carbon_measurements: [],
   });
 
-  it('gelecek tarihli dönemi reddeder', async () => {
-    const { service } = makeService({ hotels: [hotelRow()] });
-    await expect(
-      service.startMeasurement('hotel-A', {
-        period_start: '2099-01-01',
-        period_end: '2099-12-31',
-      }),
-    ).rejects.toThrow('gelecek tarih');
-  });
+  it('3pmetrics özetini oda-gece katsayısına çevirir ve fiyatı DEĞİŞTİRMEDEN kaydeder', async () => {
+    const { service, fake, adapter } = makeService(dataset());
+    const result = await service.importMeasurement('hotel-A', importInput());
 
-  it('366 günden uzun dönemi reddeder', async () => {
-    const { service } = makeService({ hotels: [hotelRow()] });
-    await expect(
-      service.startMeasurement('hotel-A', {
-        period_start: '2023-01-01',
-        period_end: '2024-12-31',
-      }),
-    ).rejects.toThrow('366');
-  });
+    // 500 t × (8000 / (8000 + 2000)) / 50 000 oda-gece = 8 kg
+    expect(result.summary.totalEmissions).toBe(500);
+    expect(result.pricing.coefficient_kg).toBeCloseTo(8, 6);
+    expect(result.pricing.provider).toBe('threepmetrics');
+    expect(result.pricing.amount_per_night).toBeCloseTo(0.2, 2);
+    expect(result.duplicate).toBe(false);
 
-  it('panel dışı bir dönüş adresini reddeder (açık redirect önlemi)', async () => {
-    const { service } = makeService(
-      { hotels: [hotelRow()] },
-      new FakeConfiguredAdapter(),
-    );
-    await expect(
-      service.startMeasurement('hotel-A', {
-        ...validPeriod,
-        return_path: '//evil.example.com',
-      }),
-    ).rejects.toThrow('panel içi bir yol');
-  });
-
-  it('panel adresi yapılandırılmadıysa oturum açmaz', async () => {
-    const { service } = makeService(
-      { hotels: [hotelRow()] },
-      new FakeConfiguredAdapter(),
-      { get: () => undefined } as never,
-    );
-    await expect(
-      service.startMeasurement('hotel-A', validPeriod),
-    ).rejects.toThrow('PANEL_BASE_URL');
-  });
-
-  it('sağlayıcı yapılandırılmadıysa 503 döner ve HİÇBİR satır yazmaz', async () => {
-    const dataset: FakeDataset = {
-      hotels: [hotelRow()],
-      carbon_measurement_sessions: [],
-    };
-    const { service } = makeService(dataset);
-    await expect(
-      service.startMeasurement('hotel-A', validPeriod),
-    ).rejects.toMatchObject({ status: 503 });
-    expect(dataset.carbon_measurement_sessions).toHaveLength(0);
-  });
-
-  it('sağlayıcı hazır olduğunda oturumu yazar ve form adresini döner', async () => {
-    const adapter = new FakeConfiguredAdapter();
-    const dataset: FakeDataset = {
-      hotels: [hotelRow()],
-      carbon_provider_links: [],
-      carbon_measurement_sessions: [],
-    };
-    const { service } = makeService(dataset, adapter);
-
-    const result = await service.startMeasurement('hotel-A', validPeriod);
-
-    expect(result.form_url).toBe('https://forms.example.com/m/abc');
-    expect(result.measurement_ref).toMatch(/^[0-9a-f-]{36}$/);
-    // Dönüş adresi panel origin'inden türetilir, istekten alınmaz.
-    expect(adapter.sessionRequests[0].returnUrl).toBe(`${PANEL}/ayarlar`);
-    // Ölçüm kimliği sağlayıcıya iletilir — webhook'u otele bağlamanın tek yolu.
-    expect(adapter.sessionRequests[0].measurementRef).toBe(
-      result.measurement_ref,
-    );
-
-    const session = dataset.carbon_measurement_sessions![0];
-    expect(session.status).toBe('opened');
-    expect(session.hotel_id).toBe('hotel-A');
-    expect(session.return_url).toBe(`${PANEL}/ayarlar`);
-  });
-
-  it('süresiz/eksik sağlayıcı yanıtını kabul etmez', async () => {
-    const adapter = new FakeConfiguredAdapter({
-      expiresAt: new Date(Date.now() - 1000).toISOString(),
+    const rows = fake.dataset.carbon_measurements!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      hotel_id: 'hotel-A',
+      external_property_id: 'otel-a',
+      total_emissions_unit: 'tonCO2e',
+      scope: 'hotel_total',
+      is_active: false,
     });
-    const dataset: FakeDataset = {
-      hotels: [hotelRow()],
-      carbon_provider_links: [],
-      carbon_measurement_sessions: [],
-    };
-    const { service } = makeService(dataset, adapter);
-    await expect(
-      service.startMeasurement('hotel-A', validPeriod),
-    ).rejects.toMatchObject({ status: 502 });
-    // Oturum silinmez, 'failed' işaretlenir (denetim izi).
-    expect(dataset.carbon_measurement_sessions![0].status).toBe('failed');
-  });
-
-  it('http form adresini reddeder', async () => {
-    const adapter = new FakeConfiguredAdapter({
-      formUrl: 'http://forms.example.com/m/abc',
-    });
-    const dataset: FakeDataset = {
-      hotels: [hotelRow()],
-      carbon_provider_links: [],
-      carbon_measurement_sessions: [],
-    };
-    const { service } = makeService(dataset, adapter);
-    await expect(
-      service.startMeasurement('hotel-A', validPeriod),
-    ).rejects.toMatchObject({ status: 502 });
-  });
-
-  it('sağlayıcı hatasının iç mesajını kullanıcıya sızdırmaz', async () => {
-    const adapter = new FakeConfiguredAdapter(
-      {},
-      new Error('upstream token abc123 expired'),
+    // Anahtar çağrıda kullanılır ama hiçbir satıra yazılmaz.
+    expect((adapter as FakeAdapter).summaryCalls[0].credentials.apiKey).toBe(
+      API_KEY,
     );
-    const dataset: FakeDataset = {
+    expect(JSON.stringify(fake.dataset)).not.toContain(API_KEY);
+    // Widget fiyatı yalnızca activate ile değişir.
+    expect(
+      fake.dataset.hotels![0].contribution_amount_per_night,
+    ).toBeUndefined();
+  });
+
+  it('aynı veri + aynı girdi ikinci kez satır üretmez', async () => {
+    const { service, fake } = makeService(dataset());
+    await service.importMeasurement('hotel-A', importInput());
+    const second = await service.importMeasurement('hotel-A', importInput());
+    expect(second.duplicate).toBe(true);
+    expect(fake.dataset.carbon_measurements).toHaveLength(1);
+  });
+
+  it('geçersiz otel girdisini sağlayıcıya GİTMEDEN reddeder', async () => {
+    const { service, adapter } = makeService(dataset());
+    await expect(
+      service.importMeasurement(
+        'hotel-A',
+        importInput({ occupied_room_nights: 200 * 365 + 1 }),
+      ),
+    ).rejects.toThrow(/Dolu oda-gece/);
+    await expect(
+      service.importMeasurement(
+        'hotel-A',
+        importInput({ period_end: '2099-01-01' }),
+      ),
+    ).rejects.toThrow();
+    expect((adapter as FakeAdapter).summaryCalls).toHaveLength(0);
+  });
+
+  it('bağlantı yoksa 503 carbon_provider_not_linked döner', async () => {
+    const { service } = makeService({
       hotels: [hotelRow()],
       carbon_provider_links: [],
-      carbon_measurement_sessions: [],
-    };
-    const { service } = makeService(dataset, adapter);
-    let failure: { status: number; response: { message: string } } | null =
-      null;
-    try {
-      await service.startMeasurement('hotel-A', validPeriod);
-    } catch (thrown) {
-      failure = thrown as { status: number; response: { message: string } };
-    }
-    expect(failure).not.toBeNull();
-    expect(failure!.status).toBe(502);
-    expect(failure!.response.message).not.toContain('abc123');
-    expect(failure!.response.message).toContain('ulaşılamadı');
-  });
-
-  it('bilinmeyen sağlayıcı 404 döner', async () => {
-    const { service } = makeService({ hotels: [hotelRow()] });
+      carbon_measurements: [],
+    });
     await expect(
-      service.startMeasurement('hotel-A', validPeriod, 'other' as never),
-    ).rejects.toMatchObject({ status: 404 });
+      service.importMeasurement('hotel-A', importInput()),
+    ).rejects.toMatchObject({
+      status: 503,
+      response: { code: 'carbon_provider_not_linked' },
+    });
   });
-});
 
-describe('CarbonMeasurementService.listProviderProperties', () => {
+  it('anahtar çözülemezse sağlayıcıyı çağırmaz', async () => {
+    const adapter = new FakeAdapter();
+    const { service } = makeService(dataset(), adapter, fixedCredentials(null));
+    await expect(
+      service.importMeasurement('hotel-A', importInput()),
+    ).rejects.toMatchObject({
+      response: { code: 'carbon_provider_credentials_missing' },
+    });
+    expect(adapter.summaryCalls).toHaveLength(0);
+  });
+
+  it('başka ortamın bağlantısıyla çağrı yapmaz', async () => {
+    const { service } = makeService({
+      hotels: [hotelRow()],
+      carbon_provider_links: [linkRow({ environment: 'production' })],
+      carbon_measurements: [],
+    });
+    await expect(
+      service.importMeasurement('hotel-A', importInput()),
+    ).rejects.toMatchObject({
+      response: { code: 'carbon_provider_environment_mismatch' },
+    });
+  });
+
+  it('dönemde veri yoksa 404 carbon_provider_no_data döner ve satır yazmaz', async () => {
+    const { service, fake } = makeService(
+      dataset(),
+      new FakeAdapter(true, { scopes: [] }),
+    );
+    await expect(
+      service.importMeasurement('hotel-A', importInput()),
+    ).rejects.toMatchObject({
+      status: 404,
+      response: { code: 'carbon_provider_no_data' },
+    });
+    expect(fake.dataset.carbon_measurements).toHaveLength(0);
+  });
+
+  it('401 hatasını anlamlı bir koda çevirir, iç mesajı sızdırmaz', async () => {
+    const { service } = makeService(
+      dataset(),
+      new FakeAdapter(
+        true,
+        ghgBody(),
+        new CarbonProviderRequestError('unauthorized', 'iç detay xyz', 401),
+      ),
+    );
+    const failure = await service
+      .importMeasurement('hotel-A', importInput())
+      .catch((e: unknown) => e);
+    expect(failure).toMatchObject({
+      response: { code: 'carbon_provider_unauthorized' },
+    });
+    expect(JSON.stringify(failure)).not.toContain('xyz');
+  });
+
   it('sağlayıcı yapılandırılmadıysa 503 döner', async () => {
+    const { service } = makeService(dataset(), new FakeAdapter(false));
+    await expect(
+      service.importMeasurement('hotel-A', importInput()),
+    ).rejects.toMatchObject({
+      response: { code: 'carbon_provider_not_configured' },
+    });
+  });
+});
+
+describe('CarbonMeasurementService.activateMeasurement', () => {
+  it('ölçümü widget fiyatına uygular ve tek aktif ölçüm bırakır', async () => {
+    const { service, fake } = makeService({
+      hotels: [hotelRow({ widget_settings: { theme: 'light' } })],
+      carbon_provider_links: [linkRow()],
+      carbon_measurements: [measurementRow({ id: 'old', is_active: true })],
+    });
+    const imported = await service.importMeasurement('hotel-A', importInput());
+    const id = imported.measurement.id;
+    // fake id'ler UUID değil — gerçek DB'de UUID; testte satırı UUID'ye çevir.
+    const uuid = '22222222-2222-4222-8222-222222222222';
+    fake.dataset.carbon_measurements!.find((r) => r.id === id)!.id = uuid;
+
+    const result = await service.activateMeasurement('hotel-A', uuid);
+    expect(result.pricing.coefficient_kg).toBeCloseTo(8, 6);
+
+    const hotel = fake.dataset.hotels![0];
+    expect(hotel.estimated_co2_per_night_kg).toBeCloseTo(8, 6);
+    expect(hotel.contribution_amount_per_night).toBeCloseTo(0.2, 2);
+    expect(hotel.widget_settings).toMatchObject({
+      theme: 'light',
+      carbon_pricing: { provider: 'threepmetrics' },
+    });
+    const active = fake.dataset.carbon_measurements!.filter((r) => r.is_active);
+    expect(active.map((r) => r.id as string)).toEqual([uuid]);
+  });
+
+  it('başka otelin ölçümünü uygulamaz (tenant izolasyonu)', async () => {
+    const uuid = '33333333-3333-4333-8333-333333333333';
+    const { service } = makeService({
+      hotels: [hotelRow()],
+      carbon_measurements: [measurementRow({ id: uuid, hotel_id: 'hotel-B' })],
+    });
+    await expect(service.activateMeasurement('hotel-A', uuid)).rejects.toThrow(
+      'Ölçüm bulunamadı.',
+    );
+  });
+
+  it('geçersiz kimliği reddeder', async () => {
     const { service } = makeService({ hotels: [hotelRow()] });
     await expect(
-      service.listProviderProperties('hotel-A'),
-    ).rejects.toMatchObject({ status: 503 });
-  });
-
-  it('yetkilendirme yoksa tesis listelemez', async () => {
-    const { service } = makeService(
-      { hotels: [hotelRow()], carbon_provider_links: [] },
-      new FakeConfiguredAdapter(),
-    );
-    await expect(service.listProviderProperties('hotel-A')).rejects.toThrow(
-      'erişim izni',
-    );
-  });
-
-  it('yetkilendirme varsa tesisleri döner', async () => {
-    const { service } = makeService(
-      {
-        hotels: [hotelRow()],
-        carbon_provider_links: [
-          {
-            id: 'l1',
-            hotel_id: 'hotel-A',
-            provider: 'threepmetrics',
-            environment: 'sandbox',
-            status: 'active',
-            external_property_id: 'prop-1',
-            external_property_name: null,
-            authorization_ref: 'HOTEL_A_3PM',
-            linked_at: null,
-            revoked_at: null,
-          },
-        ],
-      },
-      new FakeConfiguredAdapter(),
-    );
-    const properties = await service.listProviderProperties('hotel-A');
-    expect(properties.map((p) => p.externalPropertyId)).toEqual([
-      'prop-1',
-      'prop-2',
-    ]);
+      service.activateMeasurement('hotel-A', 'not-a-uuid'),
+    ).rejects.toThrow('Ölçüm kimliği geçersiz.');
   });
 });
 
 describe('CarbonMeasurementService.revokeLink', () => {
-  const link = (over: Record<string, unknown> = {}) => ({
-    id: '11111111-1111-4111-8111-111111111111',
-    hotel_id: 'hotel-A',
-    provider: 'threepmetrics',
-    environment: 'sandbox',
-    status: 'active',
-    external_property_id: 'prop-1',
-    revoked_at: null,
-    ...over,
-  });
-
   it('bağlantıyı kaldırır ve satırı silmez', async () => {
-    const dataset: FakeDataset = { carbon_provider_links: [link()] };
-    const { service } = makeService(dataset);
-    const result = await service.revokeLink(
-      'hotel-A',
-      '11111111-1111-4111-8111-111111111111',
-    );
+    const { service, fake } = makeService({
+      carbon_provider_links: [linkRow()],
+    });
+    const result = await service.revokeLink('hotel-A', LINK_ID);
     expect(result.status).toBe('revoked');
-    expect(dataset.carbon_provider_links).toHaveLength(1);
-    expect(dataset.carbon_provider_links![0].revoked_at).toBeTruthy();
+    expect(fake.dataset.carbon_provider_links).toHaveLength(1);
   });
 
   it('başka otelin bağlantısını kaldırmaz (tenant izolasyonu)', async () => {
-    const dataset: FakeDataset = {
-      carbon_provider_links: [link({ hotel_id: 'hotel-B' })],
-    };
-    const { service } = makeService(dataset);
-    await expect(
-      service.revokeLink('hotel-A', '11111111-1111-4111-8111-111111111111'),
-    ).rejects.toMatchObject({ status: 404 });
-    expect(dataset.carbon_provider_links![0].status).toBe('active');
+    const { service, fake } = makeService({
+      carbon_provider_links: [linkRow({ hotel_id: 'hotel-B' })],
+    });
+    await expect(service.revokeLink('hotel-A', LINK_ID)).rejects.toThrow(
+      'Aktif bağlantı bulunamadı.',
+    );
+    expect(fake.dataset.carbon_provider_links![0].status).toBe('active');
   });
 
   it('geçersiz kimliği reddeder', async () => {
     const { service } = makeService({ carbon_provider_links: [] });
-    await expect(service.revokeLink('hotel-A', 'not-a-uuid')).rejects.toThrow(
-      'geçersiz',
+    await expect(service.revokeLink('hotel-A', 'x')).rejects.toThrow(
+      'Bağlantı kimliği geçersiz.',
     );
-  });
-});
-
-describe('ThreePMetricsNotConfiguredAdapter', () => {
-  const adapter = new ThreePMetricsNotConfiguredAdapter();
-
-  it('yapılandırılmamış olarak kayıtlıdır', () => {
-    expect(adapter.provider).toBe('threepmetrics');
-    expect(adapter.configured).toBe(false);
-  });
-
-  it('her çağrıda açık bir hata verir — sessizce yanlış veri ÜRETMEZ', async () => {
-    await expect(adapter.getResult('x')).rejects.toBeInstanceOf(
-      CarbonProviderNotConfiguredError,
-    );
-    await expect(adapter.getFormData('x')).rejects.toBeInstanceOf(
-      CarbonProviderNotConfiguredError,
-    );
-    await expect(
-      adapter.listMeasurements({ externalPropertyId: 'x' }),
-    ).rejects.toBeInstanceOf(CarbonProviderNotConfiguredError);
-    expect(() => adapter.parseWebhookEvent(Buffer.from('{}'))).toThrow(
-      CarbonProviderNotConfiguredError,
-    );
-    expect(() =>
-      adapter.verifyWebhookSignature({
-        rawBody: Buffer.from('{}'),
-        headers: {},
-        secret: 's',
-      }),
-    ).toThrow(CarbonProviderNotConfiguredError);
   });
 });
 
 describe('CarbonProviderRegistryService', () => {
-  const registry = new CarbonProviderRegistryService();
-
-  it('yalnızca kayıtlı sağlayıcıyı çözer', () => {
-    expect(registry.resolve('threepmetrics')?.provider).toBe('threepmetrics');
-    expect(registry.resolve('synxis')).toBeUndefined();
-    expect(registry.resolve('unknown')).toBeUndefined();
-  });
-
-  it('sağlayıcı durumlarını dürüstçe listeler', () => {
-    expect(registry.statuses()).toEqual([
-      { provider: 'threepmetrics', configured: false },
+  it('ortama göre resmi 3pmetrics adresini kullanır', () => {
+    const sandbox = new CarbonProviderRegistryService(fakeConfig());
+    expect(sandbox.resolve('threepmetrics')?.configured).toBe(true);
+    expect(sandbox.resolve('baska')).toBeUndefined();
+    expect(sandbox.statuses()).toEqual([
+      { provider: 'threepmetrics', configured: true },
     ]);
   });
 });

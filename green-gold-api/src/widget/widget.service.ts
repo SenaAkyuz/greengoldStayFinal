@@ -91,9 +91,14 @@ export class WidgetService {
       (hotel.widget_settings as Record<string, { provider?: string }> | null)
         ?.carbon_pricing?.provider === 'greenview-demo';
 
+    // 3pmetrics ölçümü de otelin kendi verisine dayanır; ton fiyatı hâlâ
+    // temsili olduğu için widget aynı "otel verileriyle tahmin" ibaresini taşır.
+    const pricingProvider = (
+      hotel.widget_settings as Record<string, { provider?: string }> | null
+    )?.carbon_pricing?.provider;
     const hotelEstimate =
-      (hotel.widget_settings as Record<string, { provider?: string }> | null)
-        ?.carbon_pricing?.provider === 'hotel-input-demo';
+      pricingProvider === 'hotel-input-demo' ||
+      pricingProvider === 'threepmetrics';
     return {
       carbon_estimate_source: hotelEstimate
         ? 'hotel'

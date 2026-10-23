@@ -1,16 +1,28 @@
-import { IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsNumber,
+  IsString,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 /**
- * Faz 1 "Ölçüme başla" girdisi.
+ * "3pmetrics verisini getir" girdisi.
  *
  * whitelist + forbidNonWhitelisted (bkz. main.ts) sayesinde buradaki alanlar
  * DIŞINDA gelen her şey 400 olur — özellikle `hotel_id` gövdeden ASLA okunmaz
  * (yalnızca token'dan çözülür).
  *
- * `return_path` tam URL DEĞİL, panel içi bir yoldur. Tam URL kabul etmek açık
- * redirect açığı olurdu; origin sunucuda PANEL_BASE_URL'den eklenir.
+ * Emisyon değeri bu DTO'da YOK: o 3pmetrics'ten gelir, panelden elle
+ * girilmez. Buradaki alanlar 3pmetrics API'sinde bulunmayan ve oda-geceye
+ * dağıtım için zorunlu olan OTEL verileridir. Mantıksal kontroller
+ * (dönem ≤ 366 gün, dolu oda-gece ≤ oda × gün, alan tutarlılığı)
+ * `calculateHotelCarbon` içinde, mevcut otel hesabıyla aynı kurallarla yapılır.
  */
-export class StartMeasurementDto {
+export class ImportMeasurementDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, {
     message: 'period_start YYYY-MM-DD biçiminde olmalı.',
@@ -23,11 +35,33 @@ export class StartMeasurementDto {
   })
   period_end!: string;
 
-  @IsOptional()
   @IsString()
-  @MaxLength(200)
-  @Matches(/^\/[A-Za-z0-9\-._~/?=&%]*$/, {
-    message: 'return_path panel içi bir yol olmalı (ör. /ayarlar).',
-  })
-  return_path?: string;
+  @MinLength(2)
+  @MaxLength(80)
+  country!: string;
+
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  rooms!: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(40_000_000)
+  occupied_room_nights!: number;
+
+  @IsNumber()
+  @Min(1)
+  @Max(1e9)
+  total_area_m2!: number;
+
+  @IsNumber()
+  @Min(1)
+  @Max(1e9)
+  guestrooms_area_m2!: number;
+
+  @IsNumber()
+  @Min(0)
+  @Max(1e9)
+  meeting_area_m2!: number;
 }

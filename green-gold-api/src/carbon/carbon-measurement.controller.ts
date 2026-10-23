@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/auth.guard';
 import { CarbonMeasurementService } from './carbon-measurement.service';
-import { StartMeasurementDto } from './dto/start-measurement.dto';
+import { ImportMeasurementDto } from './dto/start-measurement.dto';
 
 /**
  * Karbon ölçüm sağlayıcısı (3pmetrics) panel yüzeyi.
@@ -18,9 +18,8 @@ import { StartMeasurementDto } from './dto/start-measurement.dto';
  * hotel_id ASLA gövdeden/query'den okunmaz, yalnızca token'dan (req.auth).
  * Yazma metotları demo_viewer için DemoReadOnlyGuard tarafından 403 alır.
  *
- * Sağlayıcı sözleşmesi gelene kadar POST uçları 503
- * 'carbon_provider_not_configured' döner — panel bunu dürüst bir "bekleniyor"
- * durumu olarak gösterir, bağlıymış gibi davranmaz.
+ * Bağlantı/anahtar yoksa POST uçları 503 ve açık bir `code` döner — panel bunu
+ * dürüst bir "bekleniyor" durumu olarak gösterir, bağlıymış gibi davranmaz.
  */
 @Controller('dashboard/carbon-provider')
 export class CarbonMeasurementController {
@@ -38,19 +37,25 @@ export class CarbonMeasurementController {
     return this.measurement.listMeasurements(req.auth.hotelId);
   }
 
-  // GET /dashboard/carbon-provider/properties — Faz 2, yetkili tesisler
-  @Get('properties')
-  async properties(@Req() req: AuthenticatedRequest) {
-    return this.measurement.listProviderProperties(req.auth.hotelId);
+  // GET /dashboard/carbon-provider/units — bağlı 3pmetrics hesabının birimleri
+  @Get('units')
+  async units(@Req() req: AuthenticatedRequest) {
+    return this.measurement.listProviderUnits(req.auth.hotelId);
   }
 
-  // POST /dashboard/carbon-provider/sessions — Faz 1, "Ölçüme başla"
-  @Post('sessions')
-  async startMeasurement(
+  // POST /dashboard/carbon-provider/measurements — dönem özetini içeri al
+  @Post('measurements')
+  async importMeasurement(
     @Req() req: AuthenticatedRequest,
-    @Body() dto: StartMeasurementDto,
+    @Body() dto: ImportMeasurementDto,
   ) {
-    return this.measurement.startMeasurement(req.auth.hotelId, dto);
+    return this.measurement.importMeasurement(req.auth.hotelId, dto);
+  }
+
+  // POST /dashboard/carbon-provider/measurements/:id/activate — widget fiyatına uygula
+  @Post('measurements/:id/activate')
+  async activate(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.measurement.activateMeasurement(req.auth.hotelId, id);
   }
 
   // DELETE /dashboard/carbon-provider/links/:id — bağlantıyı kaldır

@@ -28,8 +28,11 @@ export function toKilograms(
     case 'kg co2e':
     case 'kg':
       return value;
+    // 'tonco2e': 3pmetrics Carbon Summary API'nin birimi (dokümana göre hep bu).
     case 'tco2e':
     case 't co2e':
+    case 'tonco2e':
+    case 'ton co2e':
     case 'tonne':
     case 'tonnes':
     case 'ton':

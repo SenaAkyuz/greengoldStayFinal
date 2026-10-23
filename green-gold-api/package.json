@@ -26,7 +26,8 @@
     "rotate-integration-secret": "ts-node -r tsconfig-paths/register scripts/rotate-integration-secret.ts",
     "seed-demo-data": "ts-node -r tsconfig-paths/register scripts/seed-demo-data.ts",
     "rebind-demo-user": "ts-node -r tsconfig-paths/register scripts/rebind-demo-user.ts",
-    "set-widget-settings": "ts-node -r tsconfig-paths/register scripts/set-widget-settings.ts"
+    "set-widget-settings": "ts-node -r tsconfig-paths/register scripts/set-widget-settings.ts",
+    "link-threepmetrics": "ts-node -r tsconfig-paths/register scripts/link-threepmetrics.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

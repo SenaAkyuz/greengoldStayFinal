@@ -262,9 +262,9 @@ export function getWidgetEmbedSrc() {
 export function previewCarbon(token: string, input: HotelCarbonInput) { return apiGet<HotelCarbonResult>('/dashboard/carbon-preview?input=' + encodeURIComponent(JSON.stringify(input)), token); }
 
 // --- Harici karbon ölçüm sağlayıcısı (3pmetrics) -----------------------------
-// Faz 1 + Faz 2. Bkz. green-gold-api/src/carbon/*. Sağlayıcı sözleşmesi
-// (API dokümanı / auth yöntemi / webhook) gelene kadar POST uçları 503
-// 'carbon_provider_not_configured' döner; panel bunu DÜRÜST bir "bekleniyor"
+// Bkz. green-gold-api/src/carbon/*. Otel verisini 3pmetrics'te kendi hesabıyla
+// girer; API seçilen dönemin emisyon özetini (tonCO2e) çeker. Bağlantı/anahtar
+// yoksa POST uçları 503 + açık `code` döner; panel bunu DÜRÜST bir "bekleniyor"
 // durumu olarak gösterir, bağlıymış gibi davranmaz.
 
 export interface CarbonProviderLinkView {
@@ -304,8 +304,11 @@ export interface CarbonMeasurementView {
 
 export interface CarbonProviderStatus {
   provider: string;
-  /** Sağlayıcı sözleşmesi hazır mı (API dokümanı / auth / webhook). */
+  /** Sağlayıcıya bu ortamda çağrı yapılabilir mi. */
   provider_configured: boolean;
+  /** Otelin bağlantısı için API anahtarı sunucuda tanımlı mı. */
+  credentials_ready: boolean;
+  environment: 'sandbox' | 'production';
   /** Karbon ölçüm tabloları (migration 0015) uygulanmış mı. */
   schema_ready: boolean;
   link: CarbonProviderLinkView | null;
@@ -318,12 +321,46 @@ export interface CarbonProviderStatus {
     | 'none';
 }
 
-export interface StartMeasurementResult {
-  session_id: string;
-  measurement_ref: string;
-  form_url: string;
-  expires_at: string;
-  period: { start: string; end: string };
+/** 3pmetrics özetini içeri alırken otelden istenen dağıtım verisi. */
+export interface ProviderImportInput {
+  period_start: string;
+  period_end: string;
+  country: string;
+  rooms: number;
+  occupied_room_nights: number;
+  total_area_m2: number;
+  guestrooms_area_m2: number;
+  meeting_area_m2: number;
+}
+
+export interface ProviderSummaryScope {
+  scopeLabel: string;
+  scopeTitle: string;
+  total: number;
+}
+
+export interface ProviderPricing extends HotelCarbonResult {
+  warnings: string[];
+  external_account_id: string;
+  external_account_name: string | null;
+}
+
+export interface ImportMeasurementResult {
+  measurement: CarbonMeasurementView;
+  summary: {
+    totalEmissions: number;
+    totalEmissionsUnit: string;
+    scopes: ProviderSummaryScope[];
+    lines: {
+      scopeLabel: string;
+      categoryTitle: string;
+      source: string;
+      value: number;
+      unit: string;
+    }[];
+  };
+  pricing: ProviderPricing;
+  duplicate: boolean;
 }
 
 export function getCarbonProviderStatus(token: string) {
@@ -337,18 +374,24 @@ export function getCarbonMeasurements(token: string) {
   );
 }
 
-/**
- * Faz 1 "Ölçüme başla". `return_path` panel içi bir YOL'dur (tam URL değil) —
- * origin'i sunucu PANEL_BASE_URL'den ekler, açık redirect olmaz.
- */
-export function startCarbonMeasurement(
+/** Seçilen dönemin 3pmetrics özetini içeri alır. Widget fiyatını DEĞİŞTİRMEZ. */
+export function importCarbonMeasurement(
   token: string,
-  body: { period_start: string; period_end: string; return_path?: string },
+  body: ProviderImportInput,
 ) {
-  return apiPost<StartMeasurementResult>(
-    '/dashboard/carbon-provider/sessions',
+  return apiPost<ImportMeasurementResult>(
+    '/dashboard/carbon-provider/measurements',
     token,
     body,
+  );
+}
+
+/** İçeri alınmış ölçümü widget fiyatına uygular. */
+export function activateCarbonMeasurement(token: string, measurementId: string) {
+  return apiPost<{ measurement_id: string; pricing: ProviderPricing }>(
+    `/dashboard/carbon-provider/measurements/${encodeURIComponent(measurementId)}/activate`,
+    token,
+    {},
   );
 }
 

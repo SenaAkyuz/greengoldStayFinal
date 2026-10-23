@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { CarbonProviderAdapter } from './carbon-provider.interface';
-import { ThreePMetricsNotConfiguredAdapter } from './adapters/threepmetrics.adapter';
+import {
+  THREEPMETRICS_BASE_URLS,
+  ThreePMetricsAdapter,
+} from './adapters/threepmetrics.adapter';
 
 /**
  * Doğrulanmış karbon ölçüm sağlayıcısı kayıt defteri.
@@ -24,12 +28,30 @@ export const CARBON_SOURCES = [
 ] as const;
 export type CarbonSource = (typeof CARBON_SOURCES)[number];
 
+export type CarbonProviderEnvironment = 'sandbox' | 'production';
+
+export function carbonProviderEnvironment(
+  config: Pick<ConfigService, 'get'>,
+): CarbonProviderEnvironment {
+  return config.get<string>('CARBON_PROVIDER_ENVIRONMENT') === 'production'
+    ? 'production'
+    : 'sandbox';
+}
+
 @Injectable()
 export class CarbonProviderRegistryService {
   private readonly adapters = new Map<string, CarbonProviderAdapter>();
 
-  constructor() {
-    this.register(new ThreePMetricsNotConfiguredAdapter());
+  constructor(config: ConfigService) {
+    const environment = carbonProviderEnvironment(config);
+    this.register(
+      new ThreePMetricsAdapter({
+        // Override yalnızca test/proxy içindir; boşsa resmi adres kullanılır.
+        baseUrl:
+          config.get<string>('THREEPMETRICS_BASE_URL') ||
+          THREEPMETRICS_BASE_URLS[environment],
+      }),
+    );
   }
 
   private register(adapter: CarbonProviderAdapter): void {
