@@ -114,10 +114,10 @@ function makeDeps(db: SupabaseClient): RotateSecretDeps {
     },
 
     // Secret DEĞERİ hiçbir zaman dışarı çıkmaz — yalnızca "çözülebildi mi".
-    canResolveRef: (record, ref) => {
-      const resolver = resolverForEnvironment(record.environment);
+    canResolveRef: async (record, ref) => {
+      const resolver = resolverForEnvironment(record.environment, db);
       // Verilen ref'i TEK BAŞINA (overlap'siz) dener.
-      const { candidates } = resolver.resolve({ secretRef: ref });
+      const { candidates } = await resolver.resolve({ secretRef: ref });
       return candidates.length > 0;
     },
 

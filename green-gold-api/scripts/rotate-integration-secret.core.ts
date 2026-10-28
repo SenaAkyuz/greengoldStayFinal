@@ -38,7 +38,10 @@ export interface RotationRecord {
 export interface RotateSecretDeps {
   getIntegration(id: string): Promise<RotationRecord | null>;
   /** Secret DEĞERİ dönmez — yalnızca "bu ref çözülebiliyor mu". */
-  canResolveRef(record: RotationRecord, ref: string): boolean;
+  canResolveRef(
+    record: RotationRecord,
+    ref: string,
+  ): boolean | Promise<boolean>;
   applyBegin(
     id: string,
     patch: {
@@ -114,7 +117,7 @@ export async function beginRotation(
 
   // Yeni secret KAYDEDİLMEDEN rotasyona başlamak, overlap penceresi dolduğunda
   // entegrasyonu tamamen kırar. Bu yüzden önden doğrulanır.
-  if (!deps.canResolveRef(record, newRef)) {
+  if (!(await deps.canResolveRef(record, newRef))) {
     throw new Error(
       `Yeni secret referansı çözülemiyor (${newRef}). ` +
         'Rotasyona başlamadan ÖNCE yeni secret değerini kaydedin.',
@@ -174,7 +177,7 @@ export async function completeRotation(
 
   // Tamamlamadan önce YENİ secret gerçekten çözülebiliyor olmalı; aksi halde
   // eski secret'ı silmek entegrasyonu tamamen kırardı.
-  if (!deps.canResolveRef(record, record.secretRef)) {
+  if (!(await deps.canResolveRef(record, record.secretRef))) {
     throw new Error(
       `Yeni secret referansı çözülemiyor (${record.secretRef}). ` +
         'Tamamlama REDDEDİLDİ — aksi halde entegrasyon tamamen kırılırdı.',

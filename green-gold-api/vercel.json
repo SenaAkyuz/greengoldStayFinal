@@ -7,5 +7,16 @@
       "includeFiles": "dist/**"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/integrations/hotelrunner/poll",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

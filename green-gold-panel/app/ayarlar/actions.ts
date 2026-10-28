@@ -5,7 +5,17 @@ import { createClient } from '@/lib/supabase/server';
 import {
   updateHotel,
   previewCarbon,
-  startCarbonMeasurement,
+  importCarbonMeasurement,
+  activateCarbonMeasurement,
+  getProviderUnits,
+  getEmissionResources,
+  searchAirports,
+  getCarbonEntries,
+  createCarbonEntry,
+  uploadCarbonEntryDocument,
+  markCarbonEntryDeleted,
+  type CarbonEntryInput,
+  type ProviderImportInput,
   type HotelCarbonInput,
   type HotelCarbonResult,
   type HotelUpdate,
@@ -77,26 +87,40 @@ export async function saveSettings(
 }
 
 /**
- * Faz 1 — "Ölçüme başla". Sağlayıcı sözleşmesi gelene kadar API 503
- * 'carbon_provider_not_configured' döner; mesaj kullanıcıya AYNEN yansıtılır
- * (başarılıymış gibi davranılmaz).
+ * "3pmetrics verisini getir". Bağlantı/anahtar yoksa API 503 + açık mesaj
+ * döner; mesaj kullanıcıya AYNEN yansıtılır (başarılıymış gibi davranılmaz).
+ * Widget fiyatı burada DEĞİŞMEZ.
  */
-export async function startProviderMeasurement(input: {
-  period_start: string;
-  period_end: string;
-}) {
+export async function importProviderMeasurement(input: ProviderImportInput) {
   const supabase = await createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
 
-  const response = await startCarbonMeasurement(session.access_token, {
-    ...input,
-    // Panel içi YOL — origin'i API kendi PANEL_BASE_URL'inden ekler.
-    return_path: '/ayarlar',
-  });
+  const response = await importCarbonMeasurement(session.access_token, input);
   if (response.data) revalidatePath('/ayarlar');
+  return response;
+}
+
+/** İçeri alınmış 3pmetrics ölçümünü widget fiyatına uygular. */
+export async function activateProviderMeasurement(measurementId: string) {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { data: null, error: 'Oturum bulunamadı.' };
+
+  const response = await activateCarbonMeasurement(
+    session.access_token,
+    measurementId,
+  );
+  if (response.data) {
+    revalidatePath('/ayarlar');
+    revalidatePath('/misafir-onizleme');
+    revalidatePath('/karbon');
+    revalidatePath('/sertifikalar');
+  }
   return response;
 }
 
@@ -127,4 +151,69 @@ export async function calculateAndApplyHotelCarbon(input: HotelCarbonInput) {
   revalidatePath('/karbon');
   revalidatePath('/sertifikalar');
   return { data: pricing as HotelCarbonResult, error: null };
+}
+
+// --- 3pmetrics veri girişi ----------------------------------------------------
+// Token yalnızca sunucuda okunur; hotel_id ve 3pmetrics müşteri kimliği
+// ASLA istemciden gönderilmez (API token'dan çözer).
+
+async function accessToken(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+const NO_SESSION = { data: null, error: 'Oturum bulunamadı.' } as const;
+
+export async function loadProviderUnits() {
+  const token = await accessToken();
+  return token ? getProviderUnits(token) : NO_SESSION;
+}
+
+export async function loadEmissionResources(unitId: string) {
+  const token = await accessToken();
+  return token ? getEmissionResources(token, unitId) : NO_SESSION;
+}
+
+export async function findAirports(query: string) {
+  const token = await accessToken();
+  return token ? searchAirports(token, query) : NO_SESSION;
+}
+
+export async function loadCarbonEntries() {
+  const token = await accessToken();
+  return token ? getCarbonEntries(token) : NO_SESSION;
+}
+
+/** 3pmetrics'e yazar — GERİ ALINAMAZ. 409 'carbon_entry_possible_duplicate' kodu döner. */
+export async function submitCarbonEntry(input: CarbonEntryInput) {
+  const token = await accessToken();
+  if (!token) return { ...NO_SESSION, code: null };
+  return createCarbonEntry(token, input);
+}
+
+/**
+ * Kanıt belgesi yükler. Sınır: 4 MB (API Vercel'de, istek gövdesi 4.5 MB ile
+ * sınırlı). next.config.ts'te serverActions.bodySizeLimit buna göre ayarlı.
+ */
+export async function attachCarbonEntryDocument(
+  entryId: string,
+  form: FormData,
+) {
+  const token = await accessToken();
+  if (!token) return NO_SESSION;
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { data: null, error: 'Dosya seçilmedi.' };
+  }
+  const outbound = new FormData();
+  outbound.append('file', file, file.name);
+  return uploadCarbonEntryDocument(token, entryId, outbound);
+}
+
+export async function markEntryDeletedInProvider(entryId: string) {
+  const token = await accessToken();
+  return token ? markCarbonEntryDeleted(token, entryId) : NO_SESSION;
 }

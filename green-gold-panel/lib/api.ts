@@ -262,9 +262,10 @@ export function getWidgetEmbedSrc() {
 export function previewCarbon(token: string, input: HotelCarbonInput) { return apiGet<HotelCarbonResult>('/dashboard/carbon-preview?input=' + encodeURIComponent(JSON.stringify(input)), token); }
 
 // --- Harici karbon ölçüm sağlayıcısı (3pmetrics) -----------------------------
-// Faz 1 + Faz 2. Bkz. green-gold-api/src/carbon/*. Sağlayıcı sözleşmesi
-// (API dokümanı / auth yöntemi / webhook) gelene kadar POST uçları 503
-// 'carbon_provider_not_configured' döner; panel bunu DÜRÜST bir "bekleniyor"
+// Bkz. green-gold-api/src/carbon/*. Otel emisyon verisini BU panelden girer
+// (API -> 3pmetrics POST /cca/replies); 3pmetrics hesaplar, API seçilen
+// dönemin emisyon özetini (tonCO2e) çeker. Bağlantı/anahtar
+// yoksa POST uçları 503 + açık `code` döner; panel bunu DÜRÜST bir "bekleniyor"
 // durumu olarak gösterir, bağlıymış gibi davranmaz.
 
 export interface CarbonProviderLinkView {
@@ -304,8 +305,11 @@ export interface CarbonMeasurementView {
 
 export interface CarbonProviderStatus {
   provider: string;
-  /** Sağlayıcı sözleşmesi hazır mı (API dokümanı / auth / webhook). */
+  /** Sağlayıcıya bu ortamda çağrı yapılabilir mi. */
   provider_configured: boolean;
+  /** Otelin bağlantısı için API anahtarı sunucuda tanımlı mı. */
+  credentials_ready: boolean;
+  environment: 'sandbox' | 'production';
   /** Karbon ölçüm tabloları (migration 0015) uygulanmış mı. */
   schema_ready: boolean;
   link: CarbonProviderLinkView | null;
@@ -318,12 +322,46 @@ export interface CarbonProviderStatus {
     | 'none';
 }
 
-export interface StartMeasurementResult {
-  session_id: string;
-  measurement_ref: string;
-  form_url: string;
-  expires_at: string;
-  period: { start: string; end: string };
+/** 3pmetrics özetini içeri alırken otelden istenen dağıtım verisi. */
+export interface ProviderImportInput {
+  period_start: string;
+  period_end: string;
+  country: string;
+  rooms: number;
+  occupied_room_nights: number;
+  total_area_m2: number;
+  guestrooms_area_m2: number;
+  meeting_area_m2: number;
+}
+
+export interface ProviderSummaryScope {
+  scopeLabel: string;
+  scopeTitle: string;
+  total: number;
+}
+
+export interface ProviderPricing extends HotelCarbonResult {
+  warnings: string[];
+  external_account_id: string;
+  external_account_name: string | null;
+}
+
+export interface ImportMeasurementResult {
+  measurement: CarbonMeasurementView;
+  summary: {
+    totalEmissions: number;
+    totalEmissionsUnit: string;
+    scopes: ProviderSummaryScope[];
+    lines: {
+      scopeLabel: string;
+      categoryTitle: string;
+      source: string;
+      value: number;
+      unit: string;
+    }[];
+  };
+  pricing: ProviderPricing;
+  duplicate: boolean;
 }
 
 export function getCarbonProviderStatus(token: string) {
@@ -337,18 +375,160 @@ export function getCarbonMeasurements(token: string) {
   );
 }
 
-/**
- * Faz 1 "Ölçüme başla". `return_path` panel içi bir YOL'dur (tam URL değil) —
- * origin'i sunucu PANEL_BASE_URL'den ekler, açık redirect olmaz.
- */
-export function startCarbonMeasurement(
+/** Seçilen dönemin 3pmetrics özetini içeri alır. Widget fiyatını DEĞİŞTİRMEZ. */
+export function importCarbonMeasurement(
   token: string,
-  body: { period_start: string; period_end: string; return_path?: string },
+  body: ProviderImportInput,
 ) {
-  return apiPost<StartMeasurementResult>(
-    '/dashboard/carbon-provider/sessions',
+  return apiPost<ImportMeasurementResult>(
+    '/dashboard/carbon-provider/measurements',
     token,
     body,
+  );
+}
+
+/** İçeri alınmış ölçümü widget fiyatına uygular. */
+export function activateCarbonMeasurement(token: string, measurementId: string) {
+  return apiPost<{ measurement_id: string; pricing: ProviderPricing }>(
+    `/dashboard/carbon-provider/measurements/${encodeURIComponent(measurementId)}/activate`,
+    token,
+    {},
+  );
+}
+
+// --- 3pmetrics veri girişi ----------------------------------------------------
+// 3pmetrics'e yazılan kayıt API'den SİLİNEMEZ (yalnızca 3pmetrics arayüzünden).
+
+export interface ProviderUnit {
+  externalUnitId: string;
+  name: string;
+  type: string;
+}
+
+export interface EmissionOptionGroup {
+  description: string;
+  options: { name: string; value: string }[];
+}
+
+export interface EmissionResource {
+  slug: string;
+  title: string;
+  header: string | null;
+  description: string | null;
+  ghgScope: { id: number | null; name: string } | null;
+  systemOptions: EmissionOptionGroup | null;
+  userOptions: EmissionOptionGroup | null;
+  /** 'flight-route-v1' ise miktar yerine uçuş rotası girilir. */
+  inputMode: string | null;
+  requiredFields: string[];
+}
+
+export interface Airport {
+  iata: string;
+  name: string;
+  city: string | null;
+  country: string | null;
+}
+
+export interface CarbonEntryInput {
+  idempotency_key: string;
+  unit_id: string;
+  resource_slug: string;
+  date: string;
+  value?: string;
+  system_option_value?: string;
+  user_option_value?: string;
+  flight_name?: string;
+  departure_iata?: string;
+  arrival_iata?: string;
+  confirm_irreversible: true;
+  allow_duplicate?: boolean;
+}
+
+export interface CarbonEntry {
+  id: string;
+  idempotency_key: string;
+  unit_id: string;
+  unit_name: string | null;
+  resource_slug: string;
+  resource_title: string | null;
+  ghg_scope: string | null;
+  date: string;
+  value: number | null;
+  system_option: { value: string; label: string | null } | null;
+  user_option: { value: string; label: string | null } | null;
+  flight: {
+    passengerOrFlightName: string;
+    departureIata: string;
+    arrivalIata: string;
+  } | null;
+  status:
+    | 'sending'
+    | 'sent'
+    | 'failed'
+    | 'outcome_unknown'
+    | 'deleted_in_provider';
+  reply_id: number | null;
+  error_code: string | null;
+  documents: { file_name: string; uploaded_at: string }[];
+  environment: string;
+  created_at: string;
+}
+
+export function getProviderUnits(token: string) {
+  return apiGet<ProviderUnit[]>('/dashboard/carbon-provider/units', token);
+}
+
+export function getEmissionResources(token: string, unitId: string) {
+  return apiGet<EmissionResource[]>(
+    `/dashboard/carbon-provider/units/${encodeURIComponent(unitId)}/emission-resources`,
+    token,
+  );
+}
+
+export function searchAirports(token: string, query: string) {
+  return apiGet<Airport[]>(
+    `/dashboard/carbon-provider/airports?query=${encodeURIComponent(query)}`,
+    token,
+  );
+}
+
+export function getCarbonEntries(token: string) {
+  return apiGet<{ schema_ready: boolean; items: CarbonEntry[] }>(
+    '/dashboard/carbon-provider/entries',
+    token,
+  );
+}
+
+/** Emisyon verisini 3pmetrics'e yazar. GERİ ALINAMAZ. */
+export function createCarbonEntry(token: string, body: CarbonEntryInput) {
+  return apiPost<{ entry: CarbonEntry; replayed: boolean }>(
+    '/dashboard/carbon-provider/entries',
+    token,
+    body,
+  );
+}
+
+/** Gönderilmiş kayda kanıt belgesi ekler (multipart `file`). */
+export function uploadCarbonEntryDocument(
+  token: string,
+  entryId: string,
+  form: FormData,
+) {
+  return apiSend<CarbonEntry>(
+    `/dashboard/carbon-provider/entries/${encodeURIComponent(entryId)}/documents`,
+    token,
+    'POST',
+    form,
+  );
+}
+
+/** Kaydın 3pmetrics arayüzünden silindiğini işaretler (API silme yapmaz). */
+export function markCarbonEntryDeleted(token: string, entryId: string) {
+  return apiPost<CarbonEntry>(
+    `/dashboard/carbon-provider/entries/${encodeURIComponent(entryId)}/mark-deleted`,
+    token,
+    {},
   );
 }
 
@@ -369,20 +549,29 @@ async function apiSend<T>(
   token: string,
   method: 'POST' | 'DELETE',
   body?: unknown,
-): Promise<{ data: T | null; error: string | null }> {
+): Promise<{ data: T | null; error: string | null; code?: string | null }> {
+  // FormData (belge yükleme) olduğu gibi gider; sınırı fetch koyar.
+  const isForm = body instanceof FormData;
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
-        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(body === undefined || isForm
+          ? {}
+          : { 'Content-Type': 'application/json' }),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body:
+        body === undefined ? undefined : isForm ? body : JSON.stringify(body),
       cache: 'no-store',
     });
     const json = (await res.json()) as Envelope<T>;
     if (!res.ok || !json.success || json.data === null) {
-      return { data: null, error: json.error?.message ?? `HTTP ${res.status}` };
+      return {
+        data: null,
+        error: json.error?.message ?? `HTTP ${res.status}`,
+        code: json.error?.code ?? null,
+      };
     }
     return { data: json.data, error: null };
   } catch {

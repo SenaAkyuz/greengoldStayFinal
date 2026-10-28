@@ -11,7 +11,14 @@ import {
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ProviderRegistryService } from './provider-registry';
-import { resolverForEnvironment } from './secret-resolver';
+import {
+  resolverForEnvironment,
+  type ResolvedSecrets,
+} from './secret-resolver';
+import type {
+  ParsedEvent,
+  WebhookQuery,
+} from './adapters/provider-adapter.interface';
 import {
   NormalizedEventValidationError,
   type NormalizedReservationEvent,
@@ -29,13 +36,20 @@ const MAX_BODY_BYTES = 256 * 1024;
 /** Postgres serialization_failure — RPC'nin "kararın bayatladı, retry et" sinyali. */
 const PG_SERIALIZATION_FAILURE = '40001';
 
-interface HotelIntegrationRow {
+export interface IngestResult {
+  status: string;
+  /** Çok event'li partilerde her event'in sonucu (sırayla). */
+  events?: string[];
+}
+
+export interface HotelIntegrationRow {
   id: string;
   hotel_id: string;
   provider: string;
   environment: string;
   status: string;
   external_property_id: string;
+  product_code: string;
   secret_ref: string;
   previous_secret_ref: string | null;
   previous_secret_expires_at: string | null;
@@ -54,7 +68,10 @@ interface ContributionRow {
   amount_minor: number;
 }
 
-function sha256Hex(buf: Buffer): string {
+export const HOTEL_INTEGRATION_COLUMNS =
+  'id, hotel_id, provider, environment, status, external_property_id, product_code, secret_ref, previous_secret_ref, previous_secret_expires_at';
+
+export function sha256Hex(buf: Buffer): string {
   return createHash('sha256').update(buf).digest('hex');
 }
 
@@ -88,7 +105,8 @@ export class WebhookIngestionService {
     routingId: string,
     rawBody: Buffer | undefined,
     headers: Record<string, string | string[] | undefined>,
-  ): Promise<{ status: string }> {
+    query: WebhookQuery = {},
+  ): Promise<IngestResult> {
     if (!rawBody || rawBody.length === 0) {
       throw new BadRequestException('Boş webhook body.');
     }
@@ -119,19 +137,14 @@ export class WebhookIngestionService {
 
     const payloadHash = sha256Hex(rawBody);
 
-    // Secret çözümü environment'a göre: 'production' için resolver FAIL-CLOSED
-    // (gerçek secrets manager yok) -> aday secret dönmez -> imza doğrulanamaz.
-    const resolver = resolverForEnvironment(integration.environment);
-    const { candidates } = resolver.resolve({
-      secretRef: integration.secret_ref,
-      previousSecretRef: integration.previous_secret_ref,
-      previousSecretExpiresAt: integration.previous_secret_expires_at,
-    });
+    // Secret çözümü environment'a göre: sandbox env'den, production Supabase
+    // Vault'tan (migration 0017). Çözülemezse aday yok -> doğrulanamaz.
+    const { candidates } = await this.resolveSecrets(integration);
 
     // Rotasyon overlap'i: adaylar sırayla denenir (önce güncel, sonra süresi
     // dolmamış eski). Herhangi biri doğrularsa imza geçerlidir.
     const signatureOk = candidates.some((secret) =>
-      adapter.verifySignature({ rawBody, headers, secret }),
+      adapter.verifySignature({ rawBody, headers, query, secret }),
     );
 
     if (!signatureOk) {
@@ -149,9 +162,13 @@ export class WebhookIngestionService {
       throw new UnauthorizedException('Geçersiz imza.');
     }
 
-    let event: NormalizedReservationEvent;
+    let parsed: ParsedEvent[];
     try {
-      event = adapter.parseEvent(rawBody);
+      parsed = adapter.parseEvents({
+        rawBody,
+        query,
+        productCode: integration.product_code,
+      });
     } catch (e) {
       const code =
         e instanceof NormalizedEventValidationError
@@ -167,20 +184,108 @@ export class WebhookIngestionService {
       throw new BadRequestException('Geçersiz payload.');
     }
 
+    // Tek event'li kontrat (generic_signed_webhook): hatalar doğrudan HTTP
+    // hatası olarak döner — mevcut davranış.
+    if (parsed.length === 1) {
+      return this.applyParsedEvent(integration, payloadHash, parsed[0]);
+    }
+    return this.applyTrustedEvents(integration, payloadHash, parsed);
+  }
+
+  /**
+   * Doğrulaması YAPILMIŞ (push imzası veya kendi API çağrımız) çok event'li
+   * bir partiyi uygular. Bir event'in hatası diğerlerini durdurmaz; her hata
+   * delivery audit'ine yazılır. Eşzamanlılık çakışması olduysa parti işlendikten
+   * sonra 503 döner — sağlayıcı tekrar gönderir, işlenmiş event'ler
+   * provider_event_id idempotency'si sayesinde tekrar uygulanmaz.
+   */
+  async applyTrustedEvents(
+    integration: HotelIntegrationRow,
+    payloadHash: string,
+    parsed: ParsedEvent[],
+  ): Promise<IngestResult> {
+    const statuses: string[] = [];
+    let retryNeeded = false;
+    for (const item of parsed) {
+      try {
+        statuses.push(
+          (await this.applyParsedEvent(integration, payloadHash, item)).status,
+        );
+      } catch (e) {
+        if (e instanceof ServiceUnavailableException) retryNeeded = true;
+        statuses.push('rejected');
+      }
+    }
+    if (retryNeeded) {
+      throw new ServiceUnavailableException({
+        code: 'concurrent_update_retry',
+        message: 'Eşzamanlı güncelleme — lütfen tekrar deneyin.',
+      });
+    }
+    return { status: 'batch_processed', events: statuses };
+  }
+
+  private async applyParsedEvent(
+    integration: HotelIntegrationRow,
+    payloadHash: string,
+    item: ParsedEvent,
+  ): Promise<IngestResult> {
+    if (!item.ok) {
+      await this.logRejectedDelivery(
+        integration,
+        integration.provider,
+        payloadHash,
+        {
+          signatureVerified: true,
+          processingStatus: 'rejected_invalid_payload',
+          errorCode: item.error.code,
+          providerEventId: item.providerEventId ?? null,
+          normalizedSnapshot: null,
+        },
+      );
+      throw new BadRequestException('Geçersiz payload.');
+    }
+    const event = item.event;
+
     // Senaryo #12 — tenant çapraz saldırı koruması: event başka bir property'e
     // aitse (routing id doğru olsa bile) reddedilir, hiçbir domain yazımı yok.
     if (event.property_id !== integration.external_property_id) {
-      await this.logRejectedDelivery(integration, providerParam, payloadHash, {
-        signatureVerified: true,
-        processingStatus: 'rejected_invalid_payload',
-        errorCode: 'property_id_mismatch',
-        providerEventId: event.provider_event_id,
-        normalizedSnapshot: safeSnapshot(event),
-      });
+      await this.logRejectedDelivery(
+        integration,
+        integration.provider,
+        payloadHash,
+        {
+          signatureVerified: true,
+          processingStatus: 'rejected_invalid_payload',
+          errorCode: 'property_id_mismatch',
+          providerEventId: event.provider_event_id,
+          normalizedSnapshot: safeSnapshot(event),
+        },
+      );
       throw new ForbiddenException('property_id bu entegrasyonla eşleşmiyor.');
     }
 
     return this.applyVerifiedEvent(integration, payloadHash, event);
+  }
+
+  /** Entegrasyonun güncel (+ süresi dolmamış eski) secret'ları. Değer loglanmaz. */
+  async resolveSecrets(
+    integration: Pick<
+      HotelIntegrationRow,
+      | 'environment'
+      | 'secret_ref'
+      | 'previous_secret_ref'
+      | 'previous_secret_expires_at'
+    >,
+  ): Promise<ResolvedSecrets> {
+    return resolverForEnvironment(
+      integration.environment,
+      this.supabase.db,
+    ).resolve({
+      secretRef: integration.secret_ref,
+      previousSecretRef: integration.previous_secret_ref,
+      previousSecretExpiresAt: integration.previous_secret_expires_at,
+    });
   }
 
   /**
@@ -287,9 +392,7 @@ export class WebhookIngestionService {
   ): Promise<HotelIntegrationRow | null> {
     const { data, error } = await this.supabase.db
       .from('hotel_integrations')
-      .select(
-        'id, hotel_id, provider, environment, status, external_property_id, secret_ref, previous_secret_ref, previous_secret_expires_at',
-      )
+      .select(HOTEL_INTEGRATION_COLUMNS)
       .eq('webhook_routing_id', routingId)
       .eq('provider', provider)
       .single();

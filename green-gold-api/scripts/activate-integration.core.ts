@@ -33,7 +33,7 @@ export interface ActivateIntegrationDeps {
   /** Adapter registry'den: bu provider gerçekten yapılandırılmış mı? */
   isProviderConfigured(provider: string): boolean;
   /** Secret referansı gerçek bir secret'a çözülebiliyor mu (DEĞERİ dönmez!). */
-  canResolveSecret(record: IntegrationRecord): boolean;
+  canResolveSecret(record: IntegrationRecord): boolean | Promise<boolean>;
   /** Bu environment için secret resolver meşru mu (production -> false). */
   isResolverAllowed(environment: string): boolean;
   /** Bu entegrasyon için başarıyla işlenmiş ('processed') delivery var mı? */
@@ -63,15 +63,15 @@ export interface ActivateOptions {
   overrideVerification?: boolean;
 }
 
-export function evaluateGates(
+export async function evaluateGates(
   record: IntegrationRecord,
   deps: ActivateIntegrationDeps,
   hasDelivery: boolean,
   opts: ActivateOptions = {},
-): ActivationGate[] {
+): Promise<ActivationGate[]> {
   const adapterConfigured = deps.isProviderConfigured(record.provider);
   const resolverAllowed = deps.isResolverAllowed(record.environment);
-  const secretResolvable = deps.canResolveSecret(record);
+  const secretResolvable = await deps.canResolveSecret(record);
   const fieldsPresent = !!(
     record.externalPropertyId?.trim() && record.productCode?.trim()
   );
@@ -91,7 +91,7 @@ export function evaluateGates(
       detail: resolverAllowed
         ? `${record.environment} için secret resolver meşru.`
         : `${record.environment} için MEŞRU BİR SECRET RESOLVER YOK. ` +
-          'Env tabanlı çözüm yalnızca sandbox içindir; production gerçek bir secrets manager gerektirir.',
+          'Env tabanlı çözüm yalnızca sandbox içindir; production Supabase Vault (migration 0017) gerektirir.',
     },
     {
       name: 'secret_resolvable',
@@ -144,7 +144,7 @@ export async function runActivateIntegration(
   }
 
   const hasDelivery = await deps.hasProcessedDelivery(record.id);
-  const gates = evaluateGates(record, deps, hasDelivery, opts);
+  const gates = await evaluateGates(record, deps, hasDelivery, opts);
   const failed = gates.filter((g) => !g.passed);
 
   if (failed.length > 0) {

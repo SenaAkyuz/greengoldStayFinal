@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActions: {
+      // 3pmetrics kanıt belgesi yükleme (en fazla 4 MB + multipart payı).
+      // API Vercel'de çalıştığı için 4.5 MB istek sınırının altında kalır.
+      bodySizeLimit: '4.2mb',
+    },
+  },
   async headers() {
     return [
       {

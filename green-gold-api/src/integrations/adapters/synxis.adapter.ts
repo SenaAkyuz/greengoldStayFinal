@@ -1,6 +1,7 @@
-import type { NormalizedReservationEvent } from '../normalized-event';
 import type {
+  ParsedEvent,
   ProviderAdapter,
+  WebhookParseInput,
   WebhookVerificationInput,
 } from './provider-adapter.interface';
 
@@ -22,7 +23,7 @@ export class SynxisNotConfiguredAdapter implements ProviderAdapter {
     throw new SynxisNotConfiguredError();
   }
 
-  parseEvent(_rawBody: Buffer): NormalizedReservationEvent {
+  parseEvents(_input: WebhookParseInput): ParsedEvent[] {
     throw new SynxisNotConfiguredError();
   }
 }
