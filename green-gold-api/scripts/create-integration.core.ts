@@ -21,8 +21,12 @@
 
 import { isValidSecretRef } from '../src/integrations/secret-resolver';
 
-/** Migration 0009'daki `provider` CHECK kısıtıyla BİREBİR aynı tutulmalı. */
-export const ALLOWED_PROVIDERS = ['synxis', 'generic_signed_webhook'] as const;
+/** Migration 0009 + 0017'deki `provider` CHECK kısıtıyla BİREBİR aynı tutulmalı. */
+export const ALLOWED_PROVIDERS = [
+  'synxis',
+  'generic_signed_webhook',
+  'hotelrunner',
+] as const;
 export type AllowedProvider = (typeof ALLOWED_PROVIDERS)[number];
 
 export const ALLOWED_ENVIRONMENTS = ['sandbox', 'production'] as const;

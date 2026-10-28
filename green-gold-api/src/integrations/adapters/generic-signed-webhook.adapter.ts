@@ -5,7 +5,9 @@ import {
   type NormalizedReservationEvent,
 } from '../normalized-event';
 import type {
+  ParsedEvent,
   ProviderAdapter,
+  WebhookParseInput,
   WebhookVerificationInput,
 } from './provider-adapter.interface';
 
@@ -78,5 +80,17 @@ export class GenericSignedWebhookAdapter implements ProviderAdapter {
       );
     }
     return validateNormalizedReservationEvent(parsed);
+  }
+
+  /** Bu kontrat tek istekte tek event taşır. */
+  parseEvents(input: WebhookParseInput): ParsedEvent[] {
+    try {
+      return [{ ok: true, event: this.parseEvent(input.rawBody) }];
+    } catch (e) {
+      if (e instanceof NormalizedEventValidationError) {
+        return [{ ok: false, error: e }];
+      }
+      throw e;
+    }
   }
 }

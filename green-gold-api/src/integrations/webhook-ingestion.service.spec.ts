@@ -170,20 +170,48 @@ describe('WebhookIngestionService.ingest', () => {
     expect(deliveries[0].signature_verified).toBe(false);
   });
 
-  it('production environment -> secret çözülemez (fail closed), 401 + secret_not_resolvable', async () => {
+  it("production + Vault'ta secret yok -> fail closed, 401 + secret_not_resolvable", async () => {
     const { service, fake } = makeService({
       hotel_integrations: [integrationRow({ environment: 'production' })],
     });
-    // İmza DOĞRU secret ile atılmış olsa bile: production resolver hiçbir
-    // aday secret döndürmez -> doğrulama yapılamaz.
+    // İmza DOĞRU secret ile atılmış olsa bile: production env'i OKUMAZ,
+    // yalnızca Vault'a bakar; Vault'ta kayıt yok -> doğrulama yapılamaz.
     const { rawBody, headers } = signedRequest(payload());
     await expect(
       service.ingest('generic_signed_webhook', 'routing-A', rawBody, headers),
     ).rejects.toBeInstanceOf(UnauthorizedException);
 
-    expect(fake.rpcCalls).toHaveLength(0);
+    // Tek RPC Vault okumasıdır — domain yazımı YOK.
+    expect(fake.rpcCalls.map((c) => c.name)).toEqual([
+      'integration_secret_get',
+    ]);
     const deliveries = fake.dataset.integration_deliveries ?? [];
     expect(deliveries[0].error_code).toBe('secret_not_resolvable');
+  });
+
+  it("production + Vault'ta secret var -> doğrulanır ve işlenir", async () => {
+    const { service, fake } = makeService(
+      { hotel_integrations: [integrationRow({ environment: 'production' })] },
+      {
+        ...okRpc(),
+        integration_secret_get: (args) => ({
+          data: args.p_ref === SECRET_REF ? SECRET : null,
+          error: null,
+        }),
+      },
+    );
+    const { rawBody, headers } = signedRequest(payload());
+    const res = await service.ingest(
+      'generic_signed_webhook',
+      'routing-A',
+      rawBody,
+      headers,
+    );
+    expect(res.status).toBe('processed');
+    expect(fake.rpcCalls.map((c) => c.name)).toEqual([
+      'integration_secret_get',
+      'ingest_reservation_event',
+    ]);
   });
 
   it('#12 property_id eşleşmiyorsa -> 403, domain RPC YOK (tenant saldırı koruması)', async () => {

@@ -97,9 +97,9 @@ function makeDeps(db: SupabaseClient): ActivateIntegrationDeps {
       registry.resolve(provider)?.configured === true,
 
     // Secret DEĞERİ hiçbir zaman dışarı çıkmaz — yalnızca "çözülebildi mi".
-    canResolveSecret: (record: IntegrationRecord) => {
-      const resolver = resolverForEnvironment(record.environment);
-      const { candidates } = resolver.resolve({
+    canResolveSecret: async (record: IntegrationRecord) => {
+      const resolver = resolverForEnvironment(record.environment, db);
+      const { candidates } = await resolver.resolve({
         secretRef: record.secretRef,
         previousSecretRef: record.previousSecretRef,
         previousSecretExpiresAt: record.previousSecretExpiresAt,
@@ -108,7 +108,10 @@ function makeDeps(db: SupabaseClient): ActivateIntegrationDeps {
     },
 
     isResolverAllowed: (environment) =>
-      isResolverAllowedFor(resolverForEnvironment(environment), environment),
+      isResolverAllowedFor(
+        resolverForEnvironment(environment, db),
+        environment,
+      ),
 
     hasProcessedDelivery: async (integrationId) => {
       const { data } = await db

@@ -1,13 +1,10 @@
 /**
  * `hotel_integrations.secret_ref` (opak referans) -> gerçek paylaşılan secret.
  *
- * ⚠️ ÜRETİMDE GERÇEK BİR SECRETS MANAGER YOK. Bu dosya bir INTERFACE tanımlar
- * ve YALNIZCA local/sandbox için bir env implementasyonu sağlar. Production
- * ortamı için implementasyon YOKTUR ve bu bilinçli olarak FAIL-CLOSED
- * bırakılmıştır: production bir entegrasyon secret'ı çözemez, dolayısıyla
- * aktive edilemez ve webhook'ları doğrulanamaz. Bu bir eksiklik değil, açık
- * bir KAPIDIR — gerçek bir secrets manager (Vault / AWS Secrets Manager /
- * per-integration KMS vb.) entegre edilene kadar production akışı açılmamalıdır.
+ * Production secrets manager = Supabase Vault (migration 0017,
+ * `integration_secret_get`): secret veritabanında şifreli durur, yalnızca
+ * service_role çağırabilir. Vault istemcisi verilmeyen yerde production
+ * FAIL-CLOSED kalır (UnavailableProductionSecretResolver).
  *
  * Env yaklaşımının neden production çözümü OLMADIĞI:
  *   - secret_ref bazlı per-hotel rotasyon/erişim denetimi/audit sağlamaz,
@@ -40,7 +37,7 @@ export interface SecretResolver {
    * Referansları gerçek secret'lara çözer. Çözemezse boş candidates döner —
    * çağıran taraf bunu "imza doğrulanamaz" olarak ele almalıdır (fail closed).
    */
-  resolve(refs: IntegrationSecretRefs): ResolvedSecrets;
+  resolve(refs: IntegrationSecretRefs): Promise<ResolvedSecrets>;
 }
 
 const ENV_PREFIX = 'INTEGRATION_SECRET_';
@@ -71,7 +68,7 @@ export class EnvSecretResolver implements SecretResolver {
   readonly name = 'env';
   readonly supportedEnvironments = ['sandbox'] as const;
 
-  resolve(refs: IntegrationSecretRefs): ResolvedSecrets {
+  resolve(refs: IntegrationSecretRefs): Promise<ResolvedSecrets> {
     const candidates: string[] = [];
 
     if (isValidSecretRef(refs.secretRef)) {
@@ -94,6 +91,55 @@ export class EnvSecretResolver implements SecretResolver {
       }
     }
 
+    return Promise.resolve({ candidates, previousAccepted });
+  }
+}
+
+/** supabase-js istemcisinin burada kullanılan alt kümesi. */
+export interface IntegrationVaultClient {
+  rpc(
+    fn: string,
+    args: Record<string, unknown>,
+  ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
+}
+
+/**
+ * PRODUCTION (ve sandbox) resolver — Supabase Vault (migration 0017).
+ * Hata (ör. migration uygulanmamış) -> aday yok -> fail closed. Değer ve
+ * hata ayrıntısı loglanmaz.
+ */
+export class VaultIntegrationSecretResolver implements SecretResolver {
+  readonly name = 'supabase-vault';
+  readonly supportedEnvironments = ['sandbox', 'production'] as const;
+
+  constructor(private readonly db: IntegrationVaultClient) {}
+
+  private async get(ref: string): Promise<string | null> {
+    if (!isValidSecretRef(ref)) return null;
+    const { data, error } = await this.db.rpc('integration_secret_get', {
+      p_ref: ref,
+    });
+    if (error || typeof data !== 'string' || !data.trim()) return null;
+    return data.trim();
+  }
+
+  async resolve(refs: IntegrationSecretRefs): Promise<ResolvedSecrets> {
+    const candidates: string[] = [];
+    const current = await this.get(refs.secretRef);
+    if (current) candidates.push(current);
+
+    let previousAccepted = false;
+    if (
+      refs.previousSecretRef &&
+      refs.previousSecretExpiresAt &&
+      Date.parse(refs.previousSecretExpiresAt) > Date.now()
+    ) {
+      const previous = await this.get(refs.previousSecretRef);
+      if (previous) {
+        candidates.push(previous);
+        previousAccepted = true;
+      }
+    }
     return { candidates, previousAccepted };
   }
 }
@@ -110,20 +156,26 @@ export class UnavailableProductionSecretResolver implements SecretResolver {
   readonly name = 'unavailable_production';
   readonly supportedEnvironments = [] as const;
 
-  resolve(_refs: IntegrationSecretRefs): ResolvedSecrets {
-    return { candidates: [], previousAccepted: false };
+  resolve(_refs: IntegrationSecretRefs): Promise<ResolvedSecrets> {
+    return Promise.resolve({ candidates: [], previousAccepted: false });
   }
 }
 
 /**
- * Environment'a göre resolver seçer. 'production' için fail-closed resolver
- * döner — çağıran taraf ayrıca `isResolverAllowedFor` ile kapıyı kontrol
- * etmelidir (ör. activate-integration).
+ * Environment'a göre resolver seçer. Sandbox env'den okur (değişmedi).
+ * Production yalnızca Vault istemcisi verilirse Vault'tan okur; verilmezse
+ * fail-closed resolver döner. Çağıran taraf ayrıca `isResolverAllowedFor`
+ * ile kapıyı kontrol etmelidir (ör. activate-integration).
  */
-export function resolverForEnvironment(environment: string): SecretResolver {
-  return environment === 'sandbox'
-    ? new EnvSecretResolver()
-    : new UnavailableProductionSecretResolver();
+export function resolverForEnvironment(
+  environment: string,
+  vault?: IntegrationVaultClient,
+): SecretResolver {
+  if (environment === 'sandbox') return new EnvSecretResolver();
+  if (environment === 'production' && vault) {
+    return new VaultIntegrationSecretResolver(vault);
+  }
+  return new UnavailableProductionSecretResolver();
 }
 
 /** Bu resolver bu environment için MEŞRU mu (aktivasyon kapısı bunu sorar). */

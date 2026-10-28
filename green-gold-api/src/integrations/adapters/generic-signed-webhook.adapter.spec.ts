@@ -40,6 +40,7 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
     const sig = sign(body, ts);
     const ok = adapter.verifySignature({
       rawBody: body,
+      query: {},
       headers: {
         'x-greengold-signature': `sha256=${sig}`,
         'x-greengold-timestamp': ts,
@@ -55,6 +56,7 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
     const sig = sign(body, ts, 'wrong-secret');
     const ok = adapter.verifySignature({
       rawBody: body,
+      query: {},
       headers: {
         'x-greengold-signature': `sha256=${sig}`,
         'x-greengold-timestamp': ts,
@@ -73,6 +75,7 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
     );
     const ok = adapter.verifySignature({
       rawBody: tampered,
+      query: {},
       headers: {
         'x-greengold-signature': `sha256=${sig}`,
         'x-greengold-timestamp': ts,
@@ -85,7 +88,12 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
   it('header eksikse -> false', () => {
     const body = validPayload();
     expect(
-      adapter.verifySignature({ rawBody: body, headers: {}, secret: SECRET }),
+      adapter.verifySignature({
+        rawBody: body,
+        headers: {},
+        query: {},
+        secret: SECRET,
+      }),
     ).toBe(false);
   });
 
@@ -95,6 +103,7 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
     const sig = sign(body, oldTs);
     const ok = adapter.verifySignature({
       rawBody: body,
+      query: {},
       headers: {
         'x-greengold-signature': `sha256=${sig}`,
         'x-greengold-timestamp': oldTs,
@@ -109,6 +118,7 @@ describe('GenericSignedWebhookAdapter.verifySignature', () => {
     const ts = String(Date.now());
     const ok = adapter.verifySignature({
       rawBody: body,
+      query: {},
       headers: {
         'x-greengold-signature': 'not-a-signature',
         'x-greengold-timestamp': ts,

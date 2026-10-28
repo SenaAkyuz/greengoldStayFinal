@@ -167,10 +167,10 @@ describe('runActivateIntegration — bütün kapılar', () => {
 });
 
 describe('evaluateGates — kapı detayları secret DEĞERİ sızdırmaz', () => {
-  it('detay metinleri yalnızca REFERANS adı içerir', () => {
+  it('detay metinleri yalnızca REFERANS adı içerir', async () => {
     process.env.INTEGRATION_SECRET_PILOT_SANDBOX = 'super-gizli-deger';
     const { deps } = makeDeps({ canResolve: false });
-    const gates = evaluateGates(record(), deps, false);
+    const gates = await evaluateGates(record(), deps, false);
     const all = JSON.stringify(gates);
     expect(all).toContain('PILOT_SANDBOX');
     expect(all).not.toContain('super-gizli-deger');

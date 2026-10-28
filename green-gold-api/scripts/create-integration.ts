@@ -3,7 +3,7 @@
  *
  *   npm run create-integration -- \
  *     --hotel-key <public_widget_key veya hotel_code> \
- *     --provider generic_signed_webhook|synxis \
+ *     --provider generic_signed_webhook|synxis|hotelrunner \
  *     --environment sandbox|production \
  *     --external-property-id <id> \
  *     --product-code <code> \

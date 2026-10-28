@@ -5,6 +5,7 @@ import type { Request } from 'express';
 import { Public } from '../common/route-metadata';
 import { IntegrationWebhookRateGuard } from '../common/integration-webhook-rate.guard';
 import { WebhookIngestionService } from './webhook-ingestion.service';
+import type { WebhookQuery } from './adapters/provider-adapter.interface';
 
 /**
  * Provider-neutral webhook ingestion yüzeyi — public (auth YOK, @Public), ama
@@ -28,6 +29,21 @@ export class WebhookIngestionController {
     @Param('routingId') routingId: string,
     @Req() req: RawBodyRequest<Request>,
   ) {
-    return this.ingestion.ingest(provider, routingId, req.rawBody, req.headers);
+    return this.ingestion.ingest(
+      provider,
+      routingId,
+      req.rawBody,
+      req.headers,
+      flatQuery(req.query),
+    );
   }
+}
+
+/** Express query'sini düz string sözlüğe indirger (dizi/nesne değerler atılır). */
+function flatQuery(query: Request['query']): WebhookQuery {
+  const out: WebhookQuery = {};
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (typeof value === 'string') out[key] = value;
+  }
+  return out;
 }
