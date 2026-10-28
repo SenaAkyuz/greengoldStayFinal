@@ -7,6 +7,14 @@ import {
   previewCarbon,
   importCarbonMeasurement,
   activateCarbonMeasurement,
+  getProviderUnits,
+  getEmissionResources,
+  searchAirports,
+  getCarbonEntries,
+  createCarbonEntry,
+  uploadCarbonEntryDocument,
+  markCarbonEntryDeleted,
+  type CarbonEntryInput,
   type ProviderImportInput,
   type HotelCarbonInput,
   type HotelCarbonResult,
@@ -143,4 +151,69 @@ export async function calculateAndApplyHotelCarbon(input: HotelCarbonInput) {
   revalidatePath('/karbon');
   revalidatePath('/sertifikalar');
   return { data: pricing as HotelCarbonResult, error: null };
+}
+
+// --- 3pmetrics veri girişi ----------------------------------------------------
+// Token yalnızca sunucuda okunur; hotel_id ve 3pmetrics müşteri kimliği
+// ASLA istemciden gönderilmez (API token'dan çözer).
+
+async function accessToken(): Promise<string | null> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+}
+
+const NO_SESSION = { data: null, error: 'Oturum bulunamadı.' } as const;
+
+export async function loadProviderUnits() {
+  const token = await accessToken();
+  return token ? getProviderUnits(token) : NO_SESSION;
+}
+
+export async function loadEmissionResources(unitId: string) {
+  const token = await accessToken();
+  return token ? getEmissionResources(token, unitId) : NO_SESSION;
+}
+
+export async function findAirports(query: string) {
+  const token = await accessToken();
+  return token ? searchAirports(token, query) : NO_SESSION;
+}
+
+export async function loadCarbonEntries() {
+  const token = await accessToken();
+  return token ? getCarbonEntries(token) : NO_SESSION;
+}
+
+/** 3pmetrics'e yazar — GERİ ALINAMAZ. 409 'carbon_entry_possible_duplicate' kodu döner. */
+export async function submitCarbonEntry(input: CarbonEntryInput) {
+  const token = await accessToken();
+  if (!token) return { ...NO_SESSION, code: null };
+  return createCarbonEntry(token, input);
+}
+
+/**
+ * Kanıt belgesi yükler. Sınır: 4 MB (API Vercel'de, istek gövdesi 4.5 MB ile
+ * sınırlı). next.config.ts'te serverActions.bodySizeLimit buna göre ayarlı.
+ */
+export async function attachCarbonEntryDocument(
+  entryId: string,
+  form: FormData,
+) {
+  const token = await accessToken();
+  if (!token) return NO_SESSION;
+  const file = form.get('file');
+  if (!(file instanceof File) || file.size === 0) {
+    return { data: null, error: 'Dosya seçilmedi.' };
+  }
+  const outbound = new FormData();
+  outbound.append('file', file, file.name);
+  return uploadCarbonEntryDocument(token, entryId, outbound);
+}
+
+export async function markEntryDeletedInProvider(entryId: string) {
+  const token = await accessToken();
+  return token ? markCarbonEntryDeleted(token, entryId) : NO_SESSION;
 }

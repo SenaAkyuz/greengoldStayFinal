@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CarbonMeasurementController } from './carbon-measurement.controller';
 import { CarbonMeasurementService } from './carbon-measurement.service';
+import { CarbonDataEntryService } from './carbon-data-entry.service';
 import { CarbonProviderRegistryService } from './carbon-provider-registry';
 
 /**
@@ -13,7 +14,11 @@ import { CarbonProviderRegistryService } from './carbon-provider-registry';
  */
 @Module({
   controllers: [CarbonMeasurementController],
-  providers: [CarbonMeasurementService, CarbonProviderRegistryService],
+  providers: [
+    CarbonMeasurementService,
+    CarbonDataEntryService,
+    CarbonProviderRegistryService,
+  ],
   exports: [CarbonMeasurementService, CarbonProviderRegistryService],
 })
 export class CarbonModule {}

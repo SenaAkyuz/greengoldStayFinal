@@ -112,6 +112,19 @@ class FakeAdapter implements CarbonProviderAdapter {
     if (this.failWith) return Promise.reject(this.failWith);
     return Promise.resolve(parseGhgSummary(this.body, period));
   }
+  // Veri girişi uçları carbon-data-entry.service.spec.ts'te test edilir.
+  listEmissionResources() {
+    return Promise.resolve([]);
+  }
+  lookupAirports() {
+    return Promise.resolve([]);
+  }
+  createReply(): Promise<never> {
+    return Promise.reject(new Error('bu testte kullanılmaz'));
+  }
+  uploadReplyDocument(): Promise<never> {
+    return Promise.reject(new Error('bu testte kullanılmaz'));
+  }
 }
 
 const fixedCredentials = (

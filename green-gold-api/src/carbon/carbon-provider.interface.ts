@@ -80,6 +80,72 @@ export interface CarbonSummary {
   lines: CarbonSummaryLine[];
 }
 
+/** Emisyon kaynağının seçenek grubu (3pmetrics: systemOptions / userOptions). */
+export interface EmissionResourceOptionGroup {
+  /** Grubun etiketi (ör. "Birim Seçimi", "Yakıt Türü", "Araç Plakası"). */
+  description: string;
+  /** `value` sağlayıcıya AYNEN geri gönderilir (systemOptionValue/userOptionValue). */
+  options: { name: string; value: string }[];
+}
+
+/**
+ * Bir birim (tesis) için veri girilebilecek emisyon kaynağı. Panelin otelden
+ * HANGİ bilgiyi isteyeceğini bu tanım belirler; alanlar sağlayıcıdan gelir,
+ * GreenGold uydurmaz.
+ */
+export interface EmissionResource {
+  slug: string;
+  title: string;
+  header: string | null;
+  description: string | null;
+  ghgScope: { id: number | null; name: string } | null;
+  systemOptions: EmissionResourceOptionGroup | null;
+  userOptions: EmissionResourceOptionGroup | null;
+  /** `flight-route-v1` ise miktar yerine uçuş rotası istenir. Diğerlerinde null. */
+  inputMode: string | null;
+  requiredFields: string[];
+}
+
+export const FLIGHT_INPUT_MODE = 'flight-route-v1';
+
+export interface Airport {
+  iata: string;
+  name: string;
+  city: string | null;
+  country: string | null;
+}
+
+/** `POST /cca/replies` girdisi (sağlayıcı alan adlarıyla birebir değil, kontrat adıyla). */
+export interface EmissionReplyInput {
+  customerSlug: string;
+  customerUnitSlug: string;
+  emissionResourceSlug: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** Uçuş dışı kaynaklarda zorunlu; sayısal metin. */
+  value?: string;
+  systemOptionValue?: string;
+  userOptionValue?: string;
+  flight?: {
+    passengerOrFlightName: string;
+    departureIata: string;
+    arrivalIata: string;
+  };
+  /** Anahtarın üye kapsamı yoksa gereken üye kimliği (link'te tanımlıysa). */
+  memberId?: string;
+}
+
+export interface EmissionReplyResult {
+  replyId: number;
+  message: string;
+}
+
+export interface ReplyDocument {
+  fileName: string;
+  contentType: string;
+  data: Buffer;
+}
+
 export interface CarbonProviderAdapter {
   readonly provider: string;
   /**
@@ -101,6 +167,33 @@ export interface CarbonProviderAdapter {
     credentials: ProviderCredentials,
     period: MeasurementPeriod,
   ): Promise<CarbonSummary>;
+
+  listEmissionResources(
+    credentials: ProviderCredentials,
+    externalAccountId: string,
+    externalUnitId: string,
+  ): Promise<EmissionResource[]>;
+
+  lookupAirports(
+    credentials: ProviderCredentials,
+    query: string,
+    limit: number,
+  ): Promise<Airport[]>;
+
+  /**
+   * Emisyon verisini sağlayıcıya YAZAR. GERİ ALINAMAZ: sağlayıcı API'sinde
+   * silme yoktur, kayıt yalnızca sağlayıcının kendi arayüzünden silinebilir.
+   */
+  createReply(
+    credentials: ProviderCredentials,
+    input: EmissionReplyInput,
+  ): Promise<EmissionReplyResult>;
+
+  uploadReplyDocument(
+    credentials: ProviderCredentials,
+    replyId: number,
+    document: ReplyDocument,
+  ): Promise<{ fileName: string }>;
 }
 
 /**
@@ -126,9 +219,16 @@ export class CarbonProviderNotConfiguredError extends Error {
  *   no_data         404 — "İlgili hesap için veri bulunamadı"
  *   invalid_request 400/422 — tarih/biçim doğrulama hatası
  *   invalid_response — yanıt beklenen şemada değil (ör. bilinmeyen birim)
+ *   outcome_unknown yazma isteği gönderildi ama yanıt alınamadı (zaman aşımı) —
+ *                   kayıt sağlayıcıda OLUŞMUŞ olabilir; otomatik tekrar YAPILMAZ
+ *   too_large       413 — belge 10 MB üstü
+ *   unsupported_media 415 — belge biçimi desteklenmiyor
  *   unavailable     5xx / ağ hatası / zaman aşımı
  */
 export type CarbonProviderErrorReason =
+  | 'outcome_unknown'
+  | 'too_large'
+  | 'unsupported_media'
   | 'unauthorized'
   | 'forbidden'
   | 'no_data'

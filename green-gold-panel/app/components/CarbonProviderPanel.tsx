@@ -11,14 +11,17 @@ import {
   activateProviderMeasurement,
   importProviderMeasurement,
 } from '../ayarlar/actions';
+import { CarbonDataEntry } from './CarbonDataEntry';
 
 /**
  * 3pmetrics ölçümü — OTEL YÖNETİCİSİNE görünen ekran.
  *
- * Akış (3pmetrics Carbon Summary API'sine göre):
- *   1. Otel emisyon verisini 3pmetrics'te kendi hesabıyla girer.
- *   2. Burada dönemi + 3pmetrics'te OLMAYAN otel verisini (oda, dolu oda-gece,
- *      alanlar) girer, "3pmetrics verisini getir" der.
+ * Akış:
+ *   1. Otel emisyon verisini (fatura/sayaç miktarları) BU panelden girer;
+ *      kayıt 3pmetrics'e yazılır, 3pmetrics emisyonu hesaplar
+ *      (CarbonDataEntry). 3pmetrics arayüzünden girilen veri de sayılır.
+ *   2. Dönemi + 3pmetrics'te OLMAYAN otel verisini (oda, dolu oda-gece,
+ *      alanlar) girer, "3pmetrics sonucunu getir" der (Carbon Summary).
  *   3. Sonucu görür; onaylarsa "Widget fiyatına uygula" der.
  *
  * DİL KURALI: bu ekran otel müşterisine bakar, geliştirme ekibine değil.
@@ -141,9 +144,9 @@ export function CarbonProviderPanel({
           3pmetrics ölçümü
         </h2>
         <p className="mt-2 text-sm text-neutral-600">
-          Emisyon verileriniz 3pmetrics hesabınızda girilir ve hesaplanır.
-          GreenGold Stay seçtiğiniz dönemin sonucunu alır, oda-gece katsayısına
-          ve gecelik katkıya çevirir.
+          Tüketim verilerinizi buradan girersiniz; 3pmetrics emisyonu
+          hesaplar. GreenGold Stay seçtiğiniz dönemin sonucunu alır, oda-gece
+          katsayısına ve gecelik katkıya çevirir.
         </p>
       </header>
 
@@ -187,14 +190,37 @@ export function CarbonProviderPanel({
           </div>
         )}
 
-        <div>
+        {ready && (
+          <div>
+            <h3 className="text-sm font-semibold text-[#17372d]">
+              1. Tüketim verilerinizi girin
+            </h3>
+            <p className="mt-1 mb-4 text-xs text-neutral-500">
+              Elektrik, doğalgaz, yakıt gibi kaynaklar 3pmetrics hesabınızdaki
+              tanımlara göre listelenir. Her kayıt 3pmetrics&apos;e gönderilir
+              ve emisyon orada hesaplanır.
+            </p>
+            <CarbonDataEntry
+              locked={disabled || isDemo}
+              environment={status?.environment}
+            />
+            {isDemo && (
+              <p className="mt-2 text-xs text-neutral-500">
+                Demo hesabı veri gönderemez.
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className={ready ? 'border-t border-neutral-100 pt-6' : ''}>
           <h3 className="text-sm font-semibold text-[#17372d]">
-            Ölçüm sonucunu al
+            {ready ? '2. ' : ''}Ölçüm sonucunu al
           </h3>
           <p className="mt-1 text-xs text-neutral-500">
-            Dönem, 3pmetrics&apos;te verilerini girdiğiniz dönemle aynı olmalı.
-            Oda ve alan bilgileri 3pmetrics sonucunu konaklamaya ayırmak ve
-            dolu oda-geceye bölmek için kullanılır.
+            Dönem, verilerini girdiğiniz tarihleri kapsamalı. Sonuç, 3pmetrics
+            hesabınızdaki tüm tesislerin bu dönemdeki toplam emisyonudur. Oda ve
+            alan bilgileri bu sonucu konaklamaya ayırmak ve dolu oda-geceye
+            bölmek için kullanılır.
           </p>
           <fieldset disabled={locked} className="mt-4 grid gap-4 sm:grid-cols-2">
             <label className="block text-sm font-medium text-neutral-700">
@@ -240,7 +266,7 @@ export function CarbonProviderPanel({
             disabled={locked}
             className="mt-4 rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {pending && !result ? 'Alınıyor…' : '3pmetrics verisini getir'}
+            {pending && !result ? 'Alınıyor…' : '3pmetrics sonucunu getir'}
           </button>
           {isDemo && ready && (
             <p className="mt-2 text-xs text-neutral-500">

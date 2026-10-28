@@ -135,7 +135,7 @@ const LINK_COLUMNS =
  * Aktif bağlantının SUNUCU İÇİ görünümü. `authorization_ref` yalnızca burada
  * taşınır; `CarbonProviderLinkView`'e (panele dönen şekil) hiç girmez.
  */
-interface ActiveLink {
+export interface ActiveLink {
   id: string;
   environment: string;
   external_property_id: string;
@@ -542,7 +542,7 @@ export class CarbonMeasurementService {
   }
 
   /** Sağlayıcı + aktif bağlantı + çözülebilir anahtar; biri yoksa açık hata. */
-  private async requireConnection(
+  async requireConnection(
     hotelId: string,
     provider: RegisteredCarbonProvider,
   ): Promise<{
@@ -606,7 +606,7 @@ export class CarbonMeasurementService {
    * Sağlayıcı hatasını HTTP'ye çevirir. Sağlayıcı mesajı kullanıcıya AYNEN
    * geçirilmez (iç detay/kimlik sızıntısı olmasın); yalnızca loglanır.
    */
-  private mapProviderError(provider: string, failure: unknown) {
+  mapProviderError(provider: string, failure: unknown) {
     if (failure instanceof CarbonProviderNotConfiguredError) {
       return this.notConfigured(provider);
     }
@@ -640,6 +640,16 @@ export class CarbonMeasurementService {
             code: 'carbon_provider_invalid_request',
             message:
               '3pmetrics seçilen dönemi kabul etmedi. Tarihleri kontrol edin.',
+          });
+        case 'too_large':
+          return new HttpException(
+            { code: 'carbon_provider_too_large', message: 'Belge çok büyük.' },
+            HttpStatus.PAYLOAD_TOO_LARGE,
+          );
+        case 'unsupported_media':
+          return new BadRequestException({
+            code: 'carbon_provider_unsupported_media',
+            message: 'Belge biçimi desteklenmiyor.',
           });
         case 'invalid_response':
           return new BadGatewayException({
