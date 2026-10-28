@@ -12,6 +12,7 @@ import {
   importProviderMeasurement,
 } from '../ayarlar/actions';
 import { CarbonDataEntry } from './CarbonDataEntry';
+import { createSampleSource } from './carbon-entry-source';
 
 /**
  * 3pmetrics ölçümü — OTEL YÖNETİCİSİNE görünen ekran.
@@ -76,6 +77,9 @@ export function CarbonProviderPanel({
   disabled: boolean;
 }) {
   const [form, setForm] = useState(() => initialForm(hotel));
+  // Tesis/bağlantı hazır olmadan akışı göstermek için: hiçbir şey gönderilmez.
+  const [showSample, setShowSample] = useState(false);
+  const [sampleSource] = useState(createSampleSource);
   const [result, setResult] = useState<ImportMeasurementResult | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -175,6 +179,38 @@ export function CarbonProviderPanel({
           </div>
         )}
 
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-100 bg-sky-50/50 p-4">
+          <p className="text-sm text-neutral-700">
+            Veri girişinin nasıl işlediğini örnek verilerle görün. Örnek akışta
+            hiçbir kayıt 3pmetrics&apos;e gönderilmez.
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowSample((v) => !v)}
+            className="rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-medium text-sky-900"
+          >
+            {showSample ? 'Örnek akışı kapat' : 'Örnek akışı göster'}
+          </button>
+        </div>
+
+        {showSample && (
+          <div>
+            <h3 className="text-sm font-semibold text-[#17372d]">
+              Örnek: tüketim verisi girişi
+            </h3>
+            <p className="mt-1 mb-4 text-xs text-neutral-500">
+              Gerçek kullanımda kaynak listesi otelinizin 3pmetrics tesis
+              tanımından gelir; kayıtlar 3pmetrics&apos;e gönderilir ve emisyon
+              orada hesaplanır.
+            </p>
+            <CarbonDataEntry
+              locked={disabled}
+              environment={status?.environment}
+              source={sampleSource}
+            />
+          </div>
+        )}
+
         {status?.link && (
           <div className="rounded-xl border border-emerald-100 p-4 text-sm">
             <p className="text-xs text-neutral-500">Bağlı 3pmetrics hesabı</p>
@@ -190,7 +226,7 @@ export function CarbonProviderPanel({
           </div>
         )}
 
-        {ready && (
+        {ready && !showSample && (
           <div>
             <h3 className="text-sm font-semibold text-[#17372d]">
               1. Tüketim verilerinizi girin

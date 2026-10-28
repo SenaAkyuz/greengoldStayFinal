@@ -12,7 +12,12 @@
  *
  *   # 3) Oteli bağla (production'da anahtar Vault'ta OLMALI)
  *   npm run link-threepmetrics -- --hotel-key <public_widget_key veya hotel_code> \
- *     --authorization-ref GREENGOLD --environment production [--dry-run]
+ *     --authorization-ref GREENGOLD --environment production [--dry-run] \
+ *     [--member-id <3pmetrics üye kimliği>]
+ *
+ *   --member-id: 3pmetrics "anahtarın üye kapsamı yoksa yanıt oluşturmada
+ *   memberId belirtilmeli" diyor. Yalnızca 3pmetrics böyle bir kimlik
+ *   verdiyse kullanılır (migration 0018 gerekir); verilmezse alan yazılmaz.
  *
  * Anahtar ilk olarak `.env` içinde `CARBON_PROVIDER_SECRET_<REF>` adıyla
  * verilir (ör. CARBON_PROVIDER_SECRET_GREENGOLD=...). `--store-secret` onu
@@ -210,6 +215,10 @@ async function main(): Promise<void> {
     linked_at: now,
     revoked_at: null,
     updated_at: now,
+    // Yalnızca verildiyse yazılır: 0018 uygulanmamış ortamda bağlama bozulmasın.
+    ...(out['member-id']
+      ? { provider_member_id: out['member-id'].trim() }
+      : {}),
   };
 
   console.log(

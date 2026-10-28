@@ -7,15 +7,7 @@ import type {
   EmissionResource,
   ProviderUnit,
 } from '@/lib/api';
-import {
-  attachCarbonEntryDocument,
-  findAirports,
-  loadCarbonEntries,
-  loadEmissionResources,
-  loadProviderUnits,
-  markEntryDeletedInProvider,
-  submitCarbonEntry,
-} from '../ayarlar/actions';
+import { liveSource, type CarbonEntrySource } from './carbon-entry-source';
 
 /**
  * 3pmetrics veri girişi — otel emisyon verisini (fatura/sayaç miktarları) bu
@@ -105,11 +97,13 @@ function AirportPicker({
   value,
   onChange,
   disabled,
+  source,
 }: {
   label: string;
   value: string;
   onChange: (iata: string) => void;
   disabled: boolean;
+  source: CarbonEntrySource;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Airport[]>([]);
@@ -123,7 +117,7 @@ function AirportPicker({
         setError('En az 2 karakter girin.');
         return;
       }
-      const res = await findAirports(query.trim());
+      const res = await source.findAirports(query.trim());
       if (res.error || !res.data) {
         setError(res.error ?? 'Havalimanı aranamadı.');
         return;
@@ -204,10 +198,12 @@ function EntryRow({
   entry,
   locked,
   onChanged,
+  source,
 }: {
   entry: CarbonEntry;
   locked: boolean;
   onChanged: (entry: CarbonEntry) => void;
+  source: CarbonEntrySource;
 }) {
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
@@ -222,7 +218,7 @@ function EntryRow({
     startTransition(async () => {
       const form = new FormData();
       form.append('file', file, file.name);
-      const res = await attachCarbonEntryDocument(entry.id, form);
+      const res = await source.attach(entry.id, form);
       if (res.error || !res.data) {
         setError(res.error ?? 'Belge yüklenemedi.');
         return;
@@ -240,7 +236,7 @@ function EntryRow({
       return;
     }
     startTransition(async () => {
-      const res = await markEntryDeletedInProvider(entry.id);
+      const res = await source.markDeleted(entry.id);
       if (res.error || !res.data) {
         setError(res.error ?? 'Kayıt güncellenemedi.');
         return;
@@ -279,8 +275,12 @@ function EntryRow({
         <span
           className={`rounded-full px-3 py-1 text-xs font-medium ${STATUS_CLASS[entry.status]}`}
         >
-          {STATUS_TEXT[entry.status]}
-          {entry.status === 'sent' && entry.reply_id !== null
+          {source.sample && entry.status === 'sent'
+            ? 'Örnek kayıt · gönderilmedi'
+            : STATUS_TEXT[entry.status]}
+          {!source.sample &&
+          entry.status === 'sent' &&
+          entry.reply_id !== null
             ? ` · no ${entry.reply_id}`
             : ''}
         </span>
@@ -332,9 +332,12 @@ function EntryRow({
 export function CarbonDataEntry({
   locked,
   environment,
+  source = liveSource,
 }: {
   locked: boolean;
   environment: 'sandbox' | 'production' | undefined;
+  /** Varsayılan gerçek kaynak; örnek akışta hiçbir şey gönderilmez. */
+  source?: CarbonEntrySource;
 }) {
   const [units, setUnits] = useState<ProviderUnit[] | null>(null);
   const [unitId, setUnitId] = useState('');
@@ -362,12 +365,12 @@ export function CarbonDataEntry({
     resource !== null && resource.inputMode !== null && !isFlight;
 
   const refreshEntries = useCallback(async () => {
-    const res = await loadCarbonEntries();
+    const res = await source.loadEntries();
     if (res.data) {
       setEntries(res.data.items);
       setEntriesReady(res.data.schema_ready);
     }
-  }, []);
+  }, [source]);
 
   const selectUnit = useCallback((id: string) => {
     setUnitId(id);
@@ -375,19 +378,19 @@ export function CarbonDataEntry({
     setResourceSlug('');
     if (!id) return;
     startTransition(async () => {
-      const res = await loadEmissionResources(id);
+      const res = await source.loadResources(id);
       if (res.error || !res.data) {
         setError(res.error ?? 'Emisyon kaynakları alınamadı.');
         return;
       }
       setResources(res.data);
     });
-  }, []);
+  }, [source]);
 
   useEffect(() => {
     startTransition(async () => {
       const [unitRes] = await Promise.all([
-        loadProviderUnits(),
+        source.loadUnits(),
         refreshEntries(),
       ]);
       if (unitRes.error || !unitRes.data) {
@@ -400,7 +403,7 @@ export function CarbonDataEntry({
         selectUnit(unitRes.data[0].externalUnitId);
       }
     });
-  }, [refreshEntries, selectUnit]);
+  }, [refreshEntries, selectUnit, source]);
 
   const resetForm = () => {
     setDraft(emptyDraft());
@@ -470,7 +473,7 @@ export function CarbonDataEntry({
       if (!review) return;
       setError('');
       setMessage('');
-      const res = await submitCarbonEntry({
+      const res = await source.submit({
         ...review,
         ...(allowDuplicate ? { allow_duplicate: true } : {}),
       });
@@ -486,7 +489,9 @@ export function CarbonDataEntry({
       setMessage(
         res.data.replayed
           ? 'Bu kayıt zaten gönderilmişti; ikinci kez gönderilmedi.'
-          : `Kayıt 3pmetrics'e gönderildi (no ${res.data.entry.reply_id}). İsterseniz aşağıdan belge ekleyebilirsiniz.`,
+          : source.sample
+            ? 'Örnek kayıt listeye eklendi (3pmetrics\'e gönderilmedi). Gerçek kullanımda kayıt 3pmetrics\'e gider ve bir kayıt numarası alır.'
+            : `Kayıt 3pmetrics'e gönderildi (no ${res.data.entry.reply_id}). İsterseniz aşağıdan belge ekleyebilirsiniz.`,
       );
       resetForm();
       await refreshEntries();
@@ -503,7 +508,13 @@ export function CarbonDataEntry({
 
   return (
     <div className="space-y-6">
-      {environment === 'sandbox' && (
+      {source.sample && (
+        <p className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900">
+          Örnek akış: tesis ve emisyon kaynakları örnek veridir. Bu ekrandan
+          hiçbir kayıt 3pmetrics&apos;e gönderilmez.
+        </p>
+      )}
+      {!source.sample && environment === 'sandbox' && (
         <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
           Test ortamı: kayıtlar 3pmetrics test hesabına gider.
         </p>
@@ -634,6 +645,7 @@ export function CarbonDataEntry({
                     label="Kalkış havalimanı"
                     value={draft.departure}
                     disabled={formLocked}
+                    source={source}
                     onChange={(iata) =>
                       setDraft((d) => ({ ...d, departure: iata }))
                     }
@@ -642,6 +654,7 @@ export function CarbonDataEntry({
                     label="Varış havalimanı"
                     value={draft.arrival}
                     disabled={formLocked}
+                    source={source}
                     onChange={(iata) =>
                       setDraft((d) => ({ ...d, arrival: iata }))
                     }
@@ -726,7 +739,7 @@ export function CarbonDataEntry({
           <p className="font-semibold text-[#17372d]">
             3pmetrics&apos;e gönderilecek kayıt
           </p>
-          <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-neutral-700">
+          <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-neutral-700">
             <dt className="text-neutral-500">Tesis</dt>
             <dd>{unitName}</dd>
             <dt className="text-neutral-500">Kaynak</dt>
@@ -806,7 +819,9 @@ export function CarbonDataEntry({
                 ? 'Gönderiliyor…'
                 : duplicateWarning
                   ? 'Yine de gönder'
-                  : "3pmetrics'e gönder"}
+                  : source.sample
+                    ? 'Örnek olarak gönder'
+                    : "3pmetrics'e gönder"}
             </button>
             <button
               type="button"
@@ -855,6 +870,7 @@ export function CarbonDataEntry({
                 key={entry.id}
                 entry={entry}
                 locked={locked}
+                source={source}
                 onChanged={(updated) =>
                   setEntries((list) =>
                     list.map((e) => (e.id === updated.id ? updated : e)),

@@ -32,3 +32,5 @@ Thumbs.db
 
 # Claude local ayarları (kişisel)
 .claude/settings.local.json
+
+.vercel
