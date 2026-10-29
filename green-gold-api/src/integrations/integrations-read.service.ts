@@ -5,6 +5,7 @@ import {
   type RangeParams,
   type ResolvedRange,
 } from '../dashboard/date-range.util';
+import { fetchAllRows } from '../common/fetch-all-rows';
 
 const MAX_RESERVATIONS = 200;
 
@@ -50,6 +51,12 @@ export interface CurrencyContributionTotals {
    * OLDUĞUNDAN YÜKSEK göstermez (dürüstlük ilkesi: abartmaktansa eksik göster).
    */
   net_contribution_minor: number;
+  /**
+   * Misafirin SEÇTİĞİ ama tahsilatı doğrulanmamış katkılar (status='pending').
+   * HotelRunner ekstranın tahsil edildiğini bildirmediği için oradan gelen
+   * katkılar bu durumda kalır. Tahsilat DEĞİLDİR; net katkıya eklenmez.
+   */
+  pending_total_minor: number;
 }
 
 export interface ContributionsSummary {
@@ -60,7 +67,10 @@ export interface ContributionsSummary {
    * BİRLEŞTİRİLMEZ (yanlış toplama karşı).
    */
   totals: CurrencyContributionTotals[];
+  /** Tahsil edilmiş veya iade edilmiş katkı satırı sayısı. */
   contributions_count: number;
+  /** Seçilmiş, tahsilatı doğrulanmamış (pending) katkı satırı sayısı. */
+  pending_count: number;
 }
 
 export interface IntegrationHealthItem {
@@ -192,27 +202,40 @@ export class IntegrationsReadService {
       throw new BadRequestException((e as Error).message);
     }
 
-    const { data, error } = await this.supabase.db
-      .from('contributions')
-      .select('currency, amount_minor, status, updated_at')
-      .eq('hotel_id', hotelId)
-      .gte('updated_at', range.startUtc)
-      .lt('updated_at', range.endUtcExclusive);
+    const { data, error } = await fetchAllRows((from, to) =>
+      this.supabase.db
+        .from('contributions')
+        .select('id, selected, currency, amount_minor, status, updated_at')
+        .eq('hotel_id', hotelId)
+        .gte('updated_at', range.startUtc)
+        .lt('updated_at', range.endUtcExclusive)
+        .order('updated_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
 
     if (error) throw new BadRequestException(error.message);
 
     const byCurrency = new Map<
       string,
-      { collected: number; refunded: number; count: number }
+      {
+        collected: number;
+        refunded: number;
+        pending: number;
+        count: number;
+        pendingCount: number;
+      }
     >();
-    for (const row of data ?? []) {
+    for (const row of data) {
       const currency = row.currency as string;
       const status = row.status as string;
       const amount = row.amount_minor as number;
       const bucket = byCurrency.get(currency) ?? {
         collected: 0,
         refunded: 0,
+        pending: 0,
         count: 0,
+        pendingCount: 0,
       };
       if (status === 'collected') {
         bucket.collected += amount;
@@ -220,28 +243,31 @@ export class IntegrationsReadService {
       } else if (status === 'refunded' || status === 'partially_refunded') {
         bucket.refunded += amount;
         bucket.count += 1;
+      } else if (status === 'pending' && row.selected === true) {
+        bucket.pending += amount;
+        bucket.pendingCount += 1;
       }
       byCurrency.set(currency, bucket);
     }
 
-    const totals: CurrencyContributionTotals[] = [...byCurrency.entries()].map(
+    const buckets = [...byCurrency.entries()].filter(
+      ([, b]) => b.count > 0 || b.pendingCount > 0,
+    );
+    const totals: CurrencyContributionTotals[] = buckets.map(
       ([currency, b]) => ({
         currency,
         collected_total_minor: b.collected,
         refunded_total_minor: b.refunded,
         net_contribution_minor: Math.max(0, b.collected - b.refunded),
+        pending_total_minor: b.pending,
       }),
-    );
-
-    const contributionsCount = [...byCurrency.values()].reduce(
-      (sum, b) => sum + b.count,
-      0,
     );
 
     return {
       period: { from: range.fromLabel, to: range.toLabel },
       totals,
-      contributions_count: contributionsCount,
+      contributions_count: buckets.reduce((sum, [, b]) => sum + b.count, 0),
+      pending_count: buckets.reduce((sum, [, b]) => sum + b.pendingCount, 0),
     };
   }
 

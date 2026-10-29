@@ -72,7 +72,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
   }
 
   return (
-    <main className="grid min-h-full bg-[#f5f7f3] lg:grid-cols-[52%_48%]">
+    <main className="grid flex-1 bg-[#f5f7f3] lg:grid-cols-[52%_48%]">
       <section className="relative hidden overflow-hidden bg-[#064b3d] p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/10" />
         <div className="absolute -bottom-32 -left-32 h-[430px] w-[430px] rounded-full border border-[#c9eb47]/20" />

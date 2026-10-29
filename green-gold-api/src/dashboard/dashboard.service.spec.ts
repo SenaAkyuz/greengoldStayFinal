@@ -87,6 +87,54 @@ describe('room-night totals', () => {
   });
 });
 
+describe('DashboardService — PostgREST satır sınırı (max rows)', () => {
+  // Supabase her okuma yanıtını 1000 satırda keser ve hata dönmez. Sayımlar
+  // tek istekle okunursa yoğun bir otelde panel sessizce eksik gösterirdi.
+  const SESSIONS = 1500;
+  function busyMonth() {
+    const rows: ReturnType<typeof event>[] = [];
+    for (let i = 0; i < SESSIONS; i++) {
+      const at = `2026-07-${String((i % 28) + 1).padStart(2, '0')}T10:00:00Z`;
+      const s = `s${i}`;
+      rows.push(event('A', 'widget_goruntulendi', s, at));
+      rows.push(event('A', 'checkbox_secildi', s, at));
+      rows.push(pressEvent('A', s, 2, at));
+    }
+    return rows;
+  }
+  function cappedService() {
+    const fake = makeFakeSupabase(
+      { hotels: [hotel('A')], widget_events: busyMonth() },
+      { maxRows: 1000 },
+    );
+    return new DashboardService(fake as never);
+  }
+
+  it('özet, huni ve karbon tüm satırları sayar', async () => {
+    const service = cappedService();
+    const summary = await service.getWidgetEventsSummary('A', RANGE);
+    expect(summary.views).toBe(SESSIONS);
+    expect(summary.selections).toBe(SESSIONS);
+    expect(summary.add_clicks).toBe(SESSIONS);
+
+    const funnel = await service.getFunnel('A', RANGE);
+    expect(funnel.stages).toEqual({
+      viewed: SESSIONS,
+      selected: SESSIONS,
+      clicked: SESSIONS,
+    });
+
+    const carbon = await service.getCarbonSummary('A', RANGE);
+    expect(carbon.contributions_count).toBe(SESSIONS);
+    expect(carbon.total_selected_nights).toBe(SESSIONS * 2);
+  });
+
+  it('CSV toplamları da eksiksiz', async () => {
+    const { csv } = await cappedService().exportCsv('A', RANGE);
+    expect(csv).toContain(`Görüntülenme,${SESSIONS}`);
+  });
+});
+
 describe('DashboardService — tenant izolasyonu (a)', () => {
   const dataset: FakeDataset = {
     hotels: [hotel('A'), hotel('B')],

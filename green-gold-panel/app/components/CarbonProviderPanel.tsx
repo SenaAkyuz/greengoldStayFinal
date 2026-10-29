@@ -133,8 +133,9 @@ export function CarbonProviderPanel({
         setError(response.error ?? 'Widget fiyatı güncellenemedi.');
         return;
       }
+      const price = `${fmt(response.data.pricing.amount_per_night)} ${response.data.pricing.currency}`;
       setMessage(
-        `Widget fiyatı güncellendi: gecelik ${fmt(response.data.pricing.amount_per_night)} ${response.data.pricing.currency}.`,
+        `Widget fiyatı güncellendi: gecelik ${price}. Katkıyı HotelRunner gibi bir rezervasyon motorunda ekstra olarak satıyorsanız, oradaki Green Gold ekstrasının fiyatını da ${price} yapın; o fiyat otomatik değişmez.`,
       );
     });
 
@@ -341,6 +342,11 @@ export function CarbonProviderPanel({
                 {warning}
               </p>
             ))}
+            <p className="mt-3 text-xs text-neutral-500">
+              Bu sonuç henüz uygulanmadı. &quot;Widget fiyatına uygula&quot;
+              dediğinizde oda-gece katsayısı ve gecelik katkı tutarı otelinize
+              kaydedilir; widget yeni fiyatı hemen kullanır.
+            </p>
             <button
               type="button"
               onClick={apply}

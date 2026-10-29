@@ -203,12 +203,17 @@ export interface CurrencyContributionTotals {
   collected_total_minor: number;
   refunded_total_minor: number;
   net_contribution_minor: number;
+  /** Seçilmiş ama tahsilatı doğrulanmamış katkılar (ör. HotelRunner ekstrası). */
+  pending_total_minor: number;
 }
 
 export interface ContributionsSummary {
   period: { from: string; to: string };
   totals: CurrencyContributionTotals[];
+  /** Tahsil edilmiş veya iade edilmiş katkı satırı sayısı. */
   contributions_count: number;
+  /** Seçilmiş, tahsilatı doğrulanmamış katkı satırı sayısı. */
+  pending_count: number;
 }
 
 export interface IntegrationHealthItem {

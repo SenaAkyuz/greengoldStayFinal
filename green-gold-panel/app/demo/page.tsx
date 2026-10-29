@@ -16,7 +16,7 @@ export default function DemoPage() {
   const apiBase = getApiBaseUrl();
 
   return (
-    <main className="min-h-full bg-[#f5f7f3]">
+    <main className="flex-1 bg-[#f5f7f3]">
       {/* Üst bar (public — panel shell'i değil) */}
       <header className="border-b border-[#dce4dc] bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">

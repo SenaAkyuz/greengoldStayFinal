@@ -1,6 +1,14 @@
 import { requireAccessToken } from '@/lib/auth';
 import Link from 'next/link';
-import { getHotel, getReport, type DashboardReport, type HotelInfo } from '@/lib/api';
+import {
+  getContributionsSummary,
+  getHotel,
+  getReport,
+  type ContributionsSummary,
+  type DashboardReport,
+  type HotelInfo,
+} from '@/lib/api';
+import { formatMinorAmount } from '@/lib/money';
 import { normalizeRange } from '@/lib/range';
 import { formatDecimal, formatNumber, formatPercent } from '@/lib/format';
 import { AppShell } from './components/AppShell';
@@ -19,13 +27,20 @@ export default async function OverviewPage({
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
 
   // Tek çağrı: summary + funnel + carbon aynı period için tutarlı gelsin.
-  const [reportRes, hotelRes] = await Promise.all([
+  const [reportRes, hotelRes, contributionsRes] = await Promise.all([
     getReport(token, range),
     getHotel(token),
+    getContributionsSummary(token, range),
   ]);
 
   const hotel = hotelRes.data;
   const report = reportRes.data;
+  // Rezervasyon sisteminden (HotelRunner vb.) gelen katkılar widget event'i
+  // değildir; ayrı kartta gösterilir. Hata olursa kart sessizce gizlenir.
+  const contributions = contributionsRes.data;
+  const hasReservationContributions =
+    !!contributions &&
+    contributions.pending_count + contributions.contributions_count > 0;
   const loadError = reportRes.error ?? hotelRes.error;
 
   const conversion =
@@ -96,6 +111,10 @@ export default async function OverviewPage({
           </>
         )}
 
+        {hasReservationContributions && contributions && (
+          <ReservationContributionsCard summary={contributions} />
+        )}
+
         {hotel && (
           <section className="gg-card mt-8 flex flex-wrap items-center justify-between gap-3 p-6">
             <div>
@@ -143,6 +162,46 @@ function ConversionStory({ report }: { report: DashboardReport }) {
         variant="compact"
         className="mt-5 space-y-4"
       />
+    </section>
+  );
+}
+
+// Rezervasyon sisteminden gelen katkılar (ör. HotelRunner ekstrası). Widget
+// metriklerinden AYRI: yukarıdaki kartlar yalnızca widget etkileşimini sayar.
+function ReservationContributionsCard({ summary }: { summary: ContributionsSummary }) {
+  return (
+    <section className="gg-card mt-6 p-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-sm font-semibold text-neutral-700">
+          Rezervasyon sisteminden gelen katkılar
+        </h2>
+        <Link
+          href="/tahsilatlar"
+          className="rounded text-xs font-semibold text-[#0b5c49] underline focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+        >
+          Ayrıntıları gör →
+        </Link>
+      </div>
+      <p className="mt-1 text-xs text-neutral-500">
+        Misafirin rezervasyonda Green Gold katkısını seçtiği rezervasyonlar. Widget
+        etkileşimlerinden ayrı sayılır.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-6">
+        <div>
+          <div className="font-[Georgia] text-3xl font-medium text-[#0a493b] tabular-nums">
+            {formatNumber(summary.pending_count + summary.contributions_count)}
+          </div>
+          <div className="mt-1 text-xs text-neutral-500">katkılı rezervasyon</div>
+        </div>
+        {summary.totals.map((t) => (
+          <div key={t.currency}>
+            <div className="font-[Georgia] text-3xl font-medium text-[#0a493b] tabular-nums">
+              {formatMinorAmount(t.pending_total_minor + t.net_contribution_minor, t.currency)}
+            </div>
+            <div className="mt-1 text-xs text-neutral-500">seçilen katkı toplamı</div>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
