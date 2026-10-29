@@ -150,6 +150,64 @@ describe('IntegrationsReadService.getContributionsSummary', () => {
     expect(usd.collected_total_minor).toBe(100);
     expect(usd.net_contribution_minor).toBe(100);
   });
+
+  it('seçilmiş pending katkılar (HotelRunner) ayrı toplanır, net katkıya girmez', async () => {
+    const pending = (id: string, amount: number, selected = true) => ({
+      id,
+      hotel_id: 'hotel-A',
+      selected,
+      currency: 'TRY',
+      amount_minor: amount,
+      status: 'pending',
+      updated_at: nowIso,
+    });
+    const { service } = makeService({
+      hotels: [hotelRow()],
+      contributions: [
+        pending('p1', 4500),
+        pending('p2', 9000),
+        // Ekstra seçilmemiş rezervasyon: tutar 0, sayılmaz.
+        pending('p3', 0, false),
+        { ...pending('p4', 4500), status: 'voided' },
+      ],
+    });
+    const summary = await service.getContributionsSummary('hotel-A', {
+      range: 'month',
+    });
+    expect(summary.pending_count).toBe(2);
+    expect(summary.contributions_count).toBe(0);
+    expect(summary.totals).toEqual([
+      {
+        currency: 'TRY',
+        collected_total_minor: 0,
+        refunded_total_minor: 0,
+        net_contribution_minor: 0,
+        pending_total_minor: 13500,
+      },
+    ]);
+  });
+
+  it('1000 satır sınırını aşan dönemde tüm katkıları sayar', async () => {
+    const rows = Array.from({ length: 1500 }, (_, i) => ({
+      id: `c${String(i).padStart(5, '0')}`,
+      hotel_id: 'hotel-A',
+      selected: true,
+      currency: 'EUR',
+      amount_minor: 100,
+      status: 'collected',
+      updated_at: nowIso,
+    }));
+    const fake = makeFakeSupabase(
+      { hotels: [hotelRow()], contributions: rows },
+      { maxRows: 1000 },
+    );
+    const service = new IntegrationsReadService(fake as never);
+    const summary = await service.getContributionsSummary('hotel-A', {
+      range: 'month',
+    });
+    expect(summary.contributions_count).toBe(1500);
+    expect(summary.totals[0].collected_total_minor).toBe(150000);
+  });
 });
 
 describe('IntegrationsReadService.getIntegrationHealth', () => {

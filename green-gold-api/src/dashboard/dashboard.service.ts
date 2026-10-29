@@ -16,6 +16,7 @@ import {
   type ResolvedRange,
 } from './date-range.util';
 import { toCsv, slugify } from './csv.util';
+import { fetchAllRows } from '../common/fetch-all-rows';
 import {
   distinctSessionStages,
   funnelRates,
@@ -335,18 +336,7 @@ export class DashboardService {
     }
 
     // hotel_id ile filtreli (tenant izolasyonu) + tarih aralığı [start, end).
-    const { data: events, error: eventsError } = await this.supabase.db
-      .from('widget_events')
-      .select('id, session_ref, event_type')
-      .eq('hotel_id', hotelId)
-      .gte('created_at', range.startUtc)
-      .lt('created_at', range.endUtcExclusive);
-
-    if (eventsError) {
-      throw new BadRequestException(eventsError.message);
-    }
-
-    const rows = (events ?? []) as FunnelEventRow[];
+    const rows = await this.funnelEvents(hotelId, range);
 
     // Ham sayaçlar (toplam etkileşim) — olduğu gibi kalır.
     let views = 0;
@@ -380,6 +370,26 @@ export class DashboardService {
     };
   }
 
+  /** Özet ve hunin ortak okuması: aralıktaki tüm etkileşim event'leri (sayfalı). */
+  private async funnelEvents(
+    hotelId: string,
+    range: ResolvedRange,
+  ): Promise<FunnelEventRow[]> {
+    const { data, error } = await fetchAllRows<FunnelEventRow>((from, to) =>
+      this.supabase.db
+        .from('widget_events')
+        .select('id, session_ref, event_type')
+        .eq('hotel_id', hotelId)
+        .gte('created_at', range.startUtc)
+        .lt('created_at', range.endUtcExclusive)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    if (error) throw new BadRequestException(error.message);
+    return data;
+  }
+
   /**
    * Session bazlı ETKİLEŞİM hunisi (görüntülenme → seçim → katkı butonu).
    * Gerçekleşen katkı/tahsilat DEĞİL. Summary ile aynı helper'ları kullanır.
@@ -407,18 +417,9 @@ export class DashboardService {
       throw new BadRequestException((e as Error).message);
     }
 
-    const { data: events, error: eventsError } = await this.supabase.db
-      .from('widget_events')
-      .select('id, session_ref, event_type')
-      .eq('hotel_id', hotelId)
-      .gte('created_at', range.startUtc)
-      .lt('created_at', range.endUtcExclusive);
-
-    if (eventsError) {
-      throw new BadRequestException(eventsError.message);
-    }
-
-    const stages = distinctSessionStages(events ?? []);
+    const stages = distinctSessionStages(
+      await this.funnelEvents(hotelId, range),
+    );
     return {
       period: { from: range.fromLabel, to: range.toLabel },
       stages,
@@ -464,15 +465,19 @@ export class DashboardService {
     // Yalnızca button-press event'leri, bu otel + aralık.
     // Deterministik dedup için created_at DESC, id DESC ile çek (misafirin SON
     // buton basışı esas alınır); DB sırasına güvenmemek için JS'te de sıralarız.
-    const { data: events, error: eventsError } = await this.supabase.db
-      .from('widget_events')
-      .select('id, session_ref, metadata, created_at')
-      .eq('hotel_id', hotelId)
-      .eq('event_type', 'katki_ekle_butonuna_basildi')
-      .gte('created_at', range.startUtc)
-      .lt('created_at', range.endUtcExclusive)
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false });
+    const { data: events, error: eventsError } = await fetchAllRows(
+      (from, to) =>
+        this.supabase.db
+          .from('widget_events')
+          .select('id, session_ref, metadata, created_at')
+          .eq('hotel_id', hotelId)
+          .eq('event_type', 'katki_ekle_butonuna_basildi')
+          .gte('created_at', range.startUtc)
+          .lt('created_at', range.endUtcExclusive)
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to),
+    );
 
     if (eventsError) {
       throw new BadRequestException(eventsError.message);
@@ -569,12 +574,18 @@ export class DashboardService {
       throw new BadRequestException((e as Error).message);
     }
 
-    const { data: events, error: eventsError } = await this.supabase.db
-      .from('widget_events')
-      .select('session_ref, event_type, created_at')
-      .eq('hotel_id', hotelId)
-      .gte('created_at', range.startUtc)
-      .lt('created_at', range.endUtcExclusive);
+    const { data: events, error: eventsError } = await fetchAllRows(
+      (from, to) =>
+        this.supabase.db
+          .from('widget_events')
+          .select('id, session_ref, event_type, created_at')
+          .eq('hotel_id', hotelId)
+          .gte('created_at', range.startUtc)
+          .lt('created_at', range.endUtcExclusive)
+          .order('created_at', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+    );
 
     if (eventsError) {
       throw new BadRequestException(eventsError.message);

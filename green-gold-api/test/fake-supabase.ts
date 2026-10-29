@@ -45,6 +45,7 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
   private ltFilters: { col: string; val: string }[] = [];
   private orderBy: { col: string; ascending: boolean }[] = [];
   private limitVal: number | null = null;
+  private rangeVal: { from: number; to: number } | null = null;
   private insertedRows: Row[] | null = null;
 
   private insertError: { code: string; message: string } | null = null;
@@ -53,7 +54,13 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     private readonly table: string,
     private readonly store: FakeDataset,
     private readonly uniqueBy?: string[],
+    private readonly maxRows?: number,
   ) {}
+
+  range(from: number, to: number): this {
+    this.rangeVal = { from, to };
+    return this;
+  }
 
   select(_cols?: string): this {
     return this;
@@ -168,8 +175,15 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
         return o.ascending ? cmp : -cmp;
       });
     }
+    if (this.rangeVal !== null) {
+      rows = rows.slice(this.rangeVal.from, this.rangeVal.to + 1);
+    }
     if (this.limitVal !== null) {
       rows = rows.slice(0, this.limitVal);
+    }
+    // PostgREST "max rows": her yanıt sessizce kesilir (hata dönmez).
+    if (this.maxRows !== undefined) {
+      rows = rows.slice(0, this.maxRows);
     }
     return rows;
   }
@@ -251,6 +265,8 @@ export interface FakeOptions {
    * (bkz. dosya başı uyarısı) — yalnızca çağrı sözleşmesini test etmek için.
    */
   rpc?: Record<string, FakeRpcHandler>;
+  /** PostgREST "max rows" taklidi: okuma yanıtları bu sayıda satırla kesilir. */
+  maxRows?: number;
 }
 
 /** Sahte SupabaseService (servislere `as any` ile enjekte edilir). */
@@ -264,7 +280,12 @@ export function makeFakeSupabase(
     rpcCalls,
     db: {
       from(table: string) {
-        return new FakeQueryBuilder(table, dataset, options.uniqueBy?.[table]);
+        return new FakeQueryBuilder(
+          table,
+          dataset,
+          options.uniqueBy?.[table],
+          options.maxRows,
+        );
       },
       rpc: async (name: string, args: Row) => {
         rpcCalls.push({ name, args });
