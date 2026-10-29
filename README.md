@@ -18,35 +18,56 @@ Misafir (otel sitesi / booking engine)
         │  <green-gold-widget> (Shadow DOM, izole)
         ▼
   green-gold-widget  ──POST /widget/events──►  green-gold-api  ──►  Supabase (Postgres)
-   (web component)         GET /widget/impact      (NestJS)              + Auth
-                                                        ▲
-                                                        │ GET /dashboard/* (auth'lı)
-                                                        │ GET /raporlar/export
-                                                 green-gold-panel
-                                                   (Next.js, otel yöneticisi)
+   (web component)         GET /widget/impact      (NestJS)          + Auth + Vault
+                                                   ▲   ▲   │
+       HotelRunner / SynXis / imzalı webhook ──────┘   │   └──► 3pmetrics (karbon ölçümü)
+       (POST /integrations/webhooks/*, günlük polling) │
+                                                       │ GET/POST /dashboard/* (auth'lı)
+                                                green-gold-panel
+                                                  (Next.js, otel yöneticisi)
 ```
 
 | Parça | Teknoloji | Rol |
 |---|---|---|
-| **green-gold-widget** | TypeScript · Vite · Web Component (Shadow DOM) | Misafir tarafı; otel sitesine gömülür. `dist/green-gold-widget.v1.js` olarak build edilir. |
-| **green-gold-api** | NestJS 11 · Supabase (service_role) | `/widget/*` public uçları + `/dashboard/*` auth'lı uçlar. RLS backend'de service_role ile bypass edilir; tenant filtrelemesi kodda zorunludur. |
-| **green-gold-panel** | Next.js 16 · React 19 · Supabase Auth | Otel yöneticisinin paneli: etkileşim/dönüşüm/tahmini karbon özeti, ayarlar, misafir demo. |
+| **green-gold-widget** | TypeScript · Preact · Vite · Web Component (Shadow DOM) | Misafir tarafı; otel sitesine gömülür. Tek IIFE dosyası `dist/green-gold-widget.v1.js` olarak build edilir. |
+| **green-gold-api** | NestJS 11 · Supabase (service_role) | `/widget/*` public uçları, `/dashboard/*` auth'lı uçlar, `/integrations/*` booking engine/PMS uçları. RLS backend'de service_role ile bypass edilir; tenant filtrelemesi kodda zorunludur. |
+| **green-gold-panel** | Next.js 16 · React 19 · Supabase Auth | Otel yöneticisinin paneli: genel bakış, dönüşüm hunisi, karbon etkisi ve 3pmetrics veri girişi, raporlar, rezervasyonlar, tahsilatlar, sertifikalar, entegrasyon, ayarlar, misafir önizleme. |
 
 **Veri akışı:** Widget yalnızca otelin `allowed_origins` listesindeki alan adlarından
 `public_widget_key` ile event yollar → API doğrular ve yazar → Panel auth'lı okur.
+
+### API modülleri (`green-gold-api/src`)
+
+| Modül | İçerik |
+|---|---|
+| `widget` | Public widget config / event / impact uçları. |
+| `dashboard` | Panelin özet, huni, rapor ve otel ayarları uçları. |
+| `integrations` | Sağlayıcı adapter'ları (HotelRunner, SynXis, genel imzalı webhook), webhook alımı, entegrasyon durum makinesi, secret çözümleme, HotelRunner polling. |
+| `carbon` | 3pmetrics ölçüm sağlayıcısı: ölçüm başlatma/aktifleştirme, emisyon veri girişi ve belge yükleme, oda-gece dağıtımı. |
+| `health` | Sağlık kontrolü. |
+
+### Panel kod düzeni (`green-gold-panel`)
+
+- `app/<sayfa>/page.tsx` — her korumalı sayfa `requireAccessToken()` (`lib/auth.ts`) ile
+  başlar; oturum yoksa `/login`'e yönlendirir.
+- `app/components/` — ortak bileşenler (`AppShell`, `FunnelBars`, `PasswordSetupForm`,
+  `LeafIcon`, `MetricCard` …).
+- `lib/api.ts` — API istemcisi ve tipleri; `lib/format.ts` — TR sayı biçimleri;
+  `lib/supabase/` — sunucu/istemci Supabase bağlantısı ve oturum çerezi politikası.
 
 ---
 
 ## Yerel Kurulum
 
-Ön koşul: Node.js (LTS önerilir) ve bir Supabase projesi.
+Ön koşul: Node.js 24 (CI ile aynı) ve bir Supabase projesi. Üç paket bağımsızdır;
+her birinin kendi `package.json` ve `package-lock.json`'ı vardır.
 
 ```bash
 # 1) API
 cd green-gold-api
 npm install
 cp .env.example .env.local          # değerleri kendi Supabase projenden doldur
-# Supabase migration'larını uygula (0001–0006, supabase/migrations/)
+# Supabase migration'larını sırayla uygula (0001–0018, supabase/migrations/)
 npm run start:dev                   # http://localhost:3000
 
 # 2) Panel
@@ -58,16 +79,17 @@ npm run dev                         # http://localhost:3001
 # 3) Widget (yalnızca geliştirme/derleme gerektiğinde)
 cd ../green-gold-widget
 npm install
-npm run build                       # dist/green-gold-widget.v1.js üretir
-npm run copy:public                 # dist -> green-gold-panel/public/ kopyalar
+npm test                            # vitest
+npm run sync:widget                 # build + dist -> green-gold-panel/public/ kopyası
 npm run check:widget                # build + hash: panel/public kopyası güncel mi?
 # Bundle panelde public/green-gold-widget.v1.js olarak servis edilir.
 ```
 
 > **Bayat widget koruması:** Widget, panelin `public/`'inden statik servis edilir;
 > oradaki kopya güncel build ile eşleşmelidir. **Widget kaynağını değiştirdiyseniz:**
-> `npm run copy:public` çalıştırın **ve** güncellenen `green-gold-panel/public/green-gold-widget.v1.js`'i
-> **commit'leyin**. `npm run check:widget` senkronu sha256 ile doğrular; panel `prebuild`
+> `npm run sync:widget` çalıştırın **ve** güncellenen `green-gold-panel/public/green-gold-widget.v1.js`'i
+> **commit'leyin** (`.gitattributes` bu dosyada satır sonu dönüşümünü kapatır, böylece
+> hash Windows ve Linux'ta aynı kalır). `npm run check:widget` senkronu sha256 ile doğrular; panel `prebuild`
 > yerelde çalışır ama Vercel'in izole build'inde atlanır — asıl **zorunlu** kontrol
 > **CI'dadır** (`.github/workflows/ci.yml`). Yayın adımları: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
 
@@ -90,6 +112,8 @@ placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitign
 | `npm run create-integration` | **(Faz 2)** Otele booking engine/PMS entegrasyonu ekler. `create-hotel`'den **ayrıdır** — `pending` doğar. |
 | `npm run activate-integration` | **(Faz 2)** Entegrasyonu tüm güvenlik kapılarından geçirerek `active` yapar. |
 | `npm run rotate-integration-secret` | **(Faz 2)** İki aşamalı (overlap'li) secret rotasyonu. |
+| `npm run store-integration-secret` | Entegrasyon secret'ını Supabase Vault'a yazar. `--hotelrunner-hr-id` ile HotelRunner token'ı yazmadan önce doğrulanır. Değer komut satırından değil ortamdan okunur. |
+| `npm run link-threepmetrics` | 3pmetrics API anahtarını dener (`--check`), Vault'a kaydeder (`--store-secret`) veya oteli 3pmetrics hesabına bağlar. |
 
 > Bu script'ler `service_role` anahtarı kullanır (RLS bypass) — **yalnızca lokal/operatör**
 > ortamında çalıştırılır, hiçbir zaman client'a veya prod runtime'a konmaz.
@@ -106,10 +130,25 @@ Bu ikisi **ayrı** kurulumlardır; biri diğerinin yerine geçmez:
 | Kurulum | `create-hotel` + embed kodu | `create-integration` → `activate-integration` |
 | Veri | `widget_events` | `reservations` + `contributions` (imzalı, doğrulanmış) |
 
-> **Production blocker (Faz 2):** entegrasyon secret'ları için gerçek bir
-> secrets manager **henüz yok**. Env tabanlı çözüm yalnızca local/sandbox
-> içindir ve production resolver bilinçli olarak **fail-closed**tır —
-> `--environment production` entegrasyonlar aktive edilemez.
+> **Secret'lar:** Production'da entegrasyon ve 3pmetrics anahtarları **Supabase Vault**'ta
+> şifreli durur (migration 0016 ve 0017); yalnızca service_role okuyabilir. Env tabanlı
+> çözüm yalnızca local/sandbox içindir. Vault istemcisi olmayan yerde production
+> resolver bilinçli olarak **fail-closed**tır.
+
+---
+
+## Entegrasyonlar
+
+| Sağlayıcı | Yön | Not |
+|---|---|---|
+| **HotelRunner** | Webhook + günlük polling yedeği | `POST /integrations/webhooks/hotelrunner/:routingId`. Kaçan bildirimler için `GET /integrations/hotelrunner/poll` her gün 03:00 UTC'de Vercel Cron ile çalışır (`green-gold-api/vercel.json`). Uç `CRON_SECRET` tanımlı değilse kapalıdır. HotelRunner'ın otel başına günlük 250 istek kotası vardır. |
+| **SynXis** | Webhook | Henüz yer tutucu: istekler `503 provider_not_configured` döner. |
+| **Genel imzalı webhook** | Webhook | `x-greengold-signature: sha256=<hmac>` ile imzalı, sağlayıcıdan bağımsız rezervasyon olayı. |
+| **3pmetrics** | API (giden) | Otelin emisyon verisi panelden girilir ve 3pmetrics'e iletilir. Ölçüm sonucu, yönetici panelde onaylayınca (`activate`) otelin oda-gece karbon katsayısı olur. |
+
+Tüm gelen olaylar `ingest_reservation_event` fonksiyonuyla `reservations` ve
+`contributions` tablolarına idempotent yazılır; teslimatlar `integration_deliveries`'de
+izlenir ve panelin **Entegrasyon** sayfasında görünür.
 
 ---
 
@@ -141,6 +180,15 @@ Bu ikisi **ayrı** kurulumlardır; biri diğerinin yerine geçmez:
   değişirse `v2` olarak yayınlanır. Ayrıntı: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
 - **Rate limit** çok-instance ortamda bellek-içi sayaçla çalışmaz — dağıtık koruma için
   paylaşımlı store (Upstash Redis) gerekir; env yoksa best-effort fallback + uyarı logu.
-- Gerçek anahtarlar Vercel/Supabase ortam değişkenlerinde tutulur.
+- Gerçek anahtarlar Vercel/Supabase ortam değişkenlerinde ve Supabase Vault'ta tutulur.
+
+## CI
+
+- `.github/workflows/ci.yml` (`main`'e push ve PR): widget testleri + **bayat widget
+  kontrolü** (`check:widget`), API typecheck + jest, panel testleri + typecheck + build.
+  Kurulumlar `npm ci` ile yapılır; lockfile ile `package.json` uyumsuzsa CI başarısız olur.
+- `.github/workflows/relock.yml` (elle tetiklenir): Windows'ta üretilen lockfile'larda
+  eksik kalan Linux'a özgü optional bağımlılıkları eklemek için üç lockfile'ı Linux'ta
+  yeniden üretir ve artifact olarak verir.
 
 Ayrıntılı deploy adımları operatör dokümantasyonunda tutulur (bu repoya dahil değildir).
