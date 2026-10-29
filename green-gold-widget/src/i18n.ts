@@ -18,7 +18,7 @@ interface Strings {
 // Dürüstlük notu: bu widget karbon kredisi SATMAZ, offset ÜRETMEZ, ödeme
 // almaz. Yalnızca misafirin bir sürdürülebilirlik tercihini kaydeder ve
 // bunu host sayfaya bildirir — "karbon nötr" / "dengeledik" gibi doğrulanmamış
-// iddialar YOK. Bkz. RELEASE_CHECKLIST.md ve kök README'deki dürüstlük notu.
+// iddialar YOK. Bkz. kök README'deki dürüstlük notu.
 export const I18N: Record<Lang, Strings> = {
   tr: {
     heading: 'Daha sürdürülebilir bir konaklamayı destekle',

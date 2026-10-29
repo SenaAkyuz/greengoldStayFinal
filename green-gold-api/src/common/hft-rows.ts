@@ -1,4 +1,4 @@
-// Greenview HFT 2026v1.1, 2024 data. Retrieved 2026-09-14. Demo snapshot; see CARBON_PRICING_DEMO.md.
+// Greenview HFT 2026v1.1, 2024 data. Retrieved 2026-09-14. Demo snapshot.
 export const HFT_ROWS: {
   country: string;
   state: string;

@@ -7,8 +7,7 @@ Postgres gerektirirler.
 
 > ✅ **Son çalıştırma: 2026-08-15 — PostgreSQL 15.19 (disposable Docker),
 > T1–T15 tamamı PASS.** Runbook birebir uygulandı; hiçbir düzeltme gerekmedi.
-> Ayrıntılı sonuçlar, blokaj/`pg_blocking_pids` kanıtları ve katalog çıktıları:
-> `CLAUDE_FAZ2_BOOKING_ENGINE_CEKIRDEK_RAPORU.md` Bölüm 4.
+> Ayrıntılı sonuç raporu git geçmişinde (`CLAUDE_FAZ2_BOOKING_ENGINE_CEKIRDEK_RAPORU.md`).
 >
 > Bu testler **her migration/RPC değişikliğinden sonra yeniden çalıştırılmalıdır**;
 > Jest'te ve CI'da koşmazlar.
