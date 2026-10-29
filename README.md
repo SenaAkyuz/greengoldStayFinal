@@ -91,7 +91,7 @@ npm run check:widget                # build + hash: panel/public kopyası günce
 > **commit'leyin** (`.gitattributes` bu dosyada satır sonu dönüşümünü kapatır, böylece
 > hash Windows ve Linux'ta aynı kalır). `npm run check:widget` senkronu sha256 ile doğrular; panel `prebuild`
 > yerelde çalışır ama Vercel'in izole build'inde atlanır — asıl **zorunlu** kontrol
-> **CI'dadır** (`.github/workflows/ci.yml`). Yayın adımları: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
+> **CI'dadır** (`.github/workflows/ci.yml`).
 
 Ortam değişkenleri her paketin `.env.example` dosyasında açıklanmıştır (yalnızca
 placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitignore'dadır.
@@ -177,7 +177,7 @@ izlenir ve panelin **Entegrasyon** sayfasında görünür.
 - **Widget**, panelin domain'inden statik dosya olarak servis edilir (`v1` sürümlü).
   **Pilot cache:** `max-age=300, must-revalidate` (kısa — içerik değişince hızlı
   yayılır). Widget dondurulunca `immutable + 1y`'e geçilir; içerik o aşamadan sonra
-  değişirse `v2` olarak yayınlanır. Ayrıntı: [`RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md).
+  değişirse `v2` olarak yayınlanır.
 - **Rate limit** çok-instance ortamda bellek-içi sayaçla çalışmaz — dağıtık koruma için
   paylaşımlı store (Upstash Redis) gerekir; env yoksa best-effort fallback + uyarı logu.
 - Gerçek anahtarlar Vercel/Supabase ortam değişkenlerinde ve Supabase Vault'ta tutulur.

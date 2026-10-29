@@ -82,7 +82,7 @@ olmadan ilişkilendirebilmek için widget bir `session_ref` (yolculuk kimliği) 
    kimliğe güvenle düşer; host sayfa asla bozulmaz.
 
 `journey_id` **hiçbir zaman** e-posta/telefon/isim/IP/rezervasyon numarası içermez ve
-otomatik olarak SynXis URL'sine eklenmez (bkz. kök `PRINCES_PALACE_WORDPRESS_PILOT_KURULUM.md`).
+otomatik olarak SynXis URL'sine eklenmez.
 
 ## Booking engine tıklama ölçümü (booking_engine_clicked)
 
