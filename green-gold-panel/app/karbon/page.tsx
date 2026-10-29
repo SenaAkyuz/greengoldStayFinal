@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getCarbonSummary } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
+import { formatDecimal } from '@/lib/format';
 import { AppShell } from '../components/AppShell';
 import { RangePills } from '../components/RangePills';
 
@@ -10,18 +10,7 @@ export default async function CarbonPage({
 }: {
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
@@ -34,13 +23,6 @@ export default async function CarbonPage({
   const hotel = hotelRes.data;
   const carbon = carbonRes.data;
   const loadError = carbonRes.error ?? hotelRes.error;
-
-  // TR sayı biçimi
-  const nf = (n: number, digits = 1) =>
-    n.toLocaleString('tr-TR', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: digits,
-    });
 
   const isEmpty =
     !!carbon &&
@@ -90,7 +72,7 @@ export default async function CarbonPage({
               </div>
               <div className="mt-3 flex items-baseline gap-2">
                 <span className="font-[Georgia] text-5xl font-medium tracking-tight text-[#0a493b] tabular-nums sm:text-6xl">
-                  {nf(carbon.estimated_co2_kg)}
+                  {formatDecimal(carbon.estimated_co2_kg)}
                 </span>
                 <span className="text-2xl font-medium text-[#377866]">
                   kg CO₂
@@ -115,17 +97,17 @@ export default async function CarbonPage({
             {/* Destek kartları */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <SupportCard
-                value={nf(carbon.contributions_count, 0)}
+                value={formatDecimal(carbon.contributions_count, 0)}
                 label="katkı seçimi (tekil ziyaretçi)"
-                hint={`${nf(carbon.total_selected_nights, 0)} oda-gece toplam`}
+                hint={`${formatDecimal(carbon.total_selected_nights, 0)} oda-gece toplam`}
               />
               <SupportCard
-                value={`≈ ${nf(carbon.tree_equivalent)}`}
+                value={`≈ ${formatDecimal(carbon.tree_equivalent)}`}
                 label="ağaç-yılı eşdeğeri"
                 hint="21 kg CO₂/ağaç/yıl referans değeriyle"
               />
               <SupportCard
-                value={nf(carbon.co2_per_night_kg, 2)}
+                value={formatDecimal(carbon.co2_per_night_kg, 2)}
                 label="kg CO₂/oda-gece katsayısı"
                 hint="otelinizin kayıtlı katsayısı"
               />

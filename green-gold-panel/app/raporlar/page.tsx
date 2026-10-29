@@ -1,7 +1,7 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import { getReport, getHotel } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
+import { formatNumber, formatPercent } from '@/lib/format';
 import { AppShell } from '../components/AppShell';
 import { MetricCard } from '../components/MetricCard';
 import { RangePills } from '../components/RangePills';
@@ -11,18 +11,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
@@ -37,10 +26,9 @@ export default async function ReportsPage({
   const exportHref =
     range === 'month' ? '/raporlar/export' : `/raporlar/export?range=${range}`;
 
-  const nf = (n: number) => n.toLocaleString('tr-TR');
   const conversion =
     report && report.summary.views > 0
-      ? `%${report.summary.conversion_rate_pct.toLocaleString('tr-TR')}`
+      ? formatPercent(report.summary.conversion_rate_pct)
       : '—';
 
   return (
@@ -89,11 +77,11 @@ export default async function ReportsPage({
                 Etkileşim
               </h2>
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard label="Görüntülenme" value={nf(report.summary.views)} />
-                <MetricCard label="Seçim" value={nf(report.summary.selections)} />
+                <MetricCard label="Görüntülenme" value={formatNumber(report.summary.views)} />
+                <MetricCard label="Seçim" value={formatNumber(report.summary.selections)} />
                 <MetricCard
                   label="Katkı butonu tıklaması"
-                  value={nf(report.summary.add_clicks)}
+                  value={formatNumber(report.summary.add_clicks)}
                 />
                 <MetricCard
                   label="Dönüşüm"
@@ -110,17 +98,17 @@ export default async function ReportsPage({
               <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <MetricCard
                   label="Tahmini CO₂"
-                  value={`≈ ${nf(report.carbon.estimated_co2_kg)} kg`}
+                  value={`≈ ${formatNumber(report.carbon.estimated_co2_kg)} kg`}
                   hint="Tahmini"
                 />
                 <MetricCard
                   label="Ağaç-yılı eşdeğeri"
-                  value={`≈ ${nf(report.carbon.tree_equivalent)}`}
+                  value={`≈ ${formatNumber(report.carbon.tree_equivalent)}`}
                   hint="Tahmini"
                 />
                 <MetricCard
                   label="Katkı niyeti"
-                  value={nf(report.carbon.contributions_count)}
+                  value={formatNumber(report.carbon.contributions_count)}
                   hint="Tekil katkı butonu oturumu (ödeme değil)"
                 />
               </div>

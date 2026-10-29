@@ -1,22 +1,11 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getContributionsSummary, type CurrencyContributionTotals } from '@/lib/api';
 import { formatMinorAmount } from '@/lib/money';
 import { AppShell } from '../components/AppShell';
 import { ComingSoon } from '../components/ComingSoon';
 
 export default async function PaymentsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   const [hotelRes, summaryRes] = await Promise.all([
     getHotel(token),

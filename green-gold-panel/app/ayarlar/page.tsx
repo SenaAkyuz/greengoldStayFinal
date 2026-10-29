@@ -1,22 +1,10 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getCarbonOptions, getCarbonProviderStatus } from '@/lib/api';
 import { AppShell } from '../components/AppShell';
 import { SettingsForm } from '../components/SettingsForm';
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   // providerStatus hatası ekranı BOZMAZ: sağlayıcı paneli null durumla
   // "bekleniyor" gösterir, mevcut hesaplayıcılar etkilenmez.

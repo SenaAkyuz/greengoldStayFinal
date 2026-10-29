@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { normalizeEmailInput } from '@/lib/email';
+import { LeafIcon } from '../components/LeafIcon';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -113,25 +114,5 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </main>
-  );
-}
-
-function LeafIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 20c0-8 6-14 16-14 0 10-6 14-14 14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 16c3-3 6-4.5 9-5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }
