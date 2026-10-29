@@ -1,5 +1,4 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import {
   getHotel,
   getApiBaseUrl,
@@ -13,18 +12,7 @@ import { AppShell } from '../components/AppShell';
 import { IntegrationCard } from '../components/IntegrationCard';
 
 export default async function IntegrationPage() {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   // Son 30 gün etkileşim sinyali — API'de tüm-zamanlar endpoint'i yok, bu
   // yüzden "ilk etkileşim" değil yalnızca "son 30 günde etkileşim" iddia

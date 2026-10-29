@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "copy:public": "node scripts/copy-to-public.mjs",
+    "sync:widget": "npm run build && npm run copy:public",
     "check:widget": "npm run build && node scripts/verify-public-copy.mjs"
   },
   "dependencies": {

@@ -1,9 +1,10 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import Link from 'next/link';
 import { getHotel, getReport, type DashboardReport, type HotelInfo } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
+import { formatDecimal, formatNumber, formatPercent } from '@/lib/format';
 import { AppShell } from './components/AppShell';
+import { FunnelBars } from './components/FunnelBars';
 import { MetricCard } from './components/MetricCard';
 import { RangePills } from './components/RangePills';
 
@@ -12,18 +13,7 @@ export default async function OverviewPage({
 }: {
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
@@ -40,12 +30,10 @@ export default async function OverviewPage({
 
   const conversion =
     report && report.summary.views > 0
-      ? `%${report.summary.conversion_rate_pct.toLocaleString('tr-TR')}`
+      ? formatPercent(report.summary.conversion_rate_pct)
       : '—';
 
   const isEmpty = !!report && report.summary.views === 0;
-
-  const nf = (n: number) => n.toLocaleString('tr-TR');
 
   return (
     <AppShell
@@ -82,8 +70,8 @@ export default async function OverviewPage({
           <>
             {/* Ana metrikler: Görüntülenme, Seçim, Dönüşüm, Tahmini CO₂ etkisi. */}
             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <MetricCard label="Görüntülenme" value={nf(report.summary.views)} unit="oturum" />
-              <MetricCard label="Katkı seçimi" value={nf(report.summary.selections)} unit="oturum" />
+              <MetricCard label="Görüntülenme" value={formatNumber(report.summary.views)} unit="oturum" />
+              <MetricCard label="Katkı seçimi" value={formatNumber(report.summary.selections)} unit="oturum" />
               <MetricCard
                 label="Dönüşüm"
                 value={conversion}
@@ -91,7 +79,7 @@ export default async function OverviewPage({
               />
               <MetricCard
                 label="Tahmini CO₂ etkisi"
-                value={nf(report.carbon.estimated_co2_kg)}
+                value={formatNumber(report.carbon.estimated_co2_kg)}
                 unit="kg"
                 hint="Tahmini · offset değildir"
               />
@@ -132,21 +120,8 @@ export default async function OverviewPage({
   );
 }
 
-// Görüntülendi → Etkileşime girildi → Katkı seçildi. Sayı VE oran birlikte;
-// anlam yalnızca renkle değil metinle taşınır. Mobilde tek sütun (doğal stack).
+// Görüntülendi → Etkileşime girildi → Katkı seçildi. Mobilde tek sütun (doğal stack).
 function ConversionStory({ report }: { report: DashboardReport }) {
-  const { funnel } = report;
-  const nf = (n: number) => n.toLocaleString('tr-TR');
-  const pct = (n: number) => `%${n.toLocaleString('tr-TR')}`;
-
-  const stages = [
-    { label: 'Widget görüntülendi', count: funnel.stages.viewed },
-    { label: 'Katkı seçeneği işaretlendi', count: funnel.stages.selected },
-    { label: 'Katkı ekle butonuna basıldı', count: funnel.stages.clicked },
-  ];
-  const transitions = [funnel.rates.view_to_select_pct, funnel.rates.select_to_button_pct];
-  const maxCount = Math.max(funnel.stages.viewed, 1);
-
   return (
     <section className="gg-card mt-8 p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -162,34 +137,12 @@ function ConversionStory({ report }: { report: DashboardReport }) {
         Session bazlı etkileşim akışı — ödeme/rezervasyon onayını göstermez.
       </p>
 
-      <div className="mt-5 space-y-4">
-        {stages.map((stage, i) => (
-          <div key={stage.label}>
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="font-medium text-neutral-700">{stage.label}</span>
-              <span className="tabular-nums font-semibold text-neutral-900">
-                {nf(stage.count)}
-                <span className="ml-1 text-xs font-normal text-neutral-400">
-                  tekil session
-                </span>
-              </span>
-            </div>
-            <div className="mt-1.5 h-3 w-full overflow-hidden rounded-full bg-neutral-100">
-              <div
-                className="h-full rounded-full bg-[#0b5c49]"
-                style={{
-                  width: `${Math.max((stage.count / maxCount) * 100, stage.count > 0 ? 3 : 0)}%`,
-                }}
-              />
-            </div>
-            {i < transitions.length && (
-              <div className="mt-1.5 pl-1 text-xs text-neutral-500">
-                ↓ {pct(transitions[i])} bir sonraki adıma geçti
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <FunnelBars
+        funnel={report.funnel}
+        labels={['Widget görüntülendi', 'Katkı seçeneği işaretlendi', 'Katkı ekle butonuna basıldı']}
+        variant="compact"
+        className="mt-5 space-y-4"
+      />
     </section>
   );
 }
@@ -198,8 +151,6 @@ function ConversionStory({ report }: { report: DashboardReport }) {
 // uyarısıyla birlikte. Kaynak kırılımı YOK — API'de bu veri yok.
 function EstimatedImpactSummary({ report }: { report: DashboardReport }) {
   const { carbon } = report;
-  const nf = (n: number, digits = 1) =>
-    n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: digits });
 
   return (
     <section className="gg-card mt-6 bg-gradient-to-br from-[#eaf4ec] to-white p-6">
@@ -212,7 +163,7 @@ function EstimatedImpactSummary({ report }: { report: DashboardReport }) {
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <div className="font-[Georgia] text-3xl font-medium tracking-tight text-[#0a493b] tabular-nums">
-            {nf(carbon.estimated_co2_kg)} kg CO₂
+            {formatDecimal(carbon.estimated_co2_kg)} kg CO₂
           </div>
           <p className="mt-1 text-xs text-neutral-500">
             Widget&apos;ta katkı butonuna basılmasına dayalı tahmin; ödeme veya
@@ -221,7 +172,7 @@ function EstimatedImpactSummary({ report }: { report: DashboardReport }) {
         </div>
         <div>
           <div className="font-[Georgia] text-3xl font-medium tracking-tight text-[#0a493b] tabular-nums">
-            ≈ {nf(carbon.tree_equivalent)}
+            ≈ {formatDecimal(carbon.tree_equivalent)}
           </div>
           <p className="mt-1 text-xs text-neutral-500">
             Ağaç-yılı eşdeğeri — bu da tahminidir, doğrulanmış bir karbon

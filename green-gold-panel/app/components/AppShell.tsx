@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from '../actions';
+import { LeafIcon } from './LeafIcon';
 
 export type ActivePage =
   | 'overview'
@@ -28,7 +29,7 @@ const NAV_PRIMARY: NavItem[] = [
   { key: 'overview', label: 'Genel Bakış', href: '/', icon: <GridIcon /> },
   { key: 'guest-preview', label: 'Misafir Önizleme', href: '/misafir-onizleme', icon: <EyeIcon /> },
   { key: 'funnel', label: 'Dönüşüm', href: '/funnel', icon: <FunnelIcon /> },
-  { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon /> },
+  { key: 'carbon', label: 'Karbon Etkisi', href: '/karbon', icon: <LeafIcon size={17} /> },
   { key: 'reports', label: 'Raporlar', href: '/raporlar', icon: <ReportIcon /> },
   { key: 'integration', label: 'Entegrasyon', href: '/entegrasyon', icon: <CodeIcon /> },
   { key: 'settings', label: 'Ayarlar', href: '/ayarlar', icon: <GearIcon /> },
@@ -288,26 +289,6 @@ function SidebarLogout() {
         ↪ Güvenli çıkış
       </button>
     </form>
-  );
-}
-
-function LeafIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 20c0-8 6-14 16-14 0 10-6 14-14 14"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8 16c3-3 6-4.5 9-5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
   );
 }
 

@@ -1,27 +1,17 @@
-import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getFunnel } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
 import { AppShell } from '../components/AppShell';
+import { formatPercent } from '@/lib/format';
 import { RangePills } from '../components/RangePills';
+import { FunnelBars } from '../components/FunnelBars';
 
 export default async function FunnelPage({
   searchParams,
 }: {
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  if (!token) redirect('/login');
+  const token = await requireAccessToken();
 
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
@@ -35,29 +25,7 @@ export default async function FunnelPage({
   const funnel = funnelRes.data;
   const loadError = funnelRes.error ?? hotelRes.error;
 
-  const pct = (n: number) => `%${n.toLocaleString('tr-TR')}`;
-  const nf = (n: number) => n.toLocaleString('tr-TR');
-
   const isEmpty = !!funnel && funnel.stages.viewed === 0;
-
-  const stages = funnel
-    ? [
-        { key: 'viewed', label: 'Görüntülenme', count: funnel.stages.viewed },
-        { key: 'selected', label: 'Seçim', count: funnel.stages.selected },
-        {
-          key: 'clicked',
-          label: 'Katkı butonu tıklaması',
-          count: funnel.stages.clicked,
-        },
-      ]
-    : [];
-  const maxCount = funnel
-    ? Math.max(funnel.stages.viewed, funnel.stages.selected, funnel.stages.clicked, 1)
-    : 1;
-  // Aşamalar arası geçiş oranı etiketleri (bar aralarına).
-  const transitions = funnel
-    ? [funnel.rates.view_to_select_pct, funnel.rates.select_to_button_pct]
-    : [];
 
   return (
     <AppShell
@@ -98,7 +66,7 @@ export default async function FunnelPage({
                 Görüntülenme → Katkı butonu
               </div>
               <div className="mt-2 font-[Georgia] text-5xl font-medium tracking-tight text-[#0a493b] tabular-nums">
-                {pct(funnel.rates.view_to_button_pct)}
+                {formatPercent(funnel.rates.view_to_button_pct)}
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600">
                 Session bazlı etkileşim hunisi — her aşama, o adıma ulaşan tekil
@@ -113,37 +81,12 @@ export default async function FunnelPage({
               </div>
             ) : (
               <section className="gg-card mt-6 p-6">
-                <div className="space-y-4">
-                  {stages.map((stage, i) => (
-                    <div key={stage.key}>
-                      <div className="flex items-baseline justify-between text-sm">
-                        <span className="font-medium text-neutral-700">
-                          {stage.label}
-                        </span>
-                        <span className="tabular-nums font-semibold text-neutral-900">
-                          {nf(stage.count)}
-                          <span className="ml-1 text-xs font-normal text-neutral-400">
-                            tekil session
-                          </span>
-                        </span>
-                      </div>
-                      <div className="mt-1.5 h-8 w-full overflow-hidden rounded-lg bg-neutral-100">
-                        <div
-                            className="h-full rounded-lg bg-gradient-to-r from-[#075442] to-[#6da98d] transition-all"
-                          style={{
-                            width: `${Math.max((stage.count / maxCount) * 100, stage.count > 0 ? 4 : 0)}%`,
-                            opacity: 1 - i * 0.18,
-                          }}
-                        />
-                      </div>
-                      {i < transitions.length && (
-                        <div className="mt-1.5 pl-1 text-xs text-neutral-500">
-                          ↓ {pct(transitions[i])} bir sonraki adıma geçti
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <FunnelBars
+                  funnel={funnel}
+                  labels={['Görüntülenme', 'Seçim', 'Katkı butonu tıklaması']}
+                  variant="full"
+                  className="space-y-4"
+                />
               </section>
             )}
           </>
