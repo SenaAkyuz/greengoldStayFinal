@@ -92,7 +92,7 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#f5f7f3] px-4 py-16">
+    <main className="flex flex-1 items-center justify-center bg-[#f5f7f3] px-4 py-16">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-full bg-[#064b3d] text-[#c9eb47]">

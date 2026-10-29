@@ -76,7 +76,7 @@ export function AppShell({
   }, [menuOpen]);
 
   return (
-    <div className="flex min-h-full bg-[#f5f7f3]">
+    <div className="flex flex-1 bg-[#f5f7f3]">
       {/* Masaüstü sidebar */}
       <aside className="sticky top-0 hidden h-screen w-[278px] shrink-0 flex-col bg-[#064b3d] text-white md:flex">
         <BrandBlock />
