@@ -56,7 +56,7 @@ export default async function IntegrationPage() {
               Entegrasyon
             </h1>
             <p className="gg-subtitle">
-              Widget embed kodu ve izinli domain durumu
+              Widget kodu, izinli domain&apos;ler ve rezervasyon sistemi bağlantısı
             </p>
           </div>
           {hotel && <StatusBadge status={hotel.status} />}
@@ -88,8 +88,10 @@ export default async function IntegrationPage() {
               recentActivity={recentActivity}
             />
 
-            <BookingEngineIntegrationHealth
+            <ReservationSystemConnection
+              hotel={hotel}
               integrations={integrationHealthRes.data?.integrations ?? []}
+              loadFailed={!!integrationHealthRes.error}
             />
           </>
         )}
@@ -98,51 +100,137 @@ export default async function IntegrationPage() {
   );
 }
 
-// Faz 2 — booking engine/PMS webhook entegrasyonu sağlığı. Yalnızca
-// DOĞRULANMIŞ entegrasyon kayıtları gösterilir (secret/routing id ASLA —
-// API zaten döndürmüyor, bkz. IntegrationsReadService.getIntegrationHealth).
-function BookingEngineIntegrationHealth({
+const PROVIDER_LABEL: Record<string, string> = {
+  hotelrunner: 'HotelRunner',
+  synxis: 'SynXis',
+  generic_signed_webhook: 'İmzalı webhook',
+};
+
+const INTEGRATION_STATUS: Record<string, { label: string; cls: string }> = {
+  active: { label: 'Aktif', cls: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+  pending: { label: 'Kurulum bekliyor', cls: 'border-amber-200 bg-amber-50 text-amber-800' },
+  suspended: { label: 'Durduruldu', cls: 'border-red-200 bg-red-50 text-red-800' },
+};
+
+const DELIVERY_STATUS_LABEL: Record<string, string> = {
+  received: 'Alındı, işleniyor',
+  processed: 'İşlendi',
+  rejected_bad_signature: 'Reddedildi: anahtar doğrulanamadı',
+  rejected_invalid_payload: 'Reddedildi: içerik okunamadı',
+  rejected_replay: 'Tekrar gönderim, yok sayıldı',
+  rejected_out_of_order: 'Eski güncelleme, yok sayıldı',
+  manual_review: 'İnceleme bekliyor',
+  error: 'Hata',
+};
+
+// Rezervasyon sistemi (HotelRunner vb.) bağlantısı. Widget kurulumundan AYRI:
+// katkı otelin rezervasyon motorunda bir ekstra olarak satılır, rezervasyon
+// bize sunucudan sunucuya gelir. Bağlantı anahtarı / bildirim adresi ASLA
+// gösterilmez (API zaten döndürmüyor).
+function ReservationSystemConnection({
+  hotel,
   integrations,
+  loadFailed,
 }: {
+  hotel: HotelInfo;
   integrations: IntegrationHealthItem[];
+  loadFailed: boolean;
 }) {
+  const price = `${hotel.amount_per_night.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${hotel.currency}`;
+
   return (
     <section className="gg-card mt-6 p-6">
       <h2 className="text-sm font-semibold text-neutral-900">
-        Booking Engine/PMS entegrasyonu (Faz 2)
+        Rezervasyon sistemi bağlantısı
       </h2>
       <p className="mt-1 text-sm text-neutral-500">
-        Widget entegrasyonundan AYRI: bu, rezervasyon/ödeme onayının otelin
-        booking engine&apos;inden sunucudan sunucuya doğrulandığı bağlantıdır.
+        Rezervasyonlarınızı HotelRunner gibi bir rezervasyon motoru üzerinden
+        alıyorsanız Green Gold katkısı orada bir ekstra olarak sunulur;
+        rezervasyonlar bize otomatik gelir. Yukarıdaki widget kodu yalnızca kendi
+        ödeme sayfası olan siteler içindir.
       </p>
 
-      {integrations.length === 0 ? (
+      {loadFailed ? (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Bağlantı durumu şu an alınamadı.
+        </div>
+      ) : integrations.length === 0 ? (
         <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-          Henüz bir booking engine/PMS webhook entegrasyonu kaydedilmedi.
+          Henüz bir rezervasyon sistemi bağlantısı kurulmadı.
         </div>
       ) : (
         <ul className="mt-4 space-y-2.5 text-sm">
-          {integrations.map((integ) => (
-            <li
-              key={integ.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-neutral-200 px-3 py-2.5"
-            >
-              <div>
-                <span className="font-medium text-neutral-800">{integ.provider}</span>
-                <span className="ml-2 text-xs text-neutral-500">({integ.environment})</span>
-              </div>
-              <div className="flex items-center gap-3 text-xs text-neutral-500">
-                <span>Durum: {integ.status}</span>
-                <span>
-                  Son delivery: {integ.last_delivery_status ?? 'yok'}
-                  {integ.last_delivery_at &&
-                    ` — ${new Date(integ.last_delivery_at).toLocaleString('tr-TR')}`}
-                </span>
-              </div>
-            </li>
-          ))}
+          {integrations.map((integ) => {
+            const status = INTEGRATION_STATUS[integ.status] ?? {
+              label: integ.status,
+              cls: 'border-neutral-200 bg-neutral-50 text-neutral-600',
+            };
+            return (
+              <li
+                key={integ.id}
+                className="rounded-lg border border-neutral-200 px-4 py-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-medium text-neutral-800">
+                      {PROVIDER_LABEL[integ.provider] ?? integ.provider}
+                    </span>
+                    <span className="ml-2 text-xs text-neutral-500">
+                      {integ.environment === 'production' ? 'Canlı' : 'Test ortamı'}
+                      {' · '}Tesis kimliği {integ.external_property_id}
+                    </span>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${status.cls}`}
+                  >
+                    {status.label}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Son bildirim:{' '}
+                  {integ.last_delivery_status
+                    ? `${DELIVERY_STATUS_LABEL[integ.last_delivery_status] ?? integ.last_delivery_status} — ${new Date(integ.last_delivery_at!).toLocaleString('tr-TR')}`
+                    : 'henüz bildirim gelmedi'}
+                </p>
+              </li>
+            );
+          })}
         </ul>
       )}
+
+      <div className="mt-6 rounded-xl border border-[#d8e1da] bg-[#f6f9f6] p-5">
+        <h3 className="text-sm font-semibold text-[#17372d]">
+          HotelRunner ile kurulum
+        </h3>
+        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-neutral-700">
+          <li>
+            HotelRunner panelinizde Green Gold için bir uygulama açın ve size
+            verilen <strong className="font-medium">otel kimliğini (HR_ID)</strong>{' '}
+            ve <strong className="font-medium">anahtarı (TOKEN)</strong> Green Gold
+            ekibine güvenli bir kanaldan iletin.
+          </li>
+          <li>
+            Rezervasyon motorunuzda bir ekstra ürün tanımlayın: kodu (kod alanı
+            yoksa adı) <code className="rounded bg-white px-1 font-mono text-xs">GREENGOLD</code>,
+            gecelik fiyatı <strong className="font-medium">{price}</strong>.
+          </li>
+          <li>
+            Green Gold ekibinin size ilettiği bildirim adresini HotelRunner&apos;da
+            rezervasyon bildirim adresi olarak girin.
+          </li>
+          <li>
+            Bağlantı etkinleştirildikten sonra rezervasyonlar{' '}
+            <strong className="font-medium">Rezervasyonlar</strong>, seçilen
+            katkılar <strong className="font-medium">Tahsilatlar</strong>{' '}
+            sayfasında görünür.
+          </li>
+        </ol>
+        <p className="mt-3 text-xs text-amber-800">
+          Gecelik katkı tutarınız değişirse (ör. yeni karbon ölçümünden sonra)
+          HotelRunner&apos;daki ekstra fiyatını da güncelleyin; bu fiyat
+          HotelRunner&apos;da otomatik değişmez.
+        </p>
+      </div>
     </section>
   );
 }

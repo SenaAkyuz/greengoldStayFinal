@@ -12,6 +12,16 @@ const BOOKING_STATUS_LABEL: Record<string, string> = {
   stayed: 'Konakladı',
 };
 
+// Katkı durumu: 'pending' tahsilat DEĞİL — misafir seçti, ücret otelin kendi
+// ödeme sisteminden alınır (HotelRunner tahsilatı bildirmez).
+const CONTRIBUTION_STATUS_LABEL: Record<string, string> = {
+  pending: 'Seçildi · tahsilat otelde',
+  collected: 'Tahsil edildi',
+  refunded: 'İade edildi',
+  partially_refunded: 'Kısmi iade',
+  voided: 'Geçersiz (iptal)',
+};
+
 const BOOKING_STATUS_CLASS: Record<string, string> = {
   confirmed: 'border-emerald-200 bg-emerald-50 text-emerald-800',
   modified: 'border-sky-200 bg-sky-50 text-sky-800',
@@ -35,31 +45,39 @@ export default async function ReservationsPage() {
     <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="reservations" isDemo={hotel?.role === 'demo_viewer'}>
       <main className="gg-page">
         <div>
-          <div className="gg-kicker">Booking Engine bağlantısı</div>
+          <div className="gg-kicker">Rezervasyon sistemi bağlantısı</div>
           <h1 className="gg-title">
             Rezervasyonlar
           </h1>
           <p className="gg-subtitle">
-            Booking Engine ile onaylanmış gerçek rezervasyonlar
+            Rezervasyon sisteminizden (ör. HotelRunner) gelen rezervasyonlar · bu ay
           </p>
         </div>
+
+        {reservationsRes.error && (
+          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Rezervasyonlar yüklenemedi: {reservationsRes.error}
+          </div>
+        )}
 
         {hasReservations ? (
           <ReservationsTable items={reservations!.items} truncated={reservations!.truncated} />
         ) : (
-          <ComingSoon
-            title="Henüz rezervasyon bağlantısı yok"
-            badge="Faz 2"
-            whatItShows="Booking Engine/PMS tarafından onaylanmış gerçek rezervasyonlar; misafir, tarih ve durum bilgisiyle."
-            whyEmpty="Otelinizin Booking Engine/PMS sistemiyle henüz bir webhook bağlantısı kurulmadı. Widget'taki buton tıklaması bir rezervasyon değildir."
-            requirements={[
-              'Booking Engine/PMS sağlayıcınızın webhook dokümantasyonu',
-              "'Rezervasyon tamamlandı' olayı için paylaşılan bir secret/anahtar",
-              'Green Gold API tarafında webhook uç noktasının etkinleştirilmesi',
-            ]}
-            ctaHref="/entegrasyon"
-            ctaLabel="Entegrasyon sayfasına git"
-          />
+          !reservationsRes.error && (
+            <ComingSoon
+              title="Bu ay rezervasyon gelmedi"
+              badge="Rezervasyon bağlantısı"
+              whatItShows="Rezervasyon sisteminizden otomatik gelen rezervasyonlar; rezervasyon numarası, durum ve Green Gold katkısı seçilip seçilmediği. Misafirin adı, e-postası ve telefonu kaydedilmez."
+              whyEmpty="Rezervasyon sistemi bağlantınız henüz kurulmadı ya da bu ay yeni/değişen rezervasyon olmadı. Widget'taki buton tıklaması bir rezervasyon değildir."
+              requirements={[
+                'HotelRunner kullanıyorsanız: Green Gold uygulamasının otel kimliği (HR_ID) ve anahtarı (TOKEN)',
+                'Green Gold ekibinin ilettiği bildirim adresinin rezervasyon sisteminize girilmesi',
+                'Bağlantının Green Gold ekibi tarafından etkinleştirilmesi',
+              ]}
+              ctaHref="/entegrasyon"
+              ctaLabel="Entegrasyon sayfasına git"
+            />
+          )
         )}
       </main>
     </AppShell>
@@ -87,10 +105,10 @@ function ReservationsTable({
         <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-neutral-200 text-left text-[11px] font-bold uppercase tracking-[0.08em] text-neutral-500">
-              <th className="px-4 py-3">Provider Reservation ID</th>
+              <th className="px-4 py-3">Rezervasyon no</th>
               <th className="px-4 py-3">Durum</th>
               <th className="px-4 py-3">Green Gold seçildi mi?</th>
-              <th className="px-4 py-3">Tutar</th>
+              <th className="px-4 py-3">Katkı tutarı</th>
               <th className="px-4 py-3">Katkı durumu</th>
               <th className="px-4 py-3">Son güncelleme</th>
             </tr>
@@ -117,7 +135,9 @@ function ReservationsTable({
                     : '—'}
                 </td>
                 <td className="px-4 py-3 text-neutral-600">
-                  {r.contribution?.status ?? '—'}
+                  {r.contribution
+                    ? (CONTRIBUTION_STATUS_LABEL[r.contribution.status] ?? r.contribution.status)
+                    : '—'}
                 </td>
                 <td className="px-4 py-3 text-neutral-500">
                   {new Date(r.updated_at).toLocaleString('tr-TR')}
