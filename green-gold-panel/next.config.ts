@@ -26,6 +26,19 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Widget yazı tipi (DM Sans) — otel sitelerinden çapraz-origin yüklenir.
+        // Dosya adı sürümlüdür (.v1.) → uzun önbellek güvenli.
+        source: "/green-gold-widget-fonts/:file*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
     ];
   },
 };

@@ -1,7 +1,8 @@
 import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getFunnel } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
-import { AppShell } from '../components/AppShell';
+import { PageHeader, Notice } from '../components/ui';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { formatPercent } from '@/lib/format';
 import { RangePills } from '../components/RangePills';
 import { FunnelBars } from '../components/FunnelBars';
@@ -28,48 +29,45 @@ export default async function FunnelPage({
   const isEmpty = !!funnel && funnel.stages.viewed === 0;
 
   return (
-    <AppShell
+    <HotelPanelFrame
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
-      active="funnel"
+      title="Dönüşüm"
       isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="gg-page">
-        <div className="gg-page-header">
-          <div>
-            <div className="gg-kicker">Misafir etkileşimleri</div>
-            <h1 className="gg-title">
-              Dönüşüm
-            </h1>
-            <p className="gg-subtitle">
-              Session bazlı etkileşim hunisi
+      <div className="gg-page gg-page--framed">
+        <PageHeader
+          size="compact"
+          eyebrow="Misafir etkileşimleri"
+          title="Dönüşüm"
+          description={<>Oturum bazlı etkileşim hunisi
               {funnel?.period
                 ? ` · ${funnel.period.from} – ${funnel.period.to}`
-                : ''}
-            </p>
-          </div>
+                : ''}</>}
+          actions={<>
           <RangePills active={range} basePath="/funnel" />
-        </div>
+          </>}
+        />
 
         {loadError && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Notice tone="warning" className="mt-6">
             Veriler yüklenemedi: {loadError}. API sunucusunun çalıştığından emin
             olun.
-          </div>
+          </Notice>
         )}
 
         {funnel && (
           <>
             {/* Vurgulu: Görüntülenme → Katkı butonu */}
-            <section className="gg-card mt-7 bg-gradient-to-br from-[#eaf4ec] to-white p-7">
+            <section className="gg-card mt-7 bg-gradient-to-br from-[var(--ds-palette-sage-50)] to-white p-7">
               <div className="text-sm font-medium text-emerald-800">
                 Görüntülenme → Katkı butonu
               </div>
-              <div className="mt-2 font-[Georgia] text-5xl font-medium tracking-tight text-[#0a493b] tabular-nums">
+              <div className="mt-2 font-sans tracking-tight text-5xl font-medium tracking-tight text-[var(--ds-color-heading)] tabular-nums">
                 {formatPercent(funnel.rates.view_to_button_pct)}
               </div>
               <p className="mt-2 max-w-2xl text-sm leading-relaxed text-neutral-600">
-                Session bazlı etkileşim hunisi — her aşama, o adıma ulaşan tekil
+                Oturum bazlı etkileşim hunisi — her aşama, o adıma ulaşan tekil
                 ziyaretçi oturumunu sayar. Ödeme/rezervasyon onayını göstermez.
               </p>
             </section>
@@ -91,7 +89,7 @@ export default async function FunnelPage({
             )}
           </>
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }

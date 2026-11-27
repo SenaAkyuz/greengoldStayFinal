@@ -1,0 +1,60 @@
+.card {
+  background: var(--ds-color-surface);
+  border: var(--ds-border-width) solid var(--ds-color-border-strong);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+  overflow: hidden;
+  color: var(--ds-color-text);
+}
+.padMd { padding: var(--ds-space-6); }
+.padLg { padding: var(--ds-space-8); }
+.padNone { padding: 0; overflow: hidden; }
+.muted { background: var(--ds-color-bg-soft); border-color: var(--ds-color-border); }
+.highlight { background: var(--ds-color-surface-highlight); border-color: transparent; border-radius: var(--ds-radius-md); }
+.accent { border-top: 3px solid var(--ds-color-accent); }
+@media (max-width: 639px) {
+  .padMd { padding: var(--ds-space-5); }
+  .padLg { padding: var(--ds-space-6); }
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-space-4);
+  margin-bottom: var(--ds-space-5);
+}
+.title {
+  font-family: var(--ds-font-display);
+  font-size: var(--ds-text-xl);
+  font-weight: var(--ds-weight-title);
+  line-height: 1.35;
+  color: var(--ds-color-heading);
+  letter-spacing: var(--ds-tracking-title);
+}
+
+/* Referanstaki rapor kartı başlık şeridi (kartın üstünde, tam genişlik). */
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-space-3);
+  padding: 1.0625rem var(--ds-space-6);
+  background: var(--ds-color-surface-muted);
+  border-bottom: var(--ds-border-width) solid var(--ds-color-border);
+}
+.stripLead { display: flex; align-items: center; gap: var(--ds-space-3); min-width: 0; }
+.stripTitle { font-size: 0.9375rem; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: var(--ds-color-heading); }
+.stripSub { display: block; margin-top: 2px; font-size: var(--ds-text-xs); color: var(--ds-color-text-muted); letter-spacing: normal; text-transform: none; font-weight: 400; }
+.stripActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-space-3); font-size: var(--ds-text-sm); color: var(--ds-color-text-muted); }
+.body { padding: var(--ds-space-6); }
+@media (max-width: 639px) { .strip, .body { padding: var(--ds-space-4); } }
+.description {
+  margin-top: var(--ds-space-1);
+  font-size: var(--ds-text-sm);
+  line-height: var(--ds-leading-normal);
+  color: var(--ds-color-text-muted);
+}
+.actions { display: flex; flex-wrap: wrap; gap: var(--ds-space-2); }

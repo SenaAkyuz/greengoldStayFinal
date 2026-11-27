@@ -75,6 +75,24 @@ export interface InteractionFunnel {
   rates: FunnelRates;
 }
 
+/** Gün bazlı etkileşim serisi (UX-5.5): her gün o aşamaya ulaşan TEKİL oturum. */
+export interface DailyInteraction {
+  period: { from: string; to: string };
+  days: { date: string; viewed: number; selected: number; clicked: number }[];
+}
+
+/** CSV için gün: YYYY-MM-DD → GG.AA.YYYY (Türkçe Excel tarih olarak tanır). */
+function trDate(ymd: string): string {
+  const [y, m, d] = ymd.split('-');
+  return y && m && d ? `${d}.${m}.${y}` : ymd;
+}
+/** CSV için sayı: ondalık virgül, binlik ayıraç yok (Excel sayı olarak okur). */
+function trNumber(n: number): string {
+  return Number.isFinite(n)
+    ? String(Math.round(n * 100) / 100).replace('.', ',')
+    : '';
+}
+
 export interface DashboardReport {
   period: { from: string; to: string };
   summary: WidgetEventsSummary;
@@ -370,6 +388,86 @@ export class DashboardService {
     };
   }
 
+  /**
+   * Gün bazlı etkileşim serisi (otel saat diliminde). Her gün için o aşamaya
+   * ulaşan tekil oturum sayısı (huniyle aynı tanım). Aralıktaki tüm günler
+   * döner (etkileşim olmayan gün 0). Yalnız okuma; hotelId token'dan.
+   */
+  async getDailyInteraction(
+    hotelId: string,
+    params: RangeParams = {},
+  ): Promise<DailyInteraction> {
+    const { data: hotel, error: hotelError } = await this.supabase.db
+      .from('hotels')
+      .select('timezone')
+      .eq('id', hotelId)
+      .single();
+    if (hotelError || !hotel) {
+      throw new BadRequestException('Otel bulunamadı.');
+    }
+    const tz = (hotel.timezone as string) || 'Europe/Istanbul';
+    let range: ResolvedRange;
+    try {
+      range = resolveRange(params, tz);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+    const { data: events, error } = await fetchAllRows<{
+      id: string;
+      session_ref: string | null;
+      event_type: string;
+      created_at: string;
+    }>((from, to) =>
+      this.supabase.db
+        .from('widget_events')
+        .select('id, session_ref, event_type, created_at')
+        .eq('hotel_id', hotelId)
+        .gte('created_at', range.startUtc)
+        .lt('created_at', range.endUtcExclusive)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    );
+    if (error) throw new BadRequestException(error.message);
+
+    const STAGE: Record<string, 'viewed' | 'selected' | 'clicked'> = {
+      widget_goruntulendi: 'viewed',
+      checkbox_secildi: 'selected',
+      katki_ekle_butonuna_basildi: 'clicked',
+    };
+    const byDay = new Map<
+      string,
+      { viewed: Set<string>; selected: Set<string>; clicked: Set<string> }
+    >();
+    for (const row of events ?? []) {
+      const stage = STAGE[row.event_type];
+      if (!stage) continue;
+      const day = ymdInTz(new Date(row.created_at), tz);
+      let b = byDay.get(day);
+      if (!b) {
+        b = { viewed: new Set(), selected: new Set(), clicked: new Set() };
+        byDay.set(day, b);
+      }
+      b[stage].add(row.session_ref ?? row.id);
+    }
+
+    const days: DailyInteraction['days'] = [];
+    const cur = new Date(`${range.fromLabel}T00:00:00Z`);
+    const end = new Date(`${range.toLabel}T00:00:00Z`);
+    while (cur <= end) {
+      const date = cur.toISOString().slice(0, 10);
+      const b = byDay.get(date);
+      days.push({
+        date,
+        viewed: b?.viewed.size ?? 0,
+        selected: b?.selected.size ?? 0,
+        clicked: b?.clicked.size ?? 0,
+      });
+      cur.setUTCDate(cur.getUTCDate() + 1);
+    }
+    return { period: { from: range.fromLabel, to: range.toLabel }, days };
+  }
+
   /** Özet ve hunin ortak okuması: aralıktaki tüm etkileşim event'leri (sayfalı). */
   private async funnelEvents(
     hotelId: string,
@@ -630,7 +728,7 @@ export class DashboardService {
 
     const rows: (string | number)[][] = [];
     rows.push([`Green Gold — ${hotel.name as string}`]);
-    rows.push(['Dönem', range.fromLabel, range.toLabel]);
+    rows.push(['Dönem', trDate(range.fromLabel), trDate(range.toLabel)]);
     rows.push([]);
     rows.push(['Günlük etkileşim']);
     rows.push([
@@ -638,26 +736,39 @@ export class DashboardService {
       'Görüntülenme',
       'Seçim',
       'Katkı butonu',
-      'Tekil session',
+      'Tekil oturum',
     ]);
     for (const day of days) {
       const b = byDay.get(day)!;
-      rows.push([day, b.views, b.selections, b.clicks, b.sessions.size]);
+      rows.push([
+        trDate(day),
+        b.views,
+        b.selections,
+        b.clicks,
+        b.sessions.size,
+      ]);
     }
     rows.push([]);
     rows.push(['Özet']);
     rows.push(['Görüntülenme', summary.views]);
     rows.push(['Seçim', summary.selections]);
     rows.push(['Katkı butonu tıklaması', summary.add_clicks]);
-    rows.push(['Dönüşüm %', summary.conversion_rate_pct]);
-    rows.push(['Tahmini CO₂ (kg)', carbon.estimated_co2_kg]);
-    rows.push(['Ağaç-yılı eşdeğeri', carbon.tree_equivalent]);
+    // Görüntülenme yoksa oran tanımsızdır: boş hücre (0 değil) — UX-5.1.
     rows.push([
-      'Katkı niyeti (tekil katkı butonu oturumu)',
+      'Dönüşüm % (seçim yapan oturum / görüntüleyen oturum)',
+      summary.views > 0 ? trNumber(summary.conversion_rate_pct) : '',
+    ]);
+    rows.push([
+      'Katkı niyeti (katkı butonuna basan tekil oturum; ödeme değil)',
       carbon.contributions_count,
     ]);
+    rows.push([
+      'Seçilen konaklamaların tahmini emisyonu (kg CO₂e; tahmindir)',
+      trNumber(carbon.estimated_co2_kg),
+    ]);
 
-    const csv = toCsv(rows);
+    // Türkçe Excel: alan ayracı noktalı virgül, ondalık virgül (UX-5.9).
+    const csv = toCsv(rows, ';');
     const filename = `green-gold-${slugify(hotel.name as string)}-${range.fromLabel}_${range.toLabel}.csv`;
     return { filename, csv };
   }

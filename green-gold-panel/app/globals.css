@@ -1,34 +1,106 @@
 @import "tailwindcss";
+/* Yeni tasarım dili token'ları (--ds-*) app/layout.tsx içinde ayrıca import
+   edilir (Tailwind @import zincirine bağlı kalmasın). Bkz. app/design/README.md */
 
 /* Panel bilinçli olarak açık tema — dark auto-switch yok. */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-ds-sans), "DM Sans", Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
+
+  /* G2 — tasarım dili köprüsü: eski bileşenlerdeki Tailwind renk sınıfları
+     (neutral / emerald / amber / red / sky / green) onaylı paletin
+     (--ds-*, app/design/tokens.css) karşılıklarına bağlanır. Böylece işlev ve
+     işaretleme değişmeden tüm ekranlar aynı renk dilini kullanır. Ton
+     eşlemesi Notice/StatusPill ile aynıdır (uyarı = amber, başarı = yeşil,
+     bilgi = mavi, hata = kırmızı). */
+  --color-neutral-50: var(--ds-palette-mist-50);
+  --color-neutral-100: var(--ds-palette-sage-50);
+  --color-neutral-200: var(--ds-palette-rule-200);
+  --color-neutral-300: var(--ds-palette-rule-300);
+  --color-neutral-400: #7d8f88;
+  --color-neutral-500: var(--ds-palette-sub-600);
+  --color-neutral-600: var(--ds-palette-sub-600);
+  --color-neutral-700: #2a4744;
+  --color-neutral-800: var(--ds-palette-ink-900);
+  --color-neutral-900: var(--ds-palette-ink-900);
+  --color-neutral-950: var(--ds-palette-ink-950);
+
+  --color-emerald-50: var(--ds-palette-sage-50);
+  --color-emerald-100: var(--ds-palette-sage-100);
+  --color-emerald-200: var(--ds-palette-sage-200);
+  --color-emerald-300: var(--ds-palette-mint-300);
+  --color-emerald-400: var(--ds-palette-mint-300);
+  --color-emerald-500: var(--ds-palette-pine-600);
+  --color-emerald-600: var(--ds-palette-pine-600);
+  --color-emerald-700: var(--ds-palette-pine-700);
+  --color-emerald-800: var(--ds-palette-ink-900);
+  --color-emerald-900: var(--ds-palette-ink-950);
+  --color-emerald-950: var(--ds-palette-ink-950);
+
+  --color-green-50: var(--ds-palette-green-100);
+  --color-green-100: var(--ds-palette-green-100);
+  --color-green-200: var(--ds-tone-success-border);
+  --color-green-600: var(--ds-palette-green-700);
+  --color-green-700: var(--ds-palette-green-700);
+  --color-green-800: var(--ds-palette-green-700);
+
+  --color-amber-50: var(--ds-palette-amber-100);
+  --color-amber-100: var(--ds-palette-amber-100);
+  --color-amber-200: var(--ds-tone-warning-border);
+  --color-amber-300: var(--ds-palette-sun-300);
+  --color-amber-400: var(--ds-palette-sun-500);
+  --color-amber-500: var(--ds-palette-sun-500);
+  --color-amber-600: var(--ds-palette-gold-700);
+  --color-amber-700: var(--ds-palette-amber-700);
+  --color-amber-800: var(--ds-palette-amber-700);
+  --color-amber-900: #5c3b06;
+
+  --color-red-50: var(--ds-palette-red-100);
+  --color-red-100: var(--ds-palette-red-100);
+  --color-red-200: var(--ds-tone-danger-border);
+  --color-red-500: var(--ds-palette-red-700);
+  --color-red-600: var(--ds-palette-red-700);
+  --color-red-700: var(--ds-palette-red-700);
+  --color-red-800: #7a2a1c;
+
+  --color-sky-50: var(--ds-palette-blue-100);
+  --color-sky-100: var(--ds-palette-blue-100);
+  --color-sky-200: var(--ds-tone-info-border);
+  --color-sky-700: var(--ds-palette-blue-700);
+  --color-sky-800: var(--ds-palette-blue-700);
+  --color-sky-900: #1d4357;
+
+  /* Köşe yarıçapları: buton/alan 7px, iç panel 9px, kart 16px (tokens.css). */
+  --radius-md: var(--ds-radius-sm);
+  --radius-lg: var(--ds-radius-sm);
+  --radius-xl: var(--ds-radius-md);
+  --radius-2xl: var(--ds-radius-lg);
 }
 
 :root {
-  --gg-forest: #064b3d;
-  --gg-forest-deep: #033d32;
-  --gg-forest-soft: #176b58;
-  --gg-lime: #c9eb47;
-  --gg-canvas: #f5f7f3;
-  --gg-paper: #ffffff;
-  --gg-line: #dce4dc;
-  /* WCAG AA (4.5:1) icin dogrulandi: white uzerinde 5.85:1, canvas uzerinde
-     5.42:1 (eski #66756e canvas uzerinde 4.49:1 ile sinirdaydi). */
-  --gg-muted: #5a6862;
-  --gg-display: Georgia, "Times New Roman", serif;
+  /* G2: eski --gg-* değişkenleri onaylı paletin karşılıklarına bağlandı
+     (kullanan eski bileşenler yeni renk dilini otomatik alır). */
+  --gg-forest: var(--ds-palette-ink-900);
+  --gg-forest-deep: var(--ds-palette-ink-950);
+  --gg-forest-soft: var(--ds-palette-pine-600);
+  --gg-lime: var(--ds-palette-sun-300);
+  --gg-canvas: var(--ds-color-bg-soft);
+  --gg-paper: var(--ds-color-surface);
+  --gg-line: var(--ds-color-border);
+  --gg-muted: var(--ds-color-text-muted);
+  --gg-display: var(--ds-font-display);
 }
 
 body {
-  font-family: var(--font-geist-sans), system-ui, Arial, sans-serif;
-  background: var(--gg-canvas);
-  color: #12251e;
+  /* G2: onaylı tasarım dili — DM Sans, beyaz zemin, mürekkep metin. */
+  font-family: var(--font-ds-sans), "DM Sans", system-ui, Arial, sans-serif;
+  background: var(--ds-color-bg);
+  color: var(--ds-color-text);
 }
 
 ::selection {
-  background: #dff39a;
-  color: #083f35;
+  background: var(--ds-palette-mint-300);
+  color: var(--ds-palette-ink-950);
 }
 
 .gg-page {
@@ -46,43 +118,56 @@ body {
   gap: 18px;
 }
 
+/* G2: eski sınıflar PageHeader / Card / Notice ile aynı görünür
+   (Eyebrow: 12px kalın + zeytin çizgi; başlık DM Sans; kart kenarlı, gölgesiz). */
 .gg-kicker {
-  color: #2f7667;
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.18em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--ds-color-heading);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: var(--ds-tracking-eyebrow);
   text-transform: uppercase;
+}
+.gg-kicker::before {
+  content: '';
+  width: 22px;
+  height: 3px;
+  background: var(--ds-color-eyebrow-line);
 }
 
 .gg-title {
-  margin-top: 7px;
-  color: #10251e;
-  font-family: var(--gg-display);
-  font-size: clamp(30px, 3vw, 42px);
-  font-weight: 500;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
+  margin-top: var(--ds-space-2);
+  color: var(--ds-color-heading);
+  font-family: var(--ds-font-display);
+  font-size: clamp(1.5rem, 1.25rem + 0.9vw, 1.875rem);
+  font-weight: var(--ds-weight-display);
+  letter-spacing: -0.05em;
+  line-height: var(--ds-leading-tight);
 }
 
 .gg-subtitle {
-  margin-top: 8px;
-  color: var(--gg-muted);
-  font-size: 14px;
-  line-height: 1.6;
+  margin-top: var(--ds-space-2);
+  max-width: 70ch;
+  color: var(--ds-color-text-muted);
+  font-size: var(--ds-text-md);
+  line-height: var(--ds-leading-normal);
 }
 
 .gg-card {
-  border: 1px solid var(--gg-line);
-  border-radius: 15px;
-  background: var(--gg-paper);
-  box-shadow: 0 16px 40px rgba(16, 49, 39, 0.045);
+  border: var(--ds-border-width) solid var(--ds-color-border-strong);
+  border-radius: var(--ds-radius-lg);
+  background: var(--ds-color-surface);
+  box-shadow: var(--ds-shadow-md);
+  color: var(--ds-color-text);
 }
 
 .gg-notice {
-  border: 1px solid #d2e5d6;
-  border-radius: 13px;
-  background: #edf6ee;
-  color: #174d3f;
+  border: var(--ds-border-width) solid var(--ds-tone-success-border);
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-tone-success-bg);
+  color: var(--ds-tone-success-fg);
 }
 
 @media (max-width: 767px) {
@@ -107,4 +192,11 @@ body {
 }
 .gg-safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* G: eski sayfalar yeni çerçevede (HotelPanelFrame → AppFrame). Çerçevenin
+   içerik alanı genişlik ve boşluğu zaten verir; eski sayfa iç boşluğu sıfırlanır. */
+.gg-page.gg-page--framed {
+  max-width: none;
+  padding: 0;
 }

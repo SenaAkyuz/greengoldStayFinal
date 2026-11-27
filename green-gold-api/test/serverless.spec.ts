@@ -47,6 +47,16 @@ describe('Serverless bootstrap (configureApp) — HTTP', () => {
     expect(body(res).success).toBe(true);
   });
 
+  it.each([
+    '/dashboard/carbon-provider/connecthub/periods?year=2026',
+    '/dashboard/carbon-provider/connecthub/items?year=2026',
+    '/dashboard/carbon-provider/connecthub/periods/2026-10/provider-records',
+    '/dashboard/daily?range=month',
+  ])('GET %s -> 401 (yeni ConnectHub uçları da korumalı)', async (path) => {
+    const res = await request(server()).get(path);
+    expect(res.status).toBe(401);
+  });
+
   it('GET /dashboard/hotel -> 401 (auth guard, token yok)', async () => {
     const res = await request(server()).get('/dashboard/hotel');
     expect(res.status).toBe(401);

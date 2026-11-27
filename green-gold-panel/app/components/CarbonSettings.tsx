@@ -51,7 +51,7 @@ export function CarbonSettings({
             disabled={disabled}
             aria-pressed={mode === value}
             onClick={() => setMode(value)}
-            className={`rounded-full px-5 py-2.5 text-sm font-medium ${mode === value ? 'bg-[#075442] text-white' : 'border border-neutral-200 bg-white text-neutral-600'}`}
+            className={`rounded-full px-5 py-2.5 text-sm font-medium ${mode === value ? 'bg-[var(--ds-palette-pine-700)] text-white' : 'border border-neutral-200 bg-white text-neutral-600'}`}
           >
             {label}
           </button>

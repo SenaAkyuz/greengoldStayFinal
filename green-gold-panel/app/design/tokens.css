@@ -1,0 +1,189 @@
+/*
+ * Green Gold Stay — tasarım token'ları (tek kaynak).
+ *
+ * İKİ KATMAN:
+ *   1. Palet (--ds-palette-*): ham renkler. Marka değişirse YALNIZCA burası.
+ *   2. Anlamsal (--ds-color-*, --ds-font-*, --ds-radius-* …): bileşenler
+ *      YALNIZCA bunları kullanır; ham hex yazmaz.
+ *
+ * Kaynak: greengold-stay-product.ordino-tr.chatgpt.site — tarayıcıda
+ * hesaplanan stillerden ölçüldü (26.11.2026): DM Sans; --ink #0b393a,
+ * --pine #006e64, --mint #8be3d1, --rule #d6ded2, --sub #4d625a; panel kartı
+ * 16px köşe + #bdccbf kenar, başlık şeridi #f2f5ed, oran paneli #eff4e7,
+ * çubuklar #3b7256 / #dbe4cf, bölüm etiketi çizgisi #6c8d46, buton 7px köşe.
+ *
+ * Metin/zemin çiftleri WCAG AA (≥ 4.5:1) — README'de tablo.
+ * Eski panel değişkenleri (--gg-*) globals.css'te aynen durur.
+ */
+
+:root {
+  /* ---- 1. Palet ---------------------------------------------------------- */
+  --ds-palette-ink-950: #072a2b;
+  --ds-palette-ink-900: #0b393a; /* ana metin + başlık */
+  --ds-palette-hero: #0a393b; /* koyu bant zemini */
+  --ds-palette-pine-700: #005a52;
+  --ds-palette-pine-600: #006e64; /* birincil eylem */
+  --ds-palette-moss-600: #3b7256; /* veri çubuğu */
+  --ds-palette-olive-500: #6c8d46; /* yalnız süs çizgisi (metin değil) */
+  --ds-palette-mint-300: #8be3d1; /* koyu zemin üstü vurgu */
+  --ds-palette-sub-600: #4d625a; /* ikincil metin */
+
+  --ds-palette-white: #ffffff;
+  --ds-palette-mist-50: #f7f9fa; /* yumuşak bölüm zemini */
+  --ds-palette-sage-50: #f2f5ed; /* kart başlık şeridi */
+  --ds-palette-sage-100: #eff4e7; /* vurgulu panel */
+  --ds-palette-sage-200: #dbe4cf; /* veri çubuğu açık */
+  --ds-palette-rule-200: #d6ded2; /* ince çizgi */
+  --ds-palette-rule-300: #bdccbf; /* kart kenarı */
+
+  --ds-palette-green-700: #256b45;
+  --ds-palette-green-100: #e5f1e9;
+  --ds-palette-amber-700: #80530a;
+  --ds-palette-amber-100: #fbefd6;
+  --ds-palette-red-700: #9b3524;
+  --ds-palette-red-100: #f8e4df;
+  --ds-palette-blue-700: #285a74;
+  --ds-palette-blue-100: #e3eef4;
+  /* Referans altın vurgular (ölçüldü): koyu bant birimleri, adım rozeti kenarı */
+  --ds-palette-sun-300: #f3cc61;
+  --ds-palette-sun-500: #d3a632;
+  --ds-palette-gold-700: #7a5a12;
+  --ds-palette-gold-100: #f5ecd3;
+
+  /* ---- 2. Anlamsal: renk ------------------------------------------------- */
+  --ds-color-bg: var(--ds-palette-white);
+  --ds-color-bg-soft: var(--ds-palette-mist-50);
+  --ds-color-surface: var(--ds-palette-white);
+  --ds-color-surface-muted: var(--ds-palette-sage-50);
+  --ds-color-surface-sunken: var(--ds-palette-mist-50);
+  --ds-color-surface-highlight: var(--ds-palette-sage-100);
+  --ds-color-border: var(--ds-palette-rule-200);
+  --ds-color-border-strong: var(--ds-palette-rule-300);
+
+  --ds-color-text: var(--ds-palette-ink-900);
+  --ds-color-text-muted: var(--ds-palette-sub-600);
+  --ds-color-text-subtle: var(--ds-palette-sub-600);
+  --ds-color-heading: var(--ds-palette-ink-900);
+
+  --ds-color-primary: var(--ds-palette-pine-600);
+  --ds-color-primary-hover: var(--ds-palette-pine-700);
+  --ds-color-primary-active: var(--ds-palette-ink-950);
+  --ds-color-on-primary: #ffffff;
+  --ds-color-primary-soft: var(--ds-palette-sage-50);
+
+  --ds-color-accent: var(--ds-palette-olive-500); /* süs çizgisi */
+  --ds-color-accent-strong: var(--ds-palette-pine-600); /* vurgulu metin */
+  --ds-color-accent-soft: var(--ds-palette-sage-100);
+  --ds-color-rule: var(--ds-palette-rule-200);
+  --ds-color-eyebrow-line: var(--ds-palette-olive-500);
+
+  /* Koyu bant (hero / üst şerit) */
+  --ds-color-inverse-bg: var(--ds-palette-hero);
+  --ds-color-inverse-text: #ffffff;
+  --ds-color-inverse-muted: #d0e3e1;
+  --ds-color-inverse-accent: var(--ds-palette-mint-300);
+  --ds-color-gold-on-dark: var(--ds-palette-sun-300); /* metin, koyu zeminde 8.2:1 */
+  --ds-color-gold-rule: var(--ds-palette-sun-500); /* yalnız süs çizgisi/halka */
+
+  /* Yan menü (koyu petrol) */
+  --ds-sidebar-bg: var(--ds-palette-ink-900);
+  --ds-sidebar-bg-elevated: rgba(255, 255, 255, 0.06);
+  --ds-sidebar-border: rgba(255, 255, 255, 0.1);
+  --ds-sidebar-text: #e3efec;
+  --ds-sidebar-text-muted: #9fc1bb;
+  --ds-sidebar-active-bg: var(--ds-palette-pine-600);
+  --ds-sidebar-active-text: #ffffff;
+  --ds-sidebar-icon: #9fd8cc;
+  --ds-sidebar-width: 256px;
+  --ds-sidebar-scroll: rgba(255, 255, 255, 0.14);
+  --ds-sidebar-scroll-hover: rgba(255, 255, 255, 0.3);
+
+  /* Veri görselleştirme */
+  --ds-color-data-1: var(--ds-palette-moss-600);
+  --ds-color-data-2: var(--ds-palette-sage-200);
+  --ds-color-data-muted: #bfd7c5; /* sütun grafiğinde seçili olmayan */
+
+  --ds-color-focus: var(--ds-palette-pine-600);
+
+  /* Durum tonları: fg = metin/ikon, bg = zemin, border = kenar */
+  --ds-tone-neutral-fg: var(--ds-palette-sub-600);
+  --ds-tone-neutral-bg: var(--ds-palette-sage-50);
+  --ds-tone-neutral-border: var(--ds-palette-rule-300);
+  --ds-tone-info-fg: var(--ds-palette-blue-700);
+  --ds-tone-info-bg: var(--ds-palette-blue-100);
+  --ds-tone-info-border: #bcd3e0;
+  --ds-tone-success-fg: var(--ds-palette-green-700);
+  --ds-tone-success-bg: var(--ds-palette-green-100);
+  --ds-tone-success-border: #bcdcc8;
+  --ds-tone-warning-fg: var(--ds-palette-amber-700);
+  --ds-tone-warning-bg: var(--ds-palette-amber-100);
+  --ds-tone-warning-border: #ecd29b;
+  --ds-tone-danger-fg: var(--ds-palette-red-700);
+  --ds-tone-danger-bg: var(--ds-palette-red-100);
+  --ds-tone-danger-border: #e9bfb5;
+  --ds-tone-pending-fg: var(--ds-palette-gold-700);
+  --ds-tone-pending-bg: var(--ds-palette-gold-100);
+  --ds-tone-pending-border: #e6d29c;
+
+  /* ---- Tipografi --------------------------------------------------------- */
+  /* Referans tek aile kullanır: DM Sans (başlık 500, gövde 400). */
+  --ds-font-display: var(--font-ds-sans), "DM Sans", Arial, sans-serif;
+  --ds-font-body: var(--font-ds-sans), "DM Sans", Arial, sans-serif;
+  --ds-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --ds-text-xs: 0.8125rem; /* 13 */
+  --ds-text-sm: 0.875rem; /* 14 */
+  --ds-text-md: 1rem; /* 16 */
+  --ds-text-lg: 1.125rem; /* 18 — giriş paragrafı */
+  --ds-text-xl: 1.3125rem; /* 21 — kart başlığı (h3) */
+  --ds-display-sm: clamp(1.75rem, 1.4rem + 1.2vw, 2.304rem); /* ~37 metrik */
+  --ds-display-md: clamp(1.75rem, 1.35rem + 1.3vw, 2.25rem); /* sayfa başlığı ~36 */
+  --ds-display-lg: clamp(2rem, 1.3rem + 2.2vw, 2.75rem); /* karşılama bandı ~44 */
+  --ds-weight-display: 500;
+  --ds-weight-title: 600;
+  --ds-leading-tight: 1.02;
+  --ds-leading-normal: 1.57;
+  --ds-tracking-display: -0.064em;
+  --ds-tracking-title: -0.04em;
+  --ds-tracking-eyebrow: 0.15em;
+
+  /* ---- Ölçüler ----------------------------------------------------------- */
+  --ds-space-1: 0.25rem;
+  --ds-space-2: 0.5rem;
+  --ds-space-3: 0.75rem;
+  --ds-space-4: 1rem;
+  --ds-space-5: 1.25rem;
+  --ds-space-6: 1.5rem;
+  --ds-space-8: 2rem;
+  --ds-space-10: 2.5rem;
+  --ds-space-12: 3rem;
+  --ds-space-16: 4rem;
+
+  --ds-radius-xs: 5px; /* seçim kutusu */
+  --ds-radius-sm: 7px; /* buton, alan */
+  --ds-radius-md: 9px; /* iç panel */
+  --ds-radius-lg: 16px; /* kart */
+  --ds-radius-xl: 16px;
+  --ds-radius-pill: 21px; /* sekme / etiket */
+  --ds-radius-round: 999px;
+
+  --ds-border-width: 0.8px;
+  --ds-shadow-sm: 0 1px 2px rgba(11, 57, 58, 0.05);
+  --ds-shadow-md: none; /* referans kartları gölgesiz, kenarlı */
+  --ds-shadow-lg: 0 24px 56px rgba(11, 57, 58, 0.16);
+
+  --ds-control-height-sm: 34px;
+  --ds-control-height-md: 44px; /* dokunmatik hedef ≥ 44px */
+  --ds-control-height-lg: 50px;
+
+  --ds-container: 1240px;
+  --ds-topbar-height: 64px;
+  --ds-duration: 160ms;
+  --ds-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ds-duration: 0ms;
+  }
+}

@@ -15,7 +15,10 @@ const APOSTROPHE = "'";
 /** Bir hücre bu karakterlerden biriyle BAŞLIYORSA formül riski taşır. */
 const FORMULA_START = /^[=+\-@\t\r]/;
 
-export function csvCell(value: string | number | null | undefined): string {
+export function csvCell(
+  value: string | number | null | undefined,
+  separator: ',' | ';' = ',',
+): string {
   let s = value === null || value === undefined ? '' : String(value);
 
   const risky = FORMULA_START.test(s);
@@ -26,15 +29,20 @@ export function csvCell(value: string | number | null | undefined): string {
 
   // Riskli hücreyi de (apostrofu korumak için) ve virgül/tırnak/yeni satır
   // içeren hücreleri çift tırnakla sar.
-  if (risky || /[",\n\r]/.test(s)) {
+  if (risky || /["\n\r]/.test(s) || s.includes(',') || s.includes(separator)) {
     s = `"${s.replace(/"/g, '""')}"`;
   }
 
   return s;
 }
 
-export function toCsv(rows: (string | number | null | undefined)[][]): string {
-  return rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+export function toCsv(
+  rows: (string | number | null | undefined)[][],
+  separator: ',' | ';' = ',',
+): string {
+  return rows
+    .map((r) => r.map((c) => csvCell(c, separator)).join(separator))
+    .join('\r\n');
 }
 
 /** Dosya adı için güvenli ASCII slug. */

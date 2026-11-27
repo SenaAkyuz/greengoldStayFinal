@@ -4,6 +4,8 @@ Otellerin rezervasyon/checkout akışına eklenen bir **sürdürülebilirlik wid
 bunun etkileşimlerini otele gösteren **yönetim paneli**. Üç parçadan oluşur; tek repo
 (monorepo) altında tutulur.
 
+> **Güncel durum, yarım kalanlar ve kararlar:** [`STATUS.md`](STATUS.md) — projeye devam etmeden önce okuyun.
+
 > **Dürüstlük notu:** Panelde ve widget'ta gösterilen karbon değerleri **tahminidir**;
 > doğrulanmış bir karbon dengelemesi (offset) **değildir**. Otel başına tahmini bir
 > katsayı kullanılır ve Green Gold metodoloji onayı olmadan gerçek otele sunulmamalıdır.
@@ -43,7 +45,7 @@ Misafir (otel sitesi / booking engine)
 | `widget` | Public widget config / event / impact uçları. |
 | `dashboard` | Panelin özet, huni, rapor ve otel ayarları uçları. |
 | `integrations` | Sağlayıcı adapter'ları (HotelRunner, SynXis, genel imzalı webhook), webhook alımı, entegrasyon durum makinesi, secret çözümleme, HotelRunner polling. |
-| `carbon` | 3pmetrics ölçüm sağlayıcısı: ölçüm başlatma/aktifleştirme, emisyon veri girişi ve belge yükleme, oda-gece dağıtımı. |
+| `carbon` | 3pmetrics ölçüm sağlayıcısı. **Eski yol (CCA API):** ölçüm içeri alma/aktifleştirme, emisyon veri girişi ve belge yükleme. **Yeni yol (ConnectHub API, `carbon/connecthub/`):** otel = 3pmetrics birimi; aylık kayıt yazma, onaylı kayıtlar × envanter faktör paketiyle otel bazında hesap, oda-gece dağıtımı. Ayrıntı: `STATUS.md`. |
 | `health` | Sağlık kontrolü. |
 
 ### Panel kod düzeni (`green-gold-panel`)
@@ -67,7 +69,8 @@ her birinin kendi `package.json` ve `package-lock.json`'ı vardır.
 cd green-gold-api
 npm install
 cp .env.example .env.local          # değerleri kendi Supabase projenden doldur
-# Supabase migration'larını sırayla uygula (0001–0018, supabase/migrations/)
+# Supabase migration'larını sırayla uygula (0001–0020, supabase/migrations/)
+# Uyguladıktan sonra kontrol: supabase/checks/schema_health.sql (salt okunur)
 npm run start:dev                   # http://localhost:3000
 
 # 2) Panel
@@ -113,7 +116,8 @@ placeholder). **Gerçek anahtarlar asla commit edilmez** — `.env.local` gitign
 | `npm run activate-integration` | **(Faz 2)** Entegrasyonu tüm güvenlik kapılarından geçirerek `active` yapar. |
 | `npm run rotate-integration-secret` | **(Faz 2)** İki aşamalı (overlap'li) secret rotasyonu. |
 | `npm run store-integration-secret` | Entegrasyon secret'ını Supabase Vault'a yazar. `--hotelrunner-hr-id` ile HotelRunner token'ı yazmadan önce doğrulanır. Değer komut satırından değil ortamdan okunur. |
-| `npm run link-threepmetrics` | 3pmetrics API anahtarını dener (`--check`), Vault'a kaydeder (`--store-secret`) veya oteli 3pmetrics hesabına bağlar. |
+| `npm run link-threepmetrics` | **(Eski CCA API)** 3pmetrics API anahtarını dener (`--check`), Vault'a kaydeder (`--store-secret`) veya oteli 3pmetrics hesabına bağlar. |
+| `npm run connecthub -- <komut>` | **(ConnectHub API)** `check` anahtarları/birimleri/başlıkları/faktör paketlerini listeler · `send` test kaydı yazar · `preview` onaylı kayıtlarla hesabı DB'ye yazmadan gösterir · `store-secret` anahtarı Vault'a koyar · `link` oteli 3pmetrics birimine bağlar. Kullanım: `green-gold-api/scripts/connecthub.ts` başı. |
 
 > Bu script'ler `service_role` anahtarı kullanır (RLS bypass) — **yalnızca lokal/operatör**
 > ortamında çalıştırılır, hiçbir zaman client'a veya prod runtime'a konmaz.
@@ -144,7 +148,10 @@ Bu ikisi **ayrı** kurulumlardır; biri diğerinin yerine geçmez:
 | **HotelRunner** | Webhook + günlük polling yedeği | `POST /integrations/webhooks/hotelrunner/:routingId`. Kaçan bildirimler için `GET /integrations/hotelrunner/poll` her gün 03:00 UTC'de Vercel Cron ile çalışır (`green-gold-api/vercel.json`). Uç `CRON_SECRET` tanımlı değilse kapalıdır. HotelRunner'ın otel başına günlük 250 istek kotası vardır. |
 | **SynXis** | Webhook | Henüz yer tutucu: istekler `503 provider_not_configured` döner. |
 | **Genel imzalı webhook** | Webhook | `x-greengold-signature: sha256=<hmac>` ile imzalı, sağlayıcıdan bağımsız rezervasyon olayı. |
-| **3pmetrics** | API (giden) | Otelin emisyon verisi panelden girilir ve 3pmetrics'e iletilir. Ölçüm sonucu, yönetici panelde onaylayınca (`activate`) otelin oda-gece karbon katsayısı olur. |
+| **3pmetrics ConnectHub** | API (giden) | Yeni ana yol. Otel = 3pmetrics birimi. Aylık tüketim `POST /v1/records` ile yazılır (sabit `external_id` → tekrar gönderim günceller). Hesap: onaylı kayıtlar (`GET /v1/records`) × envanter faktör paketi (`/v1/factor-packages`). Uçlar: `/dashboard/carbon-provider/connecthub/*`. Panel ekranları henüz yok (bkz. `STATUS.md`). |
+| **3pmetrics CCA** | API (giden) | Eski yol, korunuyor. Veri `POST /cca/replies` ile yazılır, sonuç `carbon-summary/by-ghg` ile alınır — bu özet **tüm hesabın toplamıdır** (birim filtresi yok), birden fazla otel için uygun değil. |
+
+Her iki yolda da ölçüm, yönetici onaylayınca (`POST /dashboard/carbon-provider/measurements/:id/activate`) otelin oda-gece katsayısı ve widget fiyatı olur; bu işlem migration 0019'daki `activate_carbon_measurement` fonksiyonuyla tek transaction'da yapılır.
 
 Tüm gelen olaylar `ingest_reservation_event` fonksiyonuyla `reservations` ve
 `contributions` tablolarına idempotent yazılır; teslimatlar `integration_deliveries`'de

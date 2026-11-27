@@ -131,7 +131,7 @@ describe('DashboardService — PostgREST satır sınırı (max rows)', () => {
 
   it('CSV toplamları da eksiksiz', async () => {
     const { csv } = await cappedService().exportCsv('A', RANGE);
-    expect(csv).toContain(`Görüntülenme,${SESSIONS}`);
+    expect(csv).toContain(`Görüntülenme;${SESSIONS}`);
   });
 });
 
@@ -310,17 +310,36 @@ describe('DashboardService — report & CSV export (11E)', () => {
     );
   });
 
+  it('getDailyInteraction (UX-5.5): gün başına tekil oturum, tüm günler, tenant izolasyonu', async () => {
+    const { service } = makeService(dataset);
+    const d = await service.getDailyInteraction('A', {
+      from: '2026-07-10',
+      to: '2026-07-12',
+    });
+    expect(d.period).toEqual({ from: '2026-07-10', to: '2026-07-12' });
+    expect(d.days).toEqual([
+      { date: '2026-07-10', viewed: 1, selected: 1, clicked: 1 },
+      { date: '2026-07-11', viewed: 1, selected: 0, clicked: 0 },
+      { date: '2026-07-12', viewed: 0, selected: 0, clicked: 0 },
+    ]);
+  });
+
   it('exportCsv: tenant-scoped, günlük satırlar + özet + injection kaçışı', async () => {
     const { service } = makeService(dataset);
     const { filename, csv } = await service.exportCsv('A', RANGE);
 
     expect(filename).toMatch(/^green-gold-.*\.csv$/);
     expect(csv).toContain('Günlük etkileşim');
-    expect(csv).toContain('2026-07-10,1,1,1,1');
-    expect(csv).toContain('Katkı niyeti (tekil katkı butonu oturumu),1');
+    // Türkçe Excel (UX-5.9): ';' ayracı, GG.AA.YYYY tarih, "oturum".
+    expect(csv).toContain('10.07.2026;1;1;1;1');
+    expect(csv).toContain(
+      'Katkı niyeti (katkı butonuna basan tekil oturum; ödeme değil)";1',
+    );
+    expect(csv).toContain('Tekil oturum');
+    expect(csv).not.toMatch(/session/i);
     // B tenant'ının 9 gecelik katkısı A'nın CSV'sinde yok
     expect(csv).not.toContain('Otel B');
-    expect(csv).not.toContain(',9,');
+    expect(csv).not.toContain(';9;');
   });
 
   it('exportCsv: title hücresi formülle başlamaz -> güvenli', async () => {

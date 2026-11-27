@@ -8,13 +8,13 @@ import { formatNumber, formatPercent } from '@/lib/format';
 const VARIANTS = {
   compact: {
     track: 'mt-1.5 h-3 w-full overflow-hidden rounded-full bg-neutral-100',
-    bar: 'h-full rounded-full bg-[#0b5c49]',
+    bar: 'h-full rounded-full bg-[var(--ds-palette-pine-700)]',
     minWidthPct: 3,
     fade: 0,
   },
   full: {
     track: 'mt-1.5 h-8 w-full overflow-hidden rounded-lg bg-neutral-100',
-    bar: 'h-full rounded-lg bg-gradient-to-r from-[#075442] to-[#6da98d] transition-all',
+    bar: 'h-full rounded-lg bg-gradient-to-r from-[var(--ds-palette-pine-700)] to-[var(--ds-color-data-1)] transition-all',
     minWidthPct: 4,
     fade: 0.18,
   },
@@ -51,7 +51,7 @@ export function FunnelBars({
             <span className="tabular-nums font-semibold text-neutral-900">
               {formatNumber(stage.count)}
               <span className="ml-1 text-xs font-normal text-neutral-400">
-                tekil session
+                tekil oturum
               </span>
             </span>
           </div>

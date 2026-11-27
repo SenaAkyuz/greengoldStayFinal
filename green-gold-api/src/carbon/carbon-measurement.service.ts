@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   BadGatewayException,
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -32,6 +33,7 @@ import {
   type CarbonCredentialResolver,
 } from './carbon-credentials';
 import { allocateRoomNight } from './room-night-allocation';
+import { assertPublishable } from './publication-policy';
 
 /** Panelin dürüst bir durum ekranı çizebilmesi için gereken her şey. */
 export interface CarbonProviderStatus {
@@ -122,6 +124,8 @@ export type ProviderPricing = ReturnType<typeof calculateHotelCarbon> & {
 
 /** Postgres "relation does not exist" — migration 0015 henüz uygulanmamış. */
 const UNDEFINED_TABLE = '42P01';
+/** Postgres "column does not exist" — migration 0019 henüz uygulanmamış. */
+const UNDEFINED_COLUMN = '42703';
 
 const PRICING_PROVIDER = 'threepmetrics';
 
@@ -160,7 +164,13 @@ export class CarbonMeasurementService {
     private readonly config: ConfigService,
   ) {
     this.credentials = new LayeredCarbonCredentialResolver([
-      new VaultCarbonCredentialResolver(supabase.db),
+      // İstemci constructor'da OKUNMAZ: SupabaseService onu `onModuleInit`'te
+      // oluşturur ve Nest tüm constructor'ları ondan önce çalıştırır. Burada
+      // `supabase.db` yakalanırsa resolver `undefined` alır ("reading 'rpc'"
+      // hatası, 2026-11-27). Her çağrıda güncel istemciye gidilir.
+      new VaultCarbonCredentialResolver({
+        rpc: (fn, args) => this.supabase.db.rpc(fn, args),
+      }),
       new EnvCarbonCredentialResolver(),
     ]);
   }
@@ -183,6 +193,7 @@ export class CarbonMeasurementService {
       hotelId,
       provider,
       'revoked',
+      true,
     );
     const measurements = await this.trySelect(
       'carbon_measurements',
@@ -421,7 +432,7 @@ export class CarbonMeasurementService {
 
     const { data: row, error } = await this.supabase.db
       .from('carbon_measurements')
-      .select(`${MEASUREMENT_COLUMNS}, form_data`)
+      .select(`${MEASUREMENT_COLUMNS}, environment, form_data`)
       // hotel_id filtresi ZORUNLU — service_role RLS'i bypass eder.
       .eq('hotel_id', hotelId)
       .eq('provider', provider)
@@ -432,6 +443,13 @@ export class CarbonMeasurementService {
       throw new BadRequestException('Ölçüm okunamadı.');
     }
     if (!row) throw new NotFoundException('Ölçüm bulunamadı.');
+
+    // ConnectHub: yalnız dönemin GÜNCEL ölçümü yayına alınabilir. Önceki
+    // sürümler (ölçüm geçmişi) doğrudan API çağrısıyla da aktive edilemez.
+    await this.assertCurrentConnectHubVersion(hotelId, row);
+
+    // INTERNAL_USE / ülke doğrulaması — fiyat yazılmadan ÖNCE (publication-policy.ts).
+    assertPublishable(row);
 
     const pricing = (row.form_data as { pricing?: ProviderPricing } | null)
       ?.pricing;
@@ -446,17 +464,81 @@ export class CarbonMeasurementService {
       );
     }
 
+    // Tek işlem (migration 0019): pasifleştir + aktifleştir + otel fiyatı.
+    const rpc = await this.supabase.db.rpc('activate_carbon_measurement', {
+      p_hotel_id: hotelId,
+      p_measurement_id: measurementId,
+      p_amount_per_night: pricing.amount_per_night,
+      p_coefficient_kg: pricing.coefficient_kg,
+      p_pricing: pricing,
+    });
+    if (rpc.error) {
+      const code = (rpc.error as { code?: string }).code;
+      // Fonksiyon henüz yoksa (0019 uygulanmamış) eski sıralı yola düş.
+      if (code !== 'PGRST202' && code !== '42883') {
+        throw new BadRequestException('Widget fiyatı güncellenemedi.');
+      }
+      await this.activateSequential(hotelId, measurementId, pricing);
+    }
+
+    return { measurement_id: measurementId, pricing };
+  }
+
+  /**
+   * ConnectHub ölçümü, dönem satırının (carbon_periods.measurement_id) bağlı
+   * olduğu güncel sürüm değilse 409 `carbon_measurement_superseded`.
+   * CCA ve diğer ölçümler etkilenmez (form_data.api !== 'connecthub').
+   */
+  private async assertCurrentConnectHubVersion(
+    hotelId: string,
+    row: Record<string, unknown>,
+  ): Promise<void> {
+    const form = row.form_data as { api?: unknown } | null;
+    if (form?.api !== 'connecthub') return;
+    const periodStart =
+      typeof row.period_start === 'string' ? row.period_start : '';
+    const environment =
+      typeof row.environment === 'string' ? row.environment : null;
+    let query = this.supabase.db
+      .from('carbon_periods')
+      .select('measurement_id')
+      .eq('hotel_id', hotelId)
+      .eq('period', periodStart.slice(0, 7));
+    if (environment) query = query.eq('environment', environment);
+    const { data, error } = await query.maybeSingle();
+    if (error) throw new BadRequestException('Dönem okunamadı.');
+    const current = (data as { measurement_id?: string | null } | null)
+      ?.measurement_id;
+    if (current !== row.id) {
+      throw new ConflictException({
+        code: 'carbon_measurement_superseded',
+        message:
+          'Bu ölçüm dönemin güncel hesabı değil (önceki sürüm); yayına alınamaz. Dönemi yeniden hesaplayıp güncel sonucu yayınlayın.',
+      });
+    }
+  }
+
+  /** 0019 öncesi yol — her adımın hatası kontrol edilir. */
+  private async activateSequential(
+    hotelId: string,
+    measurementId: string,
+    pricing: ProviderPricing,
+  ): Promise<void> {
     const now = new Date().toISOString();
-    await this.supabase.db
+    const off = await this.supabase.db
       .from('carbon_measurements')
       .update({ is_active: false, updated_at: now })
       .eq('hotel_id', hotelId)
       .eq('is_active', true);
-    await this.supabase.db
+    if (off.error)
+      throw new BadRequestException('Widget fiyatı güncellenemedi.');
+    const on = await this.supabase.db
       .from('carbon_measurements')
       .update({ is_active: true, updated_at: now })
       .eq('hotel_id', hotelId)
       .eq('id', measurementId);
+    if (on.error)
+      throw new BadRequestException('Widget fiyatı güncellenemedi.');
 
     const { data: hotel } = await this.supabase.db
       .from('hotels')
@@ -477,8 +559,6 @@ export class CarbonMeasurementService {
     if (updateError) {
       throw new BadRequestException('Widget fiyatı güncellenemedi.');
     }
-
-    return { measurement_id: measurementId, pricing };
   }
 
   /**
@@ -724,13 +804,19 @@ export class CarbonMeasurementService {
     hotelId: string,
     provider: string,
   ): Promise<ActiveLink | null> {
-    const { data, error } = await this.supabase.db
-      .from('carbon_provider_links')
-      .select(`${LINK_COLUMNS}, authorization_ref`)
-      .eq('hotel_id', hotelId)
-      .eq('provider', provider)
-      .eq('status', 'active')
-      .limit(1);
+    const run = (withApiFilter: boolean) => {
+      let query = this.supabase.db
+        .from('carbon_provider_links')
+        .select(`${LINK_COLUMNS}, authorization_ref`)
+        .eq('hotel_id', hotelId)
+        .eq('provider', provider)
+        .eq('status', 'active');
+      // Eski CCA akışı yalnızca CCA bağlantısını kullanır (0019: api sütunu).
+      if (withApiFilter) query = query.neq('api', 'connecthub');
+      return query.limit(1);
+    };
+    let { data, error } = await run(true);
+    if (error?.code === UNDEFINED_COLUMN) ({ data, error } = await run(false));
     if (error) {
       if (error.code === UNDEFINED_TABLE) return null;
       throw new BadRequestException('Sağlayıcı bağlantısı okunamadı.');
@@ -771,16 +857,25 @@ export class CarbonMeasurementService {
     hotelId: string,
     provider: string,
     excludeStatus?: string,
+    ccaOnly = false,
   ): Promise<Record<string, unknown>[] | null> {
-    let query = this.supabase.db
-      .from(table)
-      .select(columns)
-      // hotel_id filtresi ZORUNLU — service_role RLS'i bypass eder.
-      .eq('hotel_id', hotelId)
-      .eq('provider', provider);
-    if (excludeStatus) query = query.neq('status', excludeStatus);
+    const run = (withApiFilter: boolean) => {
+      let query = this.supabase.db
+        .from(table)
+        .select(columns)
+        // hotel_id filtresi ZORUNLU — service_role RLS'i bypass eder.
+        .eq('hotel_id', hotelId)
+        .eq('provider', provider);
+      if (excludeStatus) query = query.neq('status', excludeStatus);
+      // ConnectHub bağlantıları (migration 0019) bu eski CCA ekranına karışmaz.
+      if (withApiFilter) query = query.neq('api', 'connecthub');
+      return query;
+    };
 
-    const { data, error } = await query;
+    let { data, error } = await run(ccaOnly);
+    if (error?.code === UNDEFINED_COLUMN && ccaOnly) {
+      ({ data, error } = await run(false));
+    }
     if (error) {
       if (error.code === UNDEFINED_TABLE) return null;
       throw new BadRequestException('Karbon ölçüm kayıtları okunamadı.');

@@ -1,7 +1,8 @@
 import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getContributionsSummary, type CurrencyContributionTotals } from '@/lib/api';
 import { formatMinorAmount } from '@/lib/money';
-import { AppShell } from '../components/AppShell';
+import { PageHeader, Notice } from '../components/ui';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { ComingSoon } from '../components/ComingSoon';
 
 export default async function PaymentsPage() {
@@ -17,22 +18,19 @@ export default async function PaymentsPage() {
     !!summary && (summary.contributions_count > 0 || summary.pending_count > 0);
 
   return (
-    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="payments" isDemo={hotel?.role === 'demo_viewer'}>
-      <main className="gg-page">
-        <div>
-          <div className="gg-kicker">Rezervasyon sisteminden gelen katkılar</div>
-          <h1 className="gg-title">
-            Tahsilatlar
-          </h1>
-          <p className="gg-subtitle">
-            Misafirin rezervasyonda seçtiği katkılar ve doğrulanmış tahsilatlar · bu ay
-          </p>
-        </div>
+    <HotelPanelFrame hotelName={hotel?.hotel_name} city={hotel?.city} title="Tahsilatlar" isDemo={hotel?.role === 'demo_viewer'}>
+      <div className="gg-page gg-page--framed">
+        <PageHeader
+          size="compact"
+          eyebrow="Rezervasyon sisteminden gelen katkılar"
+          title="Tahsilatlar"
+          description={<>Misafirin rezervasyonda seçtiği katkılar ve doğrulanmış tahsilatlar · bu ay</>}
+        />
 
         {summaryRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Notice tone="warning" className="mt-6">
             Katkı verisi yüklenemedi: {summaryRes.error}
-          </div>
+          </Notice>
         )}
 
         {hasContributions ? (
@@ -59,8 +57,8 @@ export default async function PaymentsPage() {
             />
           )
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }
 
@@ -86,7 +84,7 @@ function ContributionsSummaryView({
             <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-neutral-500">
               {t.currency}
             </div>
-            <div className="mt-2 text-2xl font-semibold text-[#102b22]">
+            <div className="mt-2 text-2xl font-semibold text-[var(--ds-color-heading)]">
               {formatMinorAmount(t.pending_total_minor + t.net_contribution_minor, t.currency)}
             </div>
             <div className="mt-1 text-xs text-neutral-500">

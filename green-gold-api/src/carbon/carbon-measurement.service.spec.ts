@@ -18,7 +18,11 @@ import {
   type CarbonCredentialResolver,
 } from './carbon-credentials';
 import { toKilograms } from './room-night-allocation';
-import { makeFakeSupabase, type FakeDataset } from '../../test/fake-supabase';
+import {
+  makeFakeSupabase,
+  type FakeDataset,
+  type FakeOptions,
+} from '../../test/fake-supabase';
 
 const LINK_ID = '11111111-1111-4111-8111-111111111111';
 const API_KEY = 'test-key-not-real';
@@ -141,8 +145,16 @@ function makeService(
   adapter: CarbonProviderAdapter = new FakeAdapter(),
   credentials: CarbonCredentialResolver = fixedCredentials(),
   config = fakeConfig(),
+  rpc: FakeOptions['rpc'] = {
+    // Varsayılan: 0019 uygulanmamış ortam (fonksiyon yok) → eski sıralı yol.
+    activate_carbon_measurement: () =>
+      Promise.resolve({
+        data: null,
+        error: { message: 'not found', code: 'PGRST202' } as never,
+      }),
+  },
 ) {
-  const fake = makeFakeSupabase(dataset);
+  const fake = makeFakeSupabase(dataset, { rpc });
   const service = new CarbonMeasurementService(
     fake as never,
     registryWith(adapter),
@@ -764,5 +776,169 @@ describe('CarbonProviderRegistryService', () => {
     expect(sandbox.statuses()).toEqual([
       { provider: 'threepmetrics', configured: true },
     ]);
+  });
+});
+
+describe('CarbonMeasurementService.activateMeasurement (migration 0019)', () => {
+  it('fonksiyon varsa fiyatı TEK işlemle (rpc) uygular, doğru argümanları gönderir', async () => {
+    let calledWith: Record<string, unknown> | null = null;
+    const { service, fake } = makeService(
+      {
+        hotels: [hotelRow()],
+        carbon_provider_links: [linkRow()],
+      },
+      undefined,
+      undefined,
+      undefined,
+      {
+        activate_carbon_measurement: (args) => {
+          calledWith = args;
+          return Promise.resolve({ data: null, error: null });
+        },
+      },
+    );
+    const imported = await service.importMeasurement('hotel-A', importInput());
+    const uuid = '44444444-4444-4444-8444-444444444444';
+    fake.dataset.carbon_measurements!.find(
+      (r) => r.id === imported.measurement.id,
+    )!.id = uuid;
+
+    const result = await service.activateMeasurement('hotel-A', uuid);
+    expect(calledWith).toMatchObject({
+      p_hotel_id: 'hotel-A',
+      p_measurement_id: uuid,
+      p_amount_per_night: result.pricing.amount_per_night,
+      p_coefficient_kg: result.pricing.coefficient_kg,
+      p_pricing: { provider: 'threepmetrics' },
+    });
+    // Sıralı yol ÇALIŞMADI: otel satırına uygulama kodu dokunmadı.
+    expect(fake.dataset.hotels![0].estimated_co2_per_night_kg).toBeUndefined();
+  });
+
+  it('rpc gerçek bir hata verirse fiyatı yarım bırakmaz, 400 döner', async () => {
+    const { service, fake } = makeService(
+      { hotels: [hotelRow()], carbon_provider_links: [linkRow()] },
+      undefined,
+      undefined,
+      undefined,
+      {
+        activate_carbon_measurement: () =>
+          Promise.resolve({
+            data: null,
+            error: { message: 'boom', code: 'XX000' } as never,
+          }),
+      },
+    );
+    const imported = await service.importMeasurement('hotel-A', importInput());
+    const uuid = '55555555-5555-4555-8555-555555555555';
+    fake.dataset.carbon_measurements!.find(
+      (r) => r.id === imported.measurement.id,
+    )!.id = uuid;
+    await expect(service.activateMeasurement('hotel-A', uuid)).rejects.toThrow(
+      'Widget fiyatı güncellenemedi.',
+    );
+    expect(fake.dataset.hotels![0].estimated_co2_per_night_kg).toBeUndefined();
+    expect(
+      fake.dataset.carbon_measurements!.filter((r) => r.is_active),
+    ).toHaveLength(0);
+  });
+});
+
+describe('CarbonMeasurementService.activateMeasurement — INTERNAL_USE kapısı', () => {
+  const prepare = async (mutate: (row: Record<string, unknown>) => void) => {
+    let rpcCalled = false;
+    const { service, fake } = makeService(
+      { hotels: [hotelRow()], carbon_provider_links: [linkRow()] },
+      undefined,
+      undefined,
+      undefined,
+      {
+        activate_carbon_measurement: () => {
+          rpcCalled = true;
+          return Promise.resolve({ data: null, error: null });
+        },
+      },
+    );
+    const imported = await service.importMeasurement('hotel-A', importInput());
+    const uuid = '66666666-6666-4666-8666-666666666666';
+    const row = fake.dataset.carbon_measurements!.find(
+      (r) => r.id === imported.measurement.id,
+    )!;
+    row.id = uuid;
+    mutate(row);
+    return { service, fake, uuid, rpcCalled: () => rpcCalled };
+  };
+
+  it('kapsamı bilinmeyen internal_use ölçümü 409 (scope_not_permitted); fiyata ve ölçümlere dokunulmaz', async () => {
+    const { service, fake, uuid, rpcCalled } = await prepare((row) => {
+      row.verification_status = 'internal_use';
+    });
+    await expect(
+      service.activateMeasurement('hotel-A', uuid),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'carbon_measurement_scope_not_permitted' },
+    });
+    expect(rpcCalled()).toBe(false);
+    expect(fake.dataset.hotels![0].estimated_co2_per_night_kg).toBeUndefined();
+    expect(
+      fake.dataset.carbon_measurements!.filter((r) => r.is_active),
+    ).toHaveLength(0);
+  });
+
+  it('Kapsam 3 içeren internal_use ölçümü 409; yalnız Kapsam 1/2 içeren uygulanır', async () => {
+    const withScopes = (scopes: number[]) => (row: Record<string, unknown>) => {
+      row.verification_status = 'internal_use';
+      const form = row.form_data as Record<string, unknown>;
+      row.form_data = {
+        ...form,
+        pricing: {
+          ...(form.pricing as Record<string, unknown>),
+          internal_use: true,
+          coverage: { scopes_calculated: scopes },
+        },
+        country_check: { publishable: true },
+      };
+    };
+    const blocked = await prepare(withScopes([1, 2, 3]));
+    await expect(
+      blocked.service.activateMeasurement('hotel-A', blocked.uuid),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'carbon_measurement_scope_not_permitted' },
+    });
+    expect(blocked.rpcCalled()).toBe(false);
+
+    const allowed = await prepare(withScopes([1, 2]));
+    await expect(
+      allowed.service.activateMeasurement('hotel-A', allowed.uuid),
+    ).resolves.toMatchObject({ measurement_id: allowed.uuid });
+    expect(allowed.rpcCalled()).toBe(true);
+  });
+
+  it('ülkesi doğrulanmamış ölçüm 409 (country_unverified)', async () => {
+    const { service, uuid, rpcCalled } = await prepare((row) => {
+      row.form_data = {
+        ...(row.form_data as Record<string, unknown>),
+        country_check: { publishable: false },
+      };
+    });
+    await expect(
+      service.activateMeasurement('hotel-A', uuid),
+    ).rejects.toMatchObject({
+      status: 409,
+      response: { code: 'carbon_measurement_country_unverified' },
+    });
+    expect(rpcCalled()).toBe(false);
+  });
+
+  it('CCA ölçümü (unverified) eskisi gibi uygulanır', async () => {
+    const { service, uuid, rpcCalled } = await prepare(() => {});
+    await expect(
+      service.activateMeasurement('hotel-A', uuid),
+    ).resolves.toMatchObject({
+      measurement_id: uuid,
+    });
+    expect(rpcCalled()).toBe(true);
   });
 });

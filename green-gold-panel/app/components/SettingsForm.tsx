@@ -135,8 +135,8 @@ export function SettingsForm({
         </div>
       </section>
 
-      {/* İzin verilen origin'ler */}
-      <section className="gg-card p-6">
+      {/* İzin verilen origin'ler — Entegrasyon ekranı bu çapaya bağlanır (UX-6.2). */}
+      <section id="izinli-domainler" className="gg-card p-6" style={{ scrollMarginTop: 'calc(var(--ds-topbar-height) + 16px)' }}>
         <h2 className="text-sm font-semibold text-neutral-900">
           İzin verilen alan adları (origin)
         </h2>
@@ -191,7 +191,7 @@ export function SettingsForm({
           <button
             type="button"
             onClick={addOrigin}
-            className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+            className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-3 text-sm font-medium text-neutral-700 transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
           >
             Ekle
           </button>
@@ -246,7 +246,7 @@ export function SettingsForm({
                 <button
                   type="button"
                   onClick={() => setBrandColor('')}
-                  className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+                  className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-neutral-300 px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
                 >
                   Temizle
                 </button>
@@ -332,7 +332,7 @@ export function SettingsForm({
         <button
           type="submit"
           disabled={isPending}
-          className="min-h-[44px] rounded-lg bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30 disabled:opacity-60"
+          className="min-h-[44px] rounded-lg bg-[var(--ds-palette-pine-700)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/30 disabled:opacity-60"
         >
           {isPending ? 'Kaydediliyor…' : 'Kaydet'}
         </button>
@@ -353,7 +353,7 @@ export function SettingsForm({
 }
 
 const inputCls =
-  'w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] focus:border-[#347866] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/20';
+  'w-full rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] px-3 py-2.5 text-sm text-[var(--ds-color-heading)] focus:border-[var(--ds-palette-pine-600)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/20';
 
 function LeafGlyph() {
   return (

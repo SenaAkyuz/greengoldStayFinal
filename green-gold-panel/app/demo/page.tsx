@@ -1,11 +1,14 @@
+import Image from 'next/image';
 import Link from 'next/link';
+import { BRAND_LOGO } from '@/lib/marketing-assets';
+import { DEMO_WIDGET_PREVIEW } from '@/lib/demo/dataset';
 import type { Metadata } from 'next';
 import { getApiBaseUrl } from '@/lib/api';
 import { GuestDemoWidget } from '../components/GuestDemoWidget';
 
 export const metadata: Metadata = {
-  title: 'Green Gold · Widget Demo',
-  description: 'Green Gold sürdürülebilirlik widget’ının canlı önizlemesi.',
+  title: 'Misafir ekranı demosu · GreenGold Stay',
+  description: 'GreenGold Stay misafir ekranının canlı önizlemesi (temsili veriler).',
 };
 
 // PUBLIC sayfa: auth YOK, getUser() YOK, oturum token'ı KULLANILMAZ.
@@ -16,24 +19,22 @@ export default function DemoPage() {
   const apiBase = getApiBaseUrl();
 
   return (
-    <main className="flex-1 bg-[#f5f7f3]">
+    <main className="flex-1 bg-[var(--ds-color-bg-soft)]">
       {/* Üst bar (public — panel shell'i değil) */}
-      <header className="border-b border-[#dce4dc] bg-white/80 backdrop-blur">
+      <header className="border-b border-[var(--ds-color-border)] bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-[#064b3d] font-[Georgia] text-[#c9eb47]">
-              G
-            </span>
+          <Link href="/" className="flex items-center gap-2.5 rounded-lg no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-color-data-1)]/40" aria-label="GreenGold Stay ana sayfa">
+            <Image src={BRAND_LOGO.src} alt="" width={40} height={40} className="rounded-full" priority />
             <div className="leading-tight">
-              <div className="text-[13px] font-bold tracking-[0.14em] text-[#12372c]">
-                GREEN GOLD
+              <div className="text-lg font-bold tracking-[-0.055em] text-[var(--ds-color-heading)]">
+                GreenGold<span className="font-normal"> Stay</span>
               </div>
-              <div className="text-[11px] text-neutral-500">Widget Demo</div>
+              <div className="text-xs text-neutral-500">Misafir ekranı demosu</div>
             </div>
-          </div>
+          </Link>
           <Link
             href="/login"
-            className="inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+            className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--ds-palette-pine-700)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
           >
             Paneli görüntüle
           </Link>
@@ -43,18 +44,18 @@ export default function DemoPage() {
       <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-14">
         {/* Hero / kısa anlatım */}
         <div className="max-w-2xl">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#347866]">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ds-palette-pine-600)]">
             Misafir deneyimi önizlemesi
           </div>
-          <h1 className="mt-3 font-[Georgia] text-4xl font-medium tracking-tight text-[#102b22] sm:text-5xl">
+          <h1 className="mt-3 font-sans tracking-tight text-4xl font-medium tracking-tight text-[var(--ds-color-heading)] sm:text-5xl">
             Misafirin gördüğü sürdürülebilirlik adımı
           </h1>
-          <p className="mt-4 text-sm leading-relaxed text-[#5e716a] sm:text-base">
-            Green Gold widget’ı, otelin rezervasyon/checkout akışına küçük bir
-            adım ekler: misafir konaklamasının tahmini karbon etkisini görür ve
-            dilerse bir katkı adımı seçer. Aşağıdaki önizleme canlıdır.
+          <p className="mt-4 text-sm leading-relaxed text-[var(--ds-color-text-muted)] sm:text-base">
+            GreenGold Stay misafir ekranı, otelin rezervasyon adımına yerleşir:
+            misafir konaklamasının tahmini karbon ayak izini görür ve dilerse gönüllü
+            katkı seçeneğini tercih eder. Aşağıdaki önizleme canlıdır; değerler temsilidir.
           </p>
-          <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#dbe4dd] bg-white px-3.5 py-1.5 text-xs font-medium text-[#42605a]">
+          <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--ds-color-border)] bg-white px-3.5 py-1.5 text-xs font-medium text-[var(--ds-color-text-muted)]">
             Giriş yapmadan inceleyebilirsiniz — hesap gerekmez.
           </p>
         </div>
@@ -62,15 +63,15 @@ export default function DemoPage() {
         {/* Zorunlu dürüstlük ibareleri — her madde ayrı ayrı görünür. */}
         <section
           aria-labelledby="durustluk-basligi"
-          className="mt-7 rounded-2xl border border-[#d2e5d6] bg-[#edf6ee] px-5 py-4"
+          className="mt-7 rounded-2xl border border-[var(--ds-color-border)] bg-[var(--ds-palette-sage-50)] px-5 py-4"
         >
           <h2
             id="durustluk-basligi"
-            className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#17614f]"
+            className="text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--ds-palette-pine-700)]"
           >
             Bu sayfa hakkında
           </h2>
-          <ul className="mt-3 grid gap-2 text-xs leading-relaxed text-[#174d3f] sm:grid-cols-2">
+          <ul className="mt-3 grid gap-2 text-xs leading-relaxed text-[var(--ds-palette-pine-700)] sm:grid-cols-2">
             {[
               'Bu bir önizlemedir.',
               'Etkileşimler raporlara yansımaz.',
@@ -79,7 +80,7 @@ export default function DemoPage() {
               'Doğrulanmış karbon dengelemesi değildir.',
             ].map((line) => (
               <li key={line} className="flex items-start gap-2">
-                <span aria-hidden="true" className="mt-[3px] text-[#2f7667]">
+                <span aria-hidden="true" className="mt-[3px] text-[var(--ds-palette-pine-600)]">
                   •
                 </span>
                 <span>{line}</span>
@@ -91,11 +92,17 @@ export default function DemoPage() {
         {/* Canlı önizleme veya nazik "kullanılamıyor" mesajı */}
         {demoKey ? (
           <div className="mt-8">
-            <GuestDemoWidget publicKey={demoKey} apiBase={apiBase} allowStoredPreview={false} />
+            <GuestDemoWidget
+              publicKey={demoKey}
+              apiBase={apiBase}
+              allowStoredPreview={false}
+              fixedPreview={DEMO_WIDGET_PREVIEW}
+              initialNights={2}
+            />
           </div>
         ) : (
-          <div className="mt-8 rounded-2xl border border-[#dbe4dd] bg-white p-8 text-center">
-            <div className="font-[Georgia] text-xl text-[#102b22]">
+          <div className="mt-8 rounded-2xl border border-[var(--ds-color-border)] bg-white p-8 text-center">
+            <div className="font-sans tracking-tight text-xl text-[var(--ds-color-heading)]">
               Demo şu an kullanılamıyor
             </div>
             <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
@@ -104,7 +111,7 @@ export default function DemoPage() {
             </p>
             <Link
               href="/login"
-              className="mt-5 inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+              className="mt-5 inline-flex min-h-[44px] items-center rounded-full bg-[var(--ds-palette-pine-700)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
             >
               Paneli görüntüle
             </Link>
@@ -113,12 +120,12 @@ export default function DemoPage() {
 
         {/* Nasıl çalışır? */}
         <section aria-labelledby="nasil-calisir" className="mt-12">
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#347866]">
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--ds-palette-pine-600)]">
             Üç adım
           </div>
           <h2
             id="nasil-calisir"
-            className="mt-2 font-[Georgia] text-3xl font-medium tracking-tight text-[#102b22]"
+            className="mt-2 font-sans tracking-tight text-3xl font-medium tracking-tight text-[var(--ds-color-heading)]"
           >
             Nasıl çalışır?
           </h2>
@@ -139,20 +146,20 @@ export default function DemoPage() {
               },
             ].map((s, i) => (
               <li key={s.t} className="gg-card p-5">
-                <span className="grid h-9 w-9 place-items-center rounded-full bg-[#edf5ef] font-semibold text-[#1c6b58] tabular-nums">
+                <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--ds-palette-sage-50)] font-semibold text-[var(--ds-palette-pine-600)] tabular-nums">
                   {i + 1}
                 </span>
-                <div className="mt-3 text-sm font-semibold text-[#102b22]">
+                <div className="mt-3 text-sm font-semibold text-[var(--ds-color-heading)]">
                   {s.t}
                 </div>
-                <p className="mt-1.5 text-xs leading-relaxed text-[#68766f]">
+                <p className="mt-1.5 text-xs leading-relaxed text-[var(--ds-color-text-muted)]">
                   {s.d}
                 </p>
               </li>
             ))}
           </ol>
 
-          <p className="mt-4 rounded-xl border border-[#e6e2c8] bg-[#faf7e8] px-4 py-3 text-xs leading-relaxed text-[#6b5d1f]">
+          <p className="mt-4 rounded-xl border border-[var(--ds-palette-gold-100)] bg-[var(--ds-palette-gold-100)] px-4 py-3 text-xs leading-relaxed text-[var(--ds-palette-gold-700)]">
             <strong>Katkı seçimi bir ödeme değildir.</strong> Misafir katkı
             adımını seçtiğinde herhangi bir tahsilat yapılmaz; bu yalnızca bir
             eğilim sinyalidir.
@@ -160,9 +167,9 @@ export default function DemoPage() {
         </section>
 
         {/* CTA */}
-        <div className="mt-10 rounded-2xl border border-[#dbe4dd] bg-white px-6 py-6 sm:flex sm:items-center sm:justify-between">
+        <div className="mt-10 rounded-2xl border border-[var(--ds-color-border)] bg-white px-6 py-6 sm:flex sm:items-center sm:justify-between">
           <div>
-            <div className="font-[Georgia] text-lg text-[#102b22]">
+            <div className="font-sans tracking-tight text-lg text-[var(--ds-color-heading)]">
               Otel panelini görmek ister misiniz?
             </div>
             <p className="mt-1 text-sm text-neutral-500">
@@ -172,7 +179,7 @@ export default function DemoPage() {
           </div>
           <Link
             href="/login"
-            className="mt-4 inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 sm:mt-0"
+            className="mt-4 inline-flex min-h-[44px] items-center rounded-full bg-[var(--ds-palette-pine-700)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40 sm:mt-0"
           >
             Paneli görüntüle
           </Link>

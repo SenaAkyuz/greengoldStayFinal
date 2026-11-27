@@ -236,6 +236,72 @@ describe('green-gold-widget', () => {
   });
 });
 
+/** Shadow DOM'daki görünür metin (<style> içeriği hariç). */
+function visibleText(el: HTMLElement): string {
+  return [...el.shadowRoot!.children]
+    .filter((n) => n.tagName !== 'STYLE')
+    .map((n) => n.textContent ?? '')
+    .join(' ');
+}
+
+describe('green-gold-widget — ölçüm tabanlı tahmin (3P yazılı izni: Kapsam 1+2, faktör yok)', () => {
+  const MEASURED = {
+    ...CONFIG,
+    carbon_pricing_demo: true,
+    carbon_estimate_source: 'hotel',
+    carbon_estimate_basis: 'measured_scope_1_2',
+    estimated_co2_per_night_kg: 12.4,
+  };
+
+  it('TR: kaynak satırı Kapsam 1 ve 2 der, doğrulanmış beyan/nötrlük notu görünür', async () => {
+    installFetch({ config: MEASURED });
+    const el = await mountWidget({ ...baseAttrs(), 'data-rooms': '2' });
+    const notes = [...el.shadowRoot!.querySelectorAll('.co2-note')].map((n) => n.textContent ?? '');
+    expect(notes[0]).toContain('Ölçülen enerji tüketimine dayalı tahmin (Kapsam 1 ve 2)');
+    expect(notes[0]).toContain('2 oda');
+    expect(el.shadowRoot!.querySelector('.measured-note')!.textContent).toBe(
+      'Doğrulanmış bir emisyon beyanı değildir.',
+    );
+    // Nötrlük uyarısı alt başlıkta bir kez:
+    expect(visibleText(el)).toContain('karbon nötrlüğü garanti etmez');
+    const text = visibleText(el).toLowerCase();
+    expect(text).toContain('kapsam 1 ve 2');
+    expect(text).not.toMatch(/dengele|offset|nötrdür|karbon-nötr|faktör/);
+  });
+
+  it('EN: measured note, no neutrality/offset claim', async () => {
+    installFetch({ config: MEASURED });
+    const el = await mountWidget({ ...baseAttrs(), 'data-lang': 'en' });
+    expect(el.shadowRoot!.querySelector('.co2-note')!.textContent).toContain(
+      'Estimate based on measured energy use (Scope 1 and 2)',
+    );
+    expect(el.shadowRoot!.querySelector('.measured-note')!.textContent).toBe(
+      'This is not a verified emissions statement.',
+    );
+    expect(visibleText(el)).toContain('does not guarantee carbon neutrality');
+    const text = visibleText(el).toLowerCase();
+    expect(text).toContain('scope 1 and 2');
+    expect(text).not.toMatch(/offset|carbon-neutral|is carbon neutral|factor/);
+  });
+
+  it('ölçüm tabanı yoksa (CCA / otel girdisi) eski kaynak satırı, ek not yok', async () => {
+    installFetch({ config: { ...MEASURED, carbon_estimate_basis: undefined } });
+    const el = await mountWidget(baseAttrs());
+    expect(el.shadowRoot!.querySelector('.co2-note')!.textContent).toContain('Otel verileriyle tahmin');
+    expect(el.shadowRoot!.querySelector('.measured-note')).toBeNull();
+  });
+
+  it('önizleme fiyatı API ölçüm tabanını taşımaz; yalnız data-preview-basis ile', async () => {
+    installFetch({ config: MEASURED });
+    const attrs = { ...baseAttrs(), 'data-preview': 'true', 'data-preview-amount': '4', 'data-preview-co2': '10', 'data-preview-currency': 'EUR' };
+    const el = await mountWidget(attrs);
+    expect(el.shadowRoot!.querySelector('.measured-note')).toBeNull();
+    el.setAttribute('data-preview-basis', 'measured_scope_1_2');
+    await flush();
+    expect(el.shadowRoot!.querySelector('.measured-note')).not.toBeNull();
+  });
+});
+
 describe("green-gold-widget — dürüstlük metinleri (Princes' Palace Hedef 1)", () => {
   it('karbon-nötr/offset iddiası kalmadı; yeni tercih metni gösterilir', async () => {
     installFetch();
@@ -553,6 +619,19 @@ describe('green-gold-widget — oda-gece hesabı (rooms × nights × oran)', () 
       rooms: 1,
       amount_total: 9,
     });
+  });
+
+  it('API sınırını aşan oda/gece (ör. milisaniye) geçersiz sayılır → 1; olay API sınırları içinde', async () => {
+    installFetch();
+    const el = await mountWidget({ ...baseAttrs(), 'data-nights': '2592000000', 'data-rooms': '5000' });
+    expect(el.shadowRoot!.querySelector('.row-sub')!.textContent).toBe('€3 × 1 gece');
+    el.setAttribute('data-nights', '365');
+    el.setAttribute('data-rooms', '1000');
+    await flush();
+    expect(el.shadowRoot!.querySelector('.row-sub')!.textContent).toContain('1000 oda × 365 gece');
+    el.setAttribute('data-nights', '366');
+    await flush();
+    expect(el.shadowRoot!.querySelector('.row-sub')!.textContent).toContain('1000 oda × 1 gece');
   });
 
   it('data-rooms canlı güncellenince yeniden çizer (observedAttributes)', async () => {

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 
 // Dev'de widget bundle panel public'ten servis edilir; prod'da CDN adresi verilir.
 const WIDGET_SRC =
-  process.env.NEXT_PUBLIC_WIDGET_SRC ?? '/green-gold-widget.v1.js?v=20260922-1';
+  process.env.NEXT_PUBLIC_WIDGET_SRC ?? '/green-gold-widget.v1.js?v=20261127-1';
 
 const TAG = 'green-gold-widget';
 // Script yüklendi ama custom element hâlâ tanımlı değilse bu süre sonunda hata
@@ -12,7 +12,7 @@ const TAG = 'green-gold-widget';
 const DEFINE_TIMEOUT_MS = 8000;
 
 type LoadState = 'loading' | 'ready' | 'error';
-type PreviewOverride = {
+export type PreviewOverride = {
   amount_per_night: number;
   estimated_co2_per_night_kg: number;
   currency: string;
@@ -44,20 +44,25 @@ export function GuestDemoWidget({
   publicKey,
   apiBase,
   allowStoredPreview,
+  fixedPreview,
+  initialNights = 1,
 }: {
   publicKey: string;
   apiBase: string;
   allowStoredPreview: boolean;
+  /** Demo senaryosu: temsili gecelik değerler (yalnız önizleme; veritabanına dokunmaz). */
+  fixedPreview?: PreviewOverride | null;
+  initialNights?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const elRef = useRef<HTMLElement | null>(null);
-  const [nights, setNights] = useState(1);
+  const [nights, setNights] = useState(initialNights);
   const [rooms, setRooms] = useState(1);
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const rawPreview = useSyncExternalStore(subscribePreview, readPreview, readServerPreview);
   const storedPreview = useMemo(() => parsePreview(rawPreview), [rawPreview]);
-  const previewOverride = allowStoredPreview ? storedPreview : null;
+  const previewOverride = fixedPreview ?? (allowStoredPreview ? storedPreview : null);
   // Yeniden dene: script'i baştan enjekte etmek için sayaç.
   const [attempt, setAttempt] = useState(0);
 
@@ -156,8 +161,8 @@ export function GuestDemoWidget({
     <div className="mt-7 grid gap-6 xl:grid-cols-[230px_1fr]">
       {/* Kontroller */}
       <div className="gg-card h-fit p-5">
-        <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#347866]">Önizleme kontrolleri</div>
-        <h2 className="mt-2 font-[Georgia] text-xl font-medium text-[#102b22]">Önizleme ayarları</h2>
+        <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--ds-palette-pine-600)]">Önizleme kontrolleri</div>
+        <h2 className="mt-2 font-sans tracking-tight text-xl font-medium text-[var(--ds-color-heading)]">Önizleme ayarları</h2>
 
         <div className="mt-4">
           <label
@@ -211,9 +216,9 @@ export function GuestDemoWidget({
                 onClick={() => setLang(l)}
                 aria-pressed={lang === l}
                 className={
-                  'min-h-[44px] rounded-md px-4 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 ' +
+                  'min-h-[44px] rounded-md px-4 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40 ' +
                   (lang === l
-                    ? 'bg-[#075442] text-white'
+                    ? 'bg-[var(--ds-palette-pine-700)] text-white'
                     : 'text-neutral-600 hover:bg-neutral-50')
                 }
               >
@@ -226,40 +231,40 @@ export function GuestDemoWidget({
 
       {/* Temsili booking çerçevesi — TAMAMI GÖRSEL KABUKTUR.
           İşlevsel olan tek parça, aşağıdaki gerçek widget önizlemesidir. */}
-      <div className="gg-card overflow-hidden">
+      <div className="gg-card overflow-hidden" lang={lang}>
         {/* Sahte adres çubuğu: 320px'de kırılmasın diye sabit px yerine esnek. */}
-        <div className="flex h-11 items-center gap-2 border-b border-[#dde4de] bg-[#eef1ee] px-3 sm:px-4">
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#ef9c88]" />
-          <span className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[#e4c16f] sm:block" />
-          <span className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[#83c59f] sm:block" />
-          <span className="ml-1 min-w-0 flex-1 truncate rounded-md bg-white px-3 py-1.5 text-center text-[9px] text-[#7f8a84] shadow-sm sm:ml-3">
+        <div className="flex h-11 items-center gap-2 border-b border-[var(--ds-color-border)] bg-[var(--ds-palette-sage-50)] px-3 sm:px-4">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--ds-tone-danger-border)]" />
+          <span className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--ds-palette-sun-500)] sm:block" />
+          <span className="hidden h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--ds-color-data-1)] sm:block" />
+          <span className="ml-1 min-w-0 flex-1 truncate rounded-md bg-white px-3 py-1.5 text-center text-[9px] text-[var(--ds-palette-rule-300)] shadow-sm sm:ml-3">
             book.hoteliniz.com
           </span>
         </div>
-        <div className="border-b border-[#e7ebe7] px-5 py-5 sm:px-7">
-          <div className="font-[Georgia] text-lg tracking-[0.18em] text-[#17372d] sm:text-xl">
-            OTELİNİZ
+        <div className="border-b border-[var(--ds-palette-sage-50)] px-5 py-5 sm:px-7">
+          <div className="font-sans tracking-tight text-lg tracking-[0.18em] text-[var(--ds-color-heading)] sm:text-xl">
+            {BOOKING_FRAME[lang].hotel}
           </div>
-          <div className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[#84918b]">
-            Rezervasyon · Güvenli ödeme
+          <div className="mt-1 text-[9px] uppercase tracking-[0.16em] text-[var(--ds-palette-rule-300)]">
+            {BOOKING_FRAME[lang].tagline}
           </div>
         </div>
 
-        <CheckoutSteps />
+        <CheckoutSteps lang={lang} />
 
         <div className="bg-white p-5 sm:p-10">
           <div className="mb-5">
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#347866]">Rezervasyon özeti</div>
-            <h3 className="mt-2 font-[Georgia] text-2xl font-medium text-[#102b22]">Konaklamanızı tamamlayın</h3>
-            <p className="mt-1 text-xs text-[#77847e]">{rooms} oda · {nights} gece · Vergiler dahil</p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--ds-palette-pine-600)]">{BOOKING_FRAME[lang].summary}</div>
+            <h3 className="mt-2 font-sans tracking-tight text-2xl font-medium text-[var(--ds-color-heading)]">{BOOKING_FRAME[lang].title}</h3>
+            <p className="mt-1 text-xs text-[var(--ds-color-text-muted)]">{BOOKING_FRAME[lang].stay(rooms, nights)}</p>
           </div>
 
           {/* Widget'ın checkout akışındaki yeri — vurgulu çerçeve. */}
-          <div className="max-w-2xl rounded-xl border-2 border-dashed border-[#a8cbb6] bg-[#fbfcfb] p-3 sm:p-4">
+          <div className="max-w-2xl rounded-xl border-2 border-dashed border-[var(--ds-color-data-muted)] bg-[var(--ds-color-bg-soft)] p-3 sm:p-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#347866]" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#347866]">
-                Green Gold adımı
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--ds-palette-pine-600)]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ds-palette-pine-600)]">
+                {BOOKING_FRAME[lang].step}
               </span>
             </div>
 
@@ -278,7 +283,7 @@ export function GuestDemoWidget({
                 <button
                   type="button"
                   onClick={retry}
-                  className="mt-4 inline-flex min-h-[44px] items-center rounded-lg bg-[#075442] px-5 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+                  className="mt-4 inline-flex min-h-[44px] items-center rounded-lg bg-[var(--ds-palette-pine-700)] px-5 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
                 >
                   Yeniden dene
                 </button>
@@ -286,7 +291,7 @@ export function GuestDemoWidget({
             ) : (
               <>
                 {loadState === 'loading' && (
-                  <p className="px-1 py-2 text-xs text-[#77847e]" role="status">
+                  <p className="px-1 py-2 text-xs text-[var(--ds-color-text-muted)]" role="status">
                     Önizleme yükleniyor…
                   </p>
                 )}
@@ -298,12 +303,12 @@ export function GuestDemoWidget({
           {/* Temsili ödeme önizlemesi — gerçek ödeme alanı DEĞİLDİR. */}
           <div className="mt-5 max-w-2xl" aria-hidden="true">
             <div className="grid gap-3 sm:grid-cols-2">
-              <FakeField label="Kart bilgileri" />
-              <FakeField label="Fatura adresi" />
+              <FakeField label={BOOKING_FRAME[lang].card} />
+              <FakeField label={BOOKING_FRAME[lang].billing} />
             </div>
-            <div className="mt-3 h-11 rounded-lg bg-[#dfe6e0]" />
+            <div className="mt-3 h-11 rounded-lg bg-[var(--ds-color-border)]" />
           </div>
-          <p className="mt-2 max-w-2xl text-[11px] text-[#8b968f]">
+          <p className="mt-2 max-w-2xl text-[11px] text-[var(--ds-palette-rule-300)]">
             Yukarıdaki ödeme alanları temsilidir; bu sayfada ödeme alınmaz.
           </p>
         </div>
@@ -312,16 +317,51 @@ export function GuestDemoWidget({
   );
 }
 
+// Temsili rezervasyon kabuğunun metinleri — widget dili seçilince kabuk da
+// aynı dilde görünür (UX-4.6). Panel açıklamaları (otel yöneticisine) Türkçe kalır.
+export const BOOKING_FRAME = {
+  tr: {
+    hotel: 'OTELİNİZ',
+    tagline: 'Rezervasyon · Güvenli ödeme',
+    summary: 'Rezervasyon özeti',
+    title: 'Konaklamanızı tamamlayın',
+    stay: (rooms: number, nights: number) => `${rooms} oda · ${nights} gece · Vergiler dahil`,
+    step: 'Green Gold adımı',
+    card: 'Kart bilgileri',
+    billing: 'Fatura adresi',
+    steps: ['Tarih', 'Oda', 'Green Stay', 'Ödeme', 'Onay'],
+    navLabel: 'Temsili rezervasyon adımları',
+    current: '(bulunduğunuz adım)',
+    done: '(tamamlandı)',
+  },
+  en: {
+    hotel: 'YOUR HOTEL',
+    tagline: 'Booking · Secure payment',
+    summary: 'Booking summary',
+    title: 'Complete your stay',
+    stay: (rooms: number, nights: number) =>
+      `${rooms} room${rooms === 1 ? '' : 's'} · ${nights} night${nights === 1 ? '' : 's'} · Taxes included`,
+    step: 'Green Gold step',
+    card: 'Card details',
+    billing: 'Billing address',
+    steps: ['Dates', 'Room', 'Green Stay', 'Payment', 'Confirmation'],
+    navLabel: 'Sample booking steps',
+    current: '(current step)',
+    done: '(completed)',
+  },
+} as const;
+
 // Checkout adım göstergesi. Yalnızca görsel kabuk — gerçek bir booking akışı
 // değildir; Green Stay adımının akıştaki yerini anlatır.
-const STEPS = ['Tarih', 'Oda', 'Green Stay', 'Ödeme', 'Onay'] as const;
 const ACTIVE_STEP = 2; // 'Green Stay'
 
-function CheckoutSteps() {
+function CheckoutSteps({ lang }: { lang: 'tr' | 'en' }) {
+  const STEPS = BOOKING_FRAME[lang].steps;
+  const f = BOOKING_FRAME[lang];
   return (
     <nav
-      aria-label="Temsili rezervasyon adımları"
-      className="border-b border-[#e7ebe7] bg-[#f7f9f7] px-3 py-3 sm:px-7"
+      aria-label={f.navLabel}
+      className="border-b border-[var(--ds-palette-sage-50)] bg-[var(--ds-color-bg-soft)] px-3 py-3 sm:px-7"
     >
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-2">
         {STEPS.map((label, i) => {
@@ -333,20 +373,20 @@ function CheckoutSteps() {
                 className={
                   'flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ' +
                   (isActive
-                    ? 'bg-[#075442] text-white'
+                    ? 'bg-[var(--ds-palette-pine-700)] text-white'
                     : isDone
-                      ? 'bg-[#e2efe6] text-[#2f6b58]'
-                      : 'bg-white text-[#8b968f] ring-1 ring-[#e1e6e2]')
+                      ? 'bg-[var(--ds-palette-sage-100)] text-[var(--ds-palette-pine-600)]'
+                      : 'bg-white text-[var(--ds-palette-rule-300)] ring-1 ring-[var(--ds-color-border)]')
                 }
               >
                 {/* Renk tek başına anlam taşımasın: durum metinle de veriliyor. */}
                 <span className="tabular-nums">{i + 1}</span>
                 {label}
-                {isActive && <span className="sr-only">(bulunduğunuz adım)</span>}
-                {isDone && <span className="sr-only">(tamamlandı)</span>}
+                {isActive && <span className="sr-only">{f.current}</span>}
+                {isDone && <span className="sr-only">{f.done}</span>}
               </span>
               {i < STEPS.length - 1 && (
-                <span aria-hidden="true" className="text-[#c3cec7]">
+                <span aria-hidden="true" className="text-[var(--ds-color-border-strong)]">
                   ›
                 </span>
               )}
@@ -360,11 +400,11 @@ function CheckoutSteps() {
 
 function FakeField({ label }: { label: string }) {
   return (
-    <div className="rounded-lg border border-[#e1e6e2] bg-white px-3 py-2">
-      <div className="text-[9px] uppercase tracking-[0.14em] text-[#a3ada7]">
+    <div className="rounded-lg border border-[var(--ds-color-border)] bg-white px-3 py-2">
+      <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--ds-palette-rule-300)]">
         {label}
       </div>
-      <div className="mt-1.5 h-3 w-2/3 rounded bg-[#eef1ee]" />
+      <div className="mt-1.5 h-3 w-2/3 rounded bg-[var(--ds-palette-sage-50)]" />
     </div>
   );
 }

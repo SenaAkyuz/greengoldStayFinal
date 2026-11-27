@@ -92,14 +92,14 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
   }
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-[#f5f7f3] px-4 py-16">
+    <main className="flex flex-1 items-center justify-center bg-[var(--ds-color-bg-soft)] px-4 py-16">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-[#064b3d] text-[#c9eb47]">
+          <span className="grid h-11 w-11 place-items-center rounded-full bg-[var(--ds-palette-ink-900)] text-[var(--ds-palette-sun-300)]">
             <LeafIcon />
           </span>
           <div>
-            <div className="text-[15px] font-bold tracking-[0.14em] text-[#12372c]">
+            <div className="text-[15px] font-bold tracking-[0.14em] text-[var(--ds-color-heading)]">
               GREEN GOLD
             </div>
             <div className="text-xs text-neutral-500">Otel Paneli</div>
@@ -107,15 +107,15 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
         </div>
 
         <div className="gg-card p-7">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#347866]">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ds-palette-pine-600)]">
             {copy.kicker}
           </div>
-          <h1 className="mt-3 font-[Georgia] text-3xl font-medium text-[#102b22]">
+          <h1 className="mt-3 font-sans tracking-tight text-3xl font-medium text-[var(--ds-color-heading)]">
             {copy.title}
           </h1>
 
           {sessionOk === null && (
-            <p className="mt-2 text-sm text-[#5a6862]">Kontrol ediliyor…</p>
+            <p className="mt-2 text-sm text-[var(--ds-color-text-muted)]">Kontrol ediliyor…</p>
           )}
 
           {sessionOk === false && (
@@ -128,7 +128,7 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
               </div>
               <Link
                 href={copy.invalidLinkHref}
-                className="block rounded text-center text-sm font-semibold text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
+                className="block rounded text-center text-sm font-semibold text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
               >
                 {copy.invalidLinkLabel}
               </Link>
@@ -137,7 +137,7 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
 
           {sessionOk === true && (
             <>
-              <p className="mt-2 mb-6 text-sm text-[#5a6862]">{copy.intro}</p>
+              <p className="mt-2 mb-6 text-sm text-[var(--ds-color-text-muted)]">{copy.intro}</p>
               <form onSubmit={onSubmit} className="space-y-4">
                 {error && (
                   <div
@@ -163,7 +163,7 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.currentTarget.value)}
-                    className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
+                    className="w-full rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] px-3 py-2.5 text-sm text-[var(--ds-color-heading)] outline-none focus:border-[var(--ds-palette-pine-600)] focus:ring-2 focus:ring-[var(--ds-color-data-1)]/20"
                   />
                 </div>
 
@@ -182,14 +182,14 @@ function PasswordSetupInner({ copy }: { copy: PasswordSetupCopy }) {
                     autoComplete="new-password"
                     value={confirm}
                     onChange={(e) => setConfirm(e.currentTarget.value)}
-                    className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
+                    className="w-full rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] px-3 py-2.5 text-sm text-[var(--ds-color-heading)] outline-none focus:border-[var(--ds-palette-pine-600)] focus:ring-2 focus:ring-[var(--ds-color-data-1)]/20"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="min-h-[44px] w-full rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
+                  className="min-h-[44px] w-full rounded-lg bg-[var(--ds-palette-pine-700)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40 disabled:opacity-60"
                 >
                   {loading ? copy.submittingLabel : copy.submitLabel}
                 </button>

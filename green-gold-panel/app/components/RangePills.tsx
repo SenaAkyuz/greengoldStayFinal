@@ -1,8 +1,13 @@
-import Link from 'next/link';
 import { RANGE_LABELS, type RangeKey } from '@/lib/range';
+import { SegmentedTabs } from './ui';
 
 const ORDER: RangeKey[] = ['month', '7d', '30d'];
 
+/**
+ * Tarih aralığı seçimi (bu ay / 7 gün / 30 gün). G2: görünüm tasarım
+ * dilinin `SegmentedTabs` bileşeni; adresler ve davranış aynı
+ * (`?range=`, "bu ay" parametresiz).
+ */
 export function RangePills({
   active,
   basePath = '/',
@@ -11,25 +16,14 @@ export function RangePills({
   basePath?: string;
 }) {
   return (
-    <nav className="inline-flex rounded-full border border-[#d8e2da] bg-white p-1 shadow-sm">
-      {ORDER.map((key) => {
-        const isActive = key === active;
-        return (
-          <Link
-            key={key}
-            href={key === 'month' ? basePath : `${basePath}?range=${key}`}
-            aria-current={isActive ? 'page' : undefined}
-            className={
-              'flex min-h-[44px] items-center rounded-full px-3.5 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 ' +
-              (isActive
-                ? 'bg-[#0b5c49] text-white'
-                : 'text-[#66756e] hover:bg-[#f1f5f1]')
-            }
-          >
-            {RANGE_LABELS[key]}
-          </Link>
-        );
-      })}
-    </nav>
+    <SegmentedTabs
+      label="Tarih aralığı"
+      activeKey={active}
+      items={ORDER.map((key) => ({
+        key,
+        label: RANGE_LABELS[key],
+        href: key === 'month' ? basePath : `${basePath}?range=${key}`,
+      }))}
+    />
   );
 }

@@ -13,6 +13,11 @@ export interface ContentOverrides {
 export interface WidgetConfig {
   carbon_pricing_demo?: boolean;
   carbon_estimate_source?: 'hotel' | 'regional';
+  /**
+   * 'measured_scope_1_2': aktif fiyat otelin ölçüm ortağındaki onaylı
+   * tüketim kayıtlarından (Kapsam 1 ve 2) hesaplandı. Faktörler gelmez.
+   */
+  carbon_estimate_basis?: 'measured_scope_1_2';
   hotel_name: string;
   city: string | null;
   currency: string;

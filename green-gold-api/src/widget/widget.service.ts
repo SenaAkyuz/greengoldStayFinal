@@ -16,10 +16,22 @@ import {
   resolveWidgetSettings,
   type ContentOverrides,
 } from '../common/widget-settings';
+import { scopesPermitted } from '../carbon/publication-policy';
+
+/** ConnectHub (3pmetrics faktör paketi) ölçümünden gelen widget fiyatının sürüm etiketi. */
+const CONNECTHUB_PRICING_VERSION = 'threepmetrics-connecthub-factors-v1';
 
 export interface WidgetConfig {
   carbon_pricing_demo?: boolean;
   carbon_estimate_source?: 'hotel' | 'regional';
+  /**
+   * Yalnız aktif fiyat bir ConnectHub ölçümünden geliyor VE yalnız Kapsam 1/2
+   * içeriyorsa: 'measured_scope_1_2'. Widget buna göre "ölçülen enerji
+   * tüketimi · Kapsam 1 ve 2 · doğrulanmış beyan değildir" açıklamasını
+   * gösterir. Faktörler, paket, envanter veya kayıt ayrıntısı ASLA dönmez
+   * (3P Metrics yazılı izni, 2026-11-27).
+   */
+  carbon_estimate_basis?: 'measured_scope_1_2';
   hotel_name: string;
   city: string | null;
   currency: string;
@@ -99,7 +111,21 @@ export class WidgetService {
     const hotelEstimate =
       pricingProvider === 'hotel-input-demo' ||
       pricingProvider === 'threepmetrics';
+    const activePricing = (
+      hotel.widget_settings as Record<
+        string,
+        { version?: unknown; coverage?: { scopes_calculated?: unknown } }
+      > | null
+    )?.carbon_pricing;
+    const measuredBasis =
+      pricingProvider === 'threepmetrics' &&
+      activePricing?.version === CONNECTHUB_PRICING_VERSION &&
+      Array.isArray(activePricing.coverage?.scopes_calculated) &&
+      scopesPermitted(activePricing.coverage.scopes_calculated as number[]);
     return {
+      ...(measuredBasis
+        ? { carbon_estimate_basis: 'measured_scope_1_2' as const }
+        : {}),
       carbon_estimate_source: hotelEstimate
         ? 'hotel'
         : carbonDemo

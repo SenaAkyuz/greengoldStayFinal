@@ -56,3 +56,10 @@ describe('slugify', () => {
     expect(slugify('###')).toBe('otel');
   });
 });
+
+describe('Türkçe Excel ayracı (UX-5.9)', () => {
+  it('noktalı virgül ayracı; ayraç ya da virgül içeren hücre tırnaklanır', () => {
+    expect(toCsv([['a', '4,12', 'x;y', 3]], ';')).toBe('a;"4,12";"x;y";3');
+    expect(csvCell('=1;2', ';')).toBe('"\'=1;2"');
+  });
+});
