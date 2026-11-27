@@ -1,11 +1,14 @@
+import Image from 'next/image';
 import Link from 'next/link';
+import { BRAND_LOGO } from '@/lib/marketing-assets';
+import { DEMO_WIDGET_PREVIEW } from '@/lib/demo/dataset';
 import type { Metadata } from 'next';
 import { getApiBaseUrl } from '@/lib/api';
 import { GuestDemoWidget } from '../components/GuestDemoWidget';
 
 export const metadata: Metadata = {
-  title: 'Green Gold · Widget Demo',
-  description: 'Green Gold sürdürülebilirlik widget’ının canlı önizlemesi.',
+  title: 'Misafir ekranı demosu · GreenGold Stay',
+  description: 'GreenGold Stay misafir ekranının canlı önizlemesi (temsili veriler).',
 };
 
 // PUBLIC sayfa: auth YOK, getUser() YOK, oturum token'ı KULLANILMAZ.
@@ -20,17 +23,15 @@ export default function DemoPage() {
       {/* Üst bar (public — panel shell'i değil) */}
       <header className="border-b border-[var(--ds-color-border)] bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4 sm:px-8">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-[var(--ds-palette-ink-900)] font-sans tracking-tight text-[var(--ds-palette-sun-300)]">
-              G
-            </span>
+          <Link href="/" className="flex items-center gap-2.5 rounded-lg no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-color-data-1)]/40" aria-label="GreenGold Stay ana sayfa">
+            <Image src={BRAND_LOGO.src} alt="" width={40} height={40} className="rounded-full" priority />
             <div className="leading-tight">
-              <div className="text-[13px] font-bold tracking-[0.14em] text-[var(--ds-color-heading)]">
-                GREEN GOLD
+              <div className="text-lg font-bold tracking-[-0.055em] text-[var(--ds-color-heading)]">
+                GreenGold<span className="font-normal"> Stay</span>
               </div>
-              <div className="text-[11px] text-neutral-500">Widget Demo</div>
+              <div className="text-xs text-neutral-500">Misafir ekranı demosu</div>
             </div>
-          </div>
+          </Link>
           <Link
             href="/login"
             className="inline-flex min-h-[44px] items-center rounded-full bg-[var(--ds-palette-pine-700)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40"
@@ -50,9 +51,9 @@ export default function DemoPage() {
             Misafirin gördüğü sürdürülebilirlik adımı
           </h1>
           <p className="mt-4 text-sm leading-relaxed text-[var(--ds-color-text-muted)] sm:text-base">
-            Green Gold widget’ı, otelin rezervasyon/checkout akışına küçük bir
-            adım ekler: misafir konaklamasının tahmini karbon etkisini görür ve
-            dilerse bir katkı adımı seçer. Aşağıdaki önizleme canlıdır.
+            GreenGold Stay misafir ekranı, otelin rezervasyon adımına yerleşir:
+            misafir konaklamasının tahmini karbon ayak izini görür ve dilerse gönüllü
+            katkı seçeneğini tercih eder. Aşağıdaki önizleme canlıdır; değerler temsilidir.
           </p>
           <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-[var(--ds-color-border)] bg-white px-3.5 py-1.5 text-xs font-medium text-[var(--ds-color-text-muted)]">
             Giriş yapmadan inceleyebilirsiniz — hesap gerekmez.
@@ -91,7 +92,13 @@ export default function DemoPage() {
         {/* Canlı önizleme veya nazik "kullanılamıyor" mesajı */}
         {demoKey ? (
           <div className="mt-8">
-            <GuestDemoWidget publicKey={demoKey} apiBase={apiBase} allowStoredPreview={false} />
+            <GuestDemoWidget
+              publicKey={demoKey}
+              apiBase={apiBase}
+              allowStoredPreview={false}
+              fixedPreview={DEMO_WIDGET_PREVIEW}
+              initialNights={2}
+            />
           </div>
         ) : (
           <div className="mt-8 rounded-2xl border border-[var(--ds-color-border)] bg-white p-8 text-center">

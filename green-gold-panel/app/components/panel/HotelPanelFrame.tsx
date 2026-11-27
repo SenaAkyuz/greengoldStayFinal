@@ -85,9 +85,14 @@ export function HotelPanelFrame({
       topbar={
         <>
           {isDemo && (
-            <span className={styles.hideXs}>
-              <StatusPill tone="warning">Demo modu — salt okunur</StatusPill>
-            </span>
+            <>
+              <span className={styles.hideXs}>
+                <StatusPill tone="warning">Demo hesabı · veriler temsilidir</StatusPill>
+              </span>
+              <span className={styles.showXs}>
+                <StatusPill tone="warning">Demo</StatusPill>
+              </span>
+            </>
           )}
           {/* Dar ekranda menüdeki "Güvenli çıkış" kullanılır (aynı eylem). */}
           <SignOutControl variant="top" />
@@ -105,11 +110,6 @@ export function HotelPanelFrame({
         </>
       }
     >
-      {isDemo && (
-        <div className={styles.demoStrip} role="note">
-          Bu veriler <strong>temsilidir</strong>; gerçek performans ölçümü değildir.
-        </div>
-      )}
       {children}
     </AppFrame>
   );

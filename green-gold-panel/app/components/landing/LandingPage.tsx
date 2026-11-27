@@ -84,7 +84,7 @@ export function LandingPage() {
               <dl className={styles.sampleStats}>
                 <div><dt>Misafir ekranını gören oturum</dt><dd>1.240</dd></div>
                 <div><dt>Gönüllü katkı tercihi</dt><dd>71<span> oturum</span></dd></div>
-                <div><dt>Seçilen konaklamaların tahmini emisyonu</dt><dd>873<span> kg CO₂e</span></dd></div>
+                <div><dt>Seçilen konaklamaların tahmini emisyonu</dt><dd>8.520<span> kg CO₂e</span></dd></div>
               </dl>
             </div>
           </div>
@@ -372,15 +372,15 @@ function GuestCardSample({ expanded = false }: { expanded?: boolean }) {
         <p className={styles.gcTitle}>Daha sürdürülebilir bir konaklamayı destekle</p>
         <div className={styles.gcSummary}>
           <div><span>Konaklamanız</span><b>2 gece</b></div>
-          <div><span>Tahmini ayak iziniz</span><b className={styles.gcBig}>≈ 1,37 <small>kg CO₂e</small></b></div>
+          <div><span>Tahmini ayak iziniz</span><b className={styles.gcBig}>≈ 120 <small>kg CO₂e</small></b></div>
         </div>
         {expanded && (
           <>
             <div className={styles.gcOption}>
               <span className={styles.gcCheck} aria-hidden="true">✓</span>
-              <span><b>Bu seçeneği tercih ediyorum</b><small>0,02 € × 2 gece</small></span>
+              <span><b>Bu seçeneği tercih ediyorum</b><small>1,50 € × 2 gece</small></span>
             </div>
-            <div className={styles.gcTotal}><span>Toplam katkı</span><b>0,04 €</b></div>
+            <div className={styles.gcTotal}><span>Toplam katkı</span><b>3,00 €</b></div>
           </>
         )}
         <div className={styles.gcBtn}>Tercihimi kaydet</div>
@@ -408,7 +408,7 @@ function PanelSample() {
       <div className={styles.pcStats}>
         <div><span>Görüntülenme</span><b>1.240</b><small>+%12 önceki döneme göre</small></div>
         <div><span>Katkı tercihi</span><b>71</b><small>%5,7 uçtan uca oran</small></div>
-        <div><span>Tahmini emisyon</span><b>873 <small>kg CO₂e</small></b><small>seçilen konaklamalar</small></div>
+        <div><span>Tahmini emisyon</span><b>8.520 <small>kg CO₂e</small></b><small>seçilen konaklamalar</small></div>
       </div>
       <div className={styles.pcBody}>
         <div>
@@ -421,7 +421,7 @@ function PanelSample() {
         </div>
         <div className={styles.pcSide}>
           <p className={styles.pcLabel}>Misafir ekranındaki tahmin</p>
-          <b>0,687 <small>kg CO₂e / oda-gece</small></b>
+          <b>60 <small>kg CO₂e / oda-gece</small></b>
           <p>Ölçüm ortağının onaylı verisi · Kapsam 1 + 2</p>
           <span className={styles.pcLive}>Yayında · Ekim</span>
         </div>

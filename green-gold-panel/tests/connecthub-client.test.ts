@@ -24,7 +24,11 @@ describe('connecthub istemcisi', () => {
   it('Bearer token gönderir, hotel_id göndermez, önbelleğe almaz', async () => {
     const fn = stubFetch(200, { success: true, data: { ok: 1 }, error: null });
     await connecthub.periods('TOKEN', 2026);
-    const [url, init] = fn.mock.calls[0] as [string, RequestInit];
+    // Okuma uçlarında önce oturumun rolü okunur (demo hesabı; aynı token, salt okuma).
+    const calls = fn.mock.calls as unknown as [string, RequestInit][];
+    const role = calls.filter(([u]) => u.endsWith('/dashboard/hotel'));
+    expect(role.every(([, i]) => (i.headers as Record<string, string>).Authorization === 'Bearer TOKEN' && !i.method)).toBe(true);
+    const [url, init] = calls.find(([u]) => !u.endsWith('/dashboard/hotel'))!;
     expect(url).toMatch(/\/dashboard\/carbon-provider\/connecthub\/periods\?year=2026$/);
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer TOKEN');
     expect(init.cache).toBe('no-store');

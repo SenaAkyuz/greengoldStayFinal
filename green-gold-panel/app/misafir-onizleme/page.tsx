@@ -3,6 +3,7 @@ import { getHotel, getApiBaseUrl } from '@/lib/api';
 import { PageHeader, Notice } from '../components/ui';
 import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { GuestDemoWidget } from '../components/GuestDemoWidget';
+import { DEMO_WIDGET_PREVIEW } from '@/lib/demo/dataset';
 
 export default async function GuestPreviewPage() {
   const token = await requireAccessToken();
@@ -50,6 +51,8 @@ export default async function GuestPreviewPage() {
             publicKey={hotel.public_widget_key}
             apiBase={getApiBaseUrl()}
             allowStoredPreview={hotel.role === 'demo_viewer'}
+            fixedPreview={hotel.role === 'demo_viewer' ? DEMO_WIDGET_PREVIEW : null}
+            initialNights={hotel.role === 'demo_viewer' ? 2 : 1}
           />
         )}
       </div>

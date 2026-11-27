@@ -82,6 +82,8 @@ export interface InteractionFunnel {
   };
 }
 
+import { demoGet, fetchHotelRaw, hotelForSession } from './demo/router';
+
 interface Envelope<T> {
   success: boolean;
   data: T | null;
@@ -92,6 +94,9 @@ async function apiGet<T>(
   path: string,
   token: string,
 ): Promise<{ data: T | null; error: string | null }> {
+  // Demo hesabı: okuma uçları temsili veriyle karşılanır (lib/demo/router.ts).
+  const demo = await demoGet<T>(API_BASE_URL, path, token);
+  if (demo) return demo;
   try {
     const res = await fetch(`${API_BASE_URL}${path}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -159,7 +164,10 @@ export function getDaily(token: string, range?: string) {
 }
 
 export function getHotel(token: string) {
-  return apiGet<HotelInfo>('/dashboard/hotel', token);
+  // İstek başına bir kez okunur; demo oturumunda fiyat alanları temsili değerlerle.
+  return fetchHotelRaw(API_BASE_URL, token).then(({ data, error }) =>
+    data ? { data: hotelForSession(data), error: null } : { data: null, error },
+  );
 }
 
 export async function updateHotel(

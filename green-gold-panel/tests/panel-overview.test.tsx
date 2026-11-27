@@ -164,7 +164,7 @@ describe('HotelPanelFrame — eski menüyle aynı adresler', () => {
   });
   it('demo: salt okunur rozeti + temsili veri şeridi; çıkış düğmeleri', () => {
     const html = renderToStaticMarkup(<HotelPanelFrame hotelName="Deneme Otel" isDemo>içerik</HotelPanelFrame>);
-    expect(html).toContain('Demo modu — salt okunur');
+    expect(html).toContain('Demo hesabı · veriler temsilidir');
     expect(html).toContain('temsilidir');
     expect(html).toContain('Hesap değiştir');
     expect(html).toContain('Güvenli çıkış');

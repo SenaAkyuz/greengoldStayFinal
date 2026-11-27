@@ -119,8 +119,11 @@ describe('submitPeriodEntries (Server Action)', () => {
 });
 
 describe('saveOccupancyAction (yalnız doluluk — ölçüm ortağına istek yok)', () => {
+  // Demo rol sorgusu (GET /dashboard/hotel, salt okuma) iş isteklerinden ayrı tutulur.
   const requests = (calls: { url: string; init: RequestInit }[]) =>
-    calls.map((c) => `${c.init.method ?? 'GET'} ${c.url.replace(/^.*\/connecthub/, '')}`);
+    calls
+      .filter((c) => !c.url.endsWith('/dashboard/hotel'))
+      .map((c) => `${c.init.method ?? 'GET'} ${c.url.replace(/^.*\/connecthub/, '')}`);
 
   it('geçerli değer: yalnız PUT …/occupancy; kalem listesi, kayıt gönderimi YOK; sayfalar yenilenir', async () => {
     const calls = router();

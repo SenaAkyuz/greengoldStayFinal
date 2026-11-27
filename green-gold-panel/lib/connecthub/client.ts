@@ -22,6 +22,7 @@ import type {
   SubmitPeriodInput,
   SubmitPeriodResult,
 } from './types';
+import { demoGet } from '../demo/router';
 
 export interface ApiResult<T> {
   data: T | null;
@@ -52,6 +53,11 @@ export async function request<T>(
   method: 'GET' | 'PUT' | 'POST' = 'GET',
   body?: unknown,
 ): Promise<ApiResult<T>> {
+  if (method === 'GET') {
+    // Demo hesabı: okuma uçları temsili veriyle (yazma her zaman API'ye gider).
+    const demo = await demoGet<T>(apiBase(), path, token);
+    if (demo) return { ...demo, code: demo.error ? 'not_found' : null, status: demo.error ? 404 : 200 };
+  }
   let res: Response;
   try {
     res = await fetch(`${apiBase()}${path}`, {

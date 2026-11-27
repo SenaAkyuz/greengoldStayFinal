@@ -12,7 +12,7 @@ const TAG = 'green-gold-widget';
 const DEFINE_TIMEOUT_MS = 8000;
 
 type LoadState = 'loading' | 'ready' | 'error';
-type PreviewOverride = {
+export type PreviewOverride = {
   amount_per_night: number;
   estimated_co2_per_night_kg: number;
   currency: string;
@@ -44,20 +44,25 @@ export function GuestDemoWidget({
   publicKey,
   apiBase,
   allowStoredPreview,
+  fixedPreview,
+  initialNights = 1,
 }: {
   publicKey: string;
   apiBase: string;
   allowStoredPreview: boolean;
+  /** Demo senaryosu: temsili gecelik değerler (yalnız önizleme; veritabanına dokunmaz). */
+  fixedPreview?: PreviewOverride | null;
+  initialNights?: number;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const elRef = useRef<HTMLElement | null>(null);
-  const [nights, setNights] = useState(1);
+  const [nights, setNights] = useState(initialNights);
   const [rooms, setRooms] = useState(1);
   const [lang, setLang] = useState<'tr' | 'en'>('tr');
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const rawPreview = useSyncExternalStore(subscribePreview, readPreview, readServerPreview);
   const storedPreview = useMemo(() => parsePreview(rawPreview), [rawPreview]);
-  const previewOverride = allowStoredPreview ? storedPreview : null;
+  const previewOverride = fixedPreview ?? (allowStoredPreview ? storedPreview : null);
   // Yeniden dene: script'i baştan enjekte etmek için sayaç.
   const [attempt, setAttempt] = useState(0);
 

@@ -53,6 +53,8 @@ a.month:focus-visible { outline: 3px solid var(--ds-color-focus); outline-offset
 
 .avatar { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--ds-color-surface-muted); border: var(--ds-border-width) solid var(--ds-color-border-strong); color: var(--ds-color-heading); font-size: var(--ds-text-xs); font-weight: 700; }
 @media (max-width: 479px) { .hideXs { display: none; } }
+.showXs { display: none; }
+@media (max-width: 479px) { .showXs { display: inline-flex; } }
 
 .pageBar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--ds-space-3); }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--ds-space-5); }
@@ -109,7 +111,6 @@ a.monthRow:focus-visible { outline: 3px solid var(--ds-color-focus); outline-off
 .sideAction:hover { background: var(--ds-sidebar-bg-elevated); }
 .sideAction:focus-visible { outline: 3px solid var(--ds-color-gold-on-dark); outline-offset: 2px; }
 .sideNote { margin: var(--ds-space-3) 0 0; }
-.demoStrip { margin-bottom: var(--ds-space-5); padding: var(--ds-space-2) var(--ds-space-4); border-radius: var(--ds-radius-sm); border: var(--ds-border-width) solid var(--ds-tone-warning-border); background: var(--ds-tone-warning-bg); color: var(--ds-tone-warning-fg); font-size: var(--ds-text-xs); text-align: center; }
 .gapBottom { margin-bottom: var(--ds-space-4); }
 .fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 /* Doluluk formu (tüketimden ayrı) */
