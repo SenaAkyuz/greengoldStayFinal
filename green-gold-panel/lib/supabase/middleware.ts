@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isAuthCookie, sessionCookieOptions } from './cookie-policy';
+import { devOnlyPublicPrefixes } from '../dev-only';
 
 // Public: oturum gerekmez (giriş, şifre kurtarma, recovery callback, public demo).
 const PUBLIC_PREFIXES = [
@@ -13,6 +14,11 @@ const PUBLIC_PREFIXES = [
   // kullanıcı da görebilmeli. Yalnızca public GET /widget/config kullanır.
   '/demo',
 ];
+
+// Yalnız TAM eşleşen herkese açık yollar. `/` = ürün ana sayfası (KD-1):
+// girişsiz ziyaretçi ana sayfayı, girişli kullanıcı aynı adreste genel bakışı
+// görür (karar sayfada, sunucuda doğrulanmış oturumla verilir).
+const PUBLIC_EXACT = ['/'];
 
 // Guest-only: girişliyken panele geri at. Kurtarma sayfaları BURADA OLMAMALI —
 // recovery oturumu da "girişli" sayılır; /reset-password'ı guest-only yapmak
@@ -57,7 +63,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = matchesPrefix(path, PUBLIC_PREFIXES);
+  // Geliştirme araçları (ör. /tasarim) yalnızca NODE_ENV=development iken
+  // oturumsuz açılır; production'da liste boştur.
+  const isPublic =
+    PUBLIC_EXACT.includes(path) ||
+    matchesPrefix(path, [...PUBLIC_PREFIXES, ...devOnlyPublicPrefixes()]);
   const isGuestOnly = matchesPrefix(path, GUEST_ONLY_PREFIXES);
 
   const finish = (response: NextResponse) => {

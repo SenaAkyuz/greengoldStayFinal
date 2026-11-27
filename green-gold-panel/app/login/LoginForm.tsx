@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+import { BRAND_LOGO, MARKETING_IMAGES } from '@/lib/marketing-assets';
 import { Suspense, useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
@@ -7,7 +9,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { normalizeEmailInput } from '@/lib/email';
 import { demoLogin, type DemoLoginState } from './actions';
-import { LeafIcon } from '../components/LeafIcon';
 
 /**
  * Supabase auth hatasını kullanıcıya gösterilecek mesaja çevirir.
@@ -72,43 +73,38 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
   }
 
   return (
-    <main className="grid flex-1 bg-[#f5f7f3] lg:grid-cols-[52%_48%]">
-      <section className="relative hidden overflow-hidden bg-[#064b3d] p-12 text-white lg:flex lg:flex-col lg:justify-between">
-        <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full border border-white/10" />
-        <div className="absolute -bottom-32 -left-32 h-[430px] w-[430px] rounded-full border border-[#c9eb47]/20" />
-        <div className="relative flex items-center gap-3">
-          <span className="grid h-12 w-12 place-items-center rounded-full border border-[#c9eb47] font-[Georgia] text-xl text-[#c9eb47]">G</span>
-          <div>
-            <div className="font-bold tracking-[0.18em]">GREEN GOLD</div>
-            <div className="mt-1 text-[9px] tracking-[0.26em] text-[#9cc7ba]">HOTEL PORTAL</div>
-          </div>
-        </div>
+    <main className="grid flex-1 bg-[var(--ds-color-bg-soft)] lg:grid-cols-[52%_48%]">
+      <section className="relative isolate hidden overflow-hidden bg-[var(--ds-palette-ink-900)] p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <Image src={MARKETING_IMAGES.login.src} alt="" fill sizes="52vw" priority className="-z-20 object-cover" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[rgba(7,42,43,0.96)] via-[rgba(7,42,43,0.72)] to-[rgba(7,42,43,0.5)]" />
+        <Link href="/" className="relative flex w-fit items-center gap-3 rounded-lg text-white no-underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-palette-sun-300)]">
+          <Image src={BRAND_LOGO.src} alt="" width={44} height={44} className="rounded-full" />
+          <span className="text-2xl font-bold tracking-[-0.058em]">GreenGold<span className="font-normal"> Stay</span></span>
+        </Link>
         <div className="relative max-w-xl">
-          <div className="text-xs font-bold uppercase tracking-[0.2em] text-[#c9eb47]">Sürdürülebilir konaklama</div>
-          <h2 className="mt-5 font-[Georgia] text-5xl leading-[1.08]">Otelinizin Green Stay yolculuğunu yönetin.</h2>
-          <p className="mt-5 max-w-md text-sm leading-7 text-[#b9d3cb]">Widget etkileşimlerini, tahmini karbon etkisini ve entegrasyon ayarlarını tek panelden takip edin.</p>
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--ds-palette-sun-300)]">Otel yönetim paneli</div>
+          <h2 className="mt-5 font-sans text-5xl font-medium leading-[1.06] tracking-[-0.055em]">Misafir ilgisini ve tahmini etkiyi tek yerden izleyin.</h2>
+          <p className="mt-5 max-w-md text-sm leading-7 text-[var(--ds-color-inverse-muted)]">Misafir ekranı etkileşimleri, karbon ölçümü ve entegrasyon ayarları tek panelde.</p>
         </div>
-        <div className="relative text-xs text-[#8fb9ae]">Green Gold · Hotel Sustainability Platform</div>
+        <div className="relative text-xs text-[var(--ds-color-inverse-muted)]">Ölçüm altyapısı: 3P Metrics · Sonuçlar tahminidir.</div>
       </section>
 
       <div className="flex items-center justify-center px-5 py-14">
       <div className="w-full max-w-md">
-        <div className="mb-8 flex items-center gap-3 lg:hidden">
-          <span className="grid h-11 w-11 place-items-center rounded-full bg-[#064b3d] text-[#c9eb47]">
-            <LeafIcon />
-          </span>
+        <Link href="/" className="mb-8 flex w-fit items-center gap-3 no-underline lg:hidden">
+          <Image src={BRAND_LOGO.src} alt="" width={42} height={42} className="rounded-full" />
           <div>
-            <div className="text-[15px] font-bold tracking-[0.14em] text-[#12372c]">
-              GREEN GOLD
+            <div className="text-lg font-bold tracking-[-0.05em] text-[var(--ds-color-heading)]">
+              GreenGold<span className="font-normal"> Stay</span>
             </div>
-            <div className="text-xs text-neutral-500">Otel Paneli</div>
+            <div className="text-xs text-neutral-500">Otel paneli</div>
           </div>
-        </div>
+        </Link>
 
         <div className="gg-card p-7 sm:p-9">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#347866]">Otel yönetim paneli</div>
-          <h1 className="mt-3 font-[Georgia] text-4xl font-medium text-[#102b22]">Giriş yap</h1>
-          <p className="mt-2 mb-7 text-sm text-[#5a6862]">
+          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ds-palette-pine-600)]">Otel yönetim paneli</div>
+          <h1 className="mt-3 font-sans tracking-tight text-4xl font-medium text-[var(--ds-color-heading)]">Giriş yap</h1>
+          <p className="mt-2 mb-7 text-sm text-[var(--ds-color-text-muted)]">
             Otel yönetim paneline erişmek için giriş yapın.
           </p>
 
@@ -157,7 +153,7 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 onChange={(e) =>
                   setEmail(normalizeEmailInput(e.currentTarget.value))
                 }
-                className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
+                className="w-full rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] px-3 py-2.5 text-sm text-[var(--ds-color-heading)] outline-none focus:border-[var(--ds-palette-pine-600)] focus:ring-2 focus:ring-[var(--ds-color-data-1)]/20"
               />
             </div>
 
@@ -183,14 +179,14 @@ function LoginInner({ demoEnabled }: { demoEnabled: boolean }) {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.currentTarget.value)}
-                className="w-full rounded-lg border border-[#d8e1da] bg-[#fbfcfb] px-3 py-2.5 text-sm text-[#17372d] outline-none focus:border-[#347866] focus:ring-2 focus:ring-[#5c9f80]/20"
+                className="w-full rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] px-3 py-2.5 text-sm text-[var(--ds-color-heading)] outline-none focus:border-[var(--ds-palette-pine-600)] focus:ring-2 focus:ring-[var(--ds-color-data-1)]/20"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="min-h-[44px] w-full rounded-lg bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40 disabled:opacity-60"
+              className="min-h-[44px] w-full rounded-lg bg-[var(--ds-palette-pine-700)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-[var(--ds-color-data-1)]/40 disabled:opacity-60"
             >
               {loading ? 'Giriş yapılıyor…' : 'Giriş yap'}
             </button>

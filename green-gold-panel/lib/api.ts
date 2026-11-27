@@ -141,6 +141,23 @@ export function getReport(token: string, range?: string) {
   return apiGet<DashboardReport>(`/dashboard/report${rangeQs(range)}`, token);
 }
 
+/** Açık tarih aralığıyla rapor (önceki dönem karşılaştırması için; YYYY-MM-DD, dahil). */
+export function getReportBetween(token: string, from: string, to: string) {
+  return apiGet<DashboardReport>(
+    `/dashboard/report?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    token,
+  );
+}
+
+/** Gün bazlı tekil oturum serisi (GET /dashboard/daily). */
+export interface DailyInteraction {
+  period: { from: string; to: string };
+  days: { date: string; viewed: number; selected: number; clicked: number }[];
+}
+export function getDaily(token: string, range?: string) {
+  return apiGet<DailyInteraction>(`/dashboard/daily${rangeQs(range)}`, token);
+}
+
 export function getHotel(token: string) {
   return apiGet<HotelInfo>('/dashboard/hotel', token);
 }

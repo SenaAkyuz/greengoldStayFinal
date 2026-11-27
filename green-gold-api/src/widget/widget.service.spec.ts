@@ -94,6 +94,77 @@ describe('WidgetService.getConfig', () => {
   });
 });
 
+describe('WidgetService.getConfig — ConnectHub ölçümü (3P yazılı izni: Kapsam 1+2, faktör paylaşılmaz)', () => {
+  const connectHubPricing = (scopes: number[]) => ({
+    provider: 'threepmetrics',
+    version: 'threepmetrics-connecthub-factors-v1',
+    coefficient_kg: 12.34,
+    amount_per_night: 0.31,
+    internal_use: true,
+    coverage: { scopes_calculated: scopes, label: 'Kapsam 1 + Kapsam 2' },
+    factor_inventory: { id: 'inv-secret-id', name: 'Green Gold Test – 2026' },
+    factor_release: { release_id: 'rel-1', content_hash: 'hash-secret' },
+    calculation_method: 'onaylı kayıtlar × faktör paketi',
+    external_account_id: 'unit-secret-id',
+  });
+
+  it('Kapsam 1/2 ölçümü → measured_scope_1_2; faktör/paket/birim ayrıntısı yanıtta YOK', async () => {
+    const { service } = makeService({
+      hotels: [
+        hotelRow({
+          estimated_co2_per_night_kg: 12.34,
+          widget_settings: { carbon_pricing: connectHubPricing([1, 2]) },
+        }),
+      ],
+    });
+    const cfg = await service.getConfig('key-active');
+    expect(cfg.carbon_estimate_basis).toBe('measured_scope_1_2');
+    expect(cfg.carbon_estimate_source).toBe('hotel');
+    expect(cfg.estimated_co2_per_night_kg).toBeCloseTo(12.34, 6);
+    const json = JSON.stringify(cfg);
+    for (const leak of [
+      'inv-secret-id',
+      'hash-secret',
+      'rel-1',
+      'unit-secret-id',
+      'factor',
+      'coverage',
+      'internal_use',
+      'calculation_method',
+    ]) {
+      expect(json).not.toContain(leak);
+    }
+  });
+
+  it('Kapsam 3 içeren ya da kapsamı bilinmeyen fiyat → açıklama yok', async () => {
+    for (const pricing of [
+      connectHubPricing([1, 2, 3]),
+      { ...connectHubPricing([1]), coverage: undefined },
+    ]) {
+      const { service } = makeService({
+        hotels: [hotelRow({ widget_settings: { carbon_pricing: pricing } })],
+      });
+      const cfg = await service.getConfig('key-active');
+      expect(cfg.carbon_estimate_basis).toBeUndefined();
+    }
+  });
+
+  it('eski CCA ölçümü (sürüm etiketi farklı) → açıklama yok, eski davranış', async () => {
+    const { service } = makeService({
+      hotels: [
+        hotelRow({
+          widget_settings: {
+            carbon_pricing: { provider: 'threepmetrics', coefficient_kg: 8 },
+          },
+        }),
+      ],
+    });
+    const cfg = await service.getConfig('key-active');
+    expect(cfg.carbon_estimate_basis).toBeUndefined();
+    expect(cfg.carbon_estimate_source).toBe('hotel');
+  });
+});
+
 describe("WidgetService.getConfig — show_estimated_impact & content_overrides (Princes' Palace pilot)", () => {
   it('widget_settings yoksa -> show_estimated_impact varsayılan false, CO2 katsayısı 0 (yanıltıcı sayı sızmaz)', async () => {
     const { service } = makeService({ hotels: [hotelRow()] });

@@ -1,7 +1,17 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
+import { Button, Card, CardHeader, Notice, StatusPill } from './ui';
+import styles from './panel/panel.module.css';
 
+/**
+ * WEB SİTESİ WIDGET'I kartı (UX-6.1 / 6.2 / 6.4). Betik adresi geçersizse
+ * (yer tutucu, https değil) gömme kodu KOPYALANAMAZ — yanlış adresli kodun
+ * otel sitesine yapıştırılması engellenir. İzinli domain ayarına doğrudan
+ * bağlantı verilir. Ortak anahtar maskelenmez (gömme kodunda zaten görünür);
+ * servis anahtarı burada asla yer almaz.
+ */
 export function IntegrationCard({
   embedCode,
   allowedOrigins,
@@ -9,128 +19,103 @@ export function IntegrationCard({
   apiBaseUrl,
   publicKey,
   widgetSrcConfigured,
+  settingsHref = '/ayarlar#izinli-domainler',
 }: {
   embedCode: string;
   allowedOrigins?: string[];
   widgetSrc: string;
   apiBaseUrl: string;
   publicKey: string;
+  /** Betik adresi geçerli mi (yer tutucu / https dışı değil). */
   widgetSrcConfigured: boolean;
+  settingsHref?: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   async function copy() {
+    if (!widgetSrcConfigured) return;
     try {
       await navigator.clipboard.writeText(embedCode);
       setCopied(true);
+      setCopyFailed(false);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      /* pano erişilemezse sessizce geç */
+      setCopyFailed(true);
     }
   }
 
   const origins = allowedOrigins ?? [];
-  const hasOrigins = origins.length > 0;
 
   return (
-    <section className="gg-card p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-sm font-semibold text-neutral-900">
-            Embed kodu
-          </h2>
-          <p className="mt-1 text-sm text-neutral-500">
-            Aşağıdaki kodu sitenizin ödeme (checkout) sayfasına yapıştırın.
-          </p>
-        </div>
-        <button
-          onClick={copy}
-          className="inline-flex min-h-[44px] shrink-0 items-center rounded-lg border border-[#cfdad2] px-3 text-sm font-medium text-[#315d50] transition hover:bg-[#f1f6f2] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/30"
-        >
-          {copied ? 'Kopyalandı ✓' : 'Kopyala'}
-        </button>
-      </div>
-
-      {/* Bağlantı bilgileri — public key BİLEREK maskelenmiyor (embed kodunda
-          zaten görünür, hassas değil). Service role burada asla yer almaz. */}
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <ConnectionField label="Widget script URL" value={widgetSrc} />
-        <ConnectionField label="API URL" value={apiBaseUrl} />
-        <ConnectionField label="Public widget key" value={publicKey} />
-      </div>
-
-      <pre className="mt-4 overflow-x-auto rounded-xl bg-[#073c32] p-4 text-xs leading-relaxed text-[#e9f4ef]">
-        <code>{embedCode}</code>
-      </pre>
-
-      <div className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs leading-relaxed text-neutral-600">
-        <strong className="font-semibold text-neutral-800">
-          Otel geliştiricisi için:
-        </strong>{' '}
-        Misafir oda/gece seçtikçe <code>data-rooms</code> ve{' '}
-        <code>data-nights</code> değerlerini rezervasyon formundan güncelleyin
-        (varsayılan 1). Misafir katkıyı onaylayınca widget{' '}
-        <code>greengold:contribution-selected</code> event&apos;ini fırlatır (
-        <code>detail.amount_total</code>); bu tutarı kendi checkout sepetinize
-        ekstra satır olarak ekleyin. Ödeme sizin mevcut altyapınızdan alınır.
-      </div>
+    <Card as="section" aria-labelledby="widget-card-title">
+      <CardHeader
+        id="widget-card-title"
+        title="Web sitesi widget’ı"
+        headingLevel={2}
+        description="Kendi ödeme (checkout) sayfası olan siteler için. Kodu misafirin oda/gece seçtiği adıma yapıştırın."
+        actions={
+          <Button
+            variant="secondary"
+            onClick={copy}
+            disabled={!widgetSrcConfigured}
+            aria-describedby={!widgetSrcConfigured ? 'embed-blocked' : undefined}
+          >
+            {copied ? 'Kopyalandı ✓' : 'Kodu kopyala'}
+          </Button>
+        }
+      />
 
       {!widgetSrcConfigured && (
-        <div
-          role="alert"
-          className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
-        >
-          Widget script adresi henüz yapılandırılmadı (
-          <code className="text-amber-900">NEXT_PUBLIC_WIDGET_SRC</code> /{' '}
-          <code className="text-amber-900">NEXT_PUBLIC_SITE_URL</code>{' '}
-          eksik). Yukarıdaki embed kodu geçici bir placeholder adres içeriyor
-          — canlıya almadan önce ayarlanmalı.
+        <div id="embed-blocked" className={styles.gapBottom}>
+          <Notice tone="warning" title="Kod henüz kullanılamaz">
+            Widget betik adresi yapılandırılmadı ya da https değil (<code>NEXT_PUBLIC_WIDGET_SRC</code> / <code>NEXT_PUBLIC_SITE_URL</code>).
+            Aşağıdaki kod yer tutucu adres içerdiği için kopyalanamaz; adres ayarlanınca etkinleşir.
+          </Notice>
+        </div>
+      )}
+      {copyFailed && (
+        <div className={styles.gapBottom}>
+          <Notice tone="info">Tarayıcı panoya erişime izin vermedi; kodu seçip elle kopyalayın.</Notice>
         </div>
       )}
 
-      {/* İzinli domain durumu */}
-      <div className="mt-5 border-t border-neutral-200 pt-4">
-        <h3 className="text-sm font-semibold text-neutral-900">
-          İzinli domain’ler
-        </h3>
-        <p className="mt-1 text-sm text-neutral-500">
-          Widget yalnızca Ayarlar’daki izinli domain’lerde çalışır.
-        </p>
+      <pre className={`${styles.code} ${!widgetSrcConfigured ? styles.codeBlocked : ''}`}>
+        <code>{embedCode}</code>
+      </pre>
 
-        {hasOrigins ? (
-          <ul className="mt-3 flex flex-wrap gap-2">
+      <dl className={`${styles.connGrid} ${styles.gapTop}`}>
+        <div><dt>Betik adresi</dt><dd>{widgetSrc}</dd></div>
+        <div><dt>API adresi</dt><dd>{apiBaseUrl}</dd></div>
+        <div><dt>Ortak widget anahtarı</dt><dd>{publicKey}</dd></div>
+      </dl>
+
+      <div className={styles.originBox}>
+        <div className={styles.inlineRow} style={{ justifyContent: 'space-between' }}>
+          <p className={styles.itemName}>İzinli domain’ler</p>
+          <Link className={styles.textLink} href={settingsHref}>İzinli domainleri düzenle →</Link>
+        </div>
+        {origins.length > 0 ? (
+          <ul className={styles.originList}>
             {origins.map((o) => (
-              <li
-                key={o}
-                className="rounded-lg border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-xs font-medium text-neutral-700"
-              >
-                {o}
-              </li>
+              <li key={o}><StatusPill tone="success" dot={false}>{o}</StatusPill></li>
             ))}
           </ul>
         ) : (
-          <div
-            role="alert"
-            className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-          >
-            Henüz izinli domain eklenmemiş — widget hiçbir sitede çalışmaz.
-            Ayarlar’dan otelinizin domain’ini ekleyin.
-          </div>
+          <Notice tone="warning">Henüz izinli domain yok — widget hiçbir sitede görünmez. Otelinizin sitesini https adresiyle ekleyin.</Notice>
         )}
+        <p className={styles.small}>Widget yalnız bu adreslerde çalışır; diğer sitelerde gizlenir (403).</p>
       </div>
-    </section>
-  );
-}
 
-function ConnectionField({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-500">
-        {label}
-      </div>
-      <div className="mt-1 break-all font-mono text-xs text-neutral-800">
-        {value}
-      </div>
-    </div>
+      <details className={styles.details}>
+        <summary>Otel geliştiricisi için ayrıntılar</summary>
+        <p className={styles.small}>
+          Misafir oda/gece seçtikçe <code>data-rooms</code> ve <code>data-nights</code> değerlerini rezervasyon formundan
+          güncelleyin (varsayılan 1). Misafir tercihini kaydedince widget <code>greengold:contribution-selected</code>{' '}
+          olayını yayınlar (<code>detail.amount_total</code>); bu tutarı kendi sepetinize ekstra satır olarak ekleyin. Ödeme sizin
+          mevcut altyapınızdan alınır; widget ödeme almaz.
+        </p>
+      </details>
+    </Card>
   );
 }

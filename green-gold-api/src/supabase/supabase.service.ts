@@ -36,8 +36,21 @@ export class SupabaseService implements OnModuleInit {
     });
   }
 
-  /** service_role client (RLS bypass). */
+  /**
+   * service_role client (RLS bypass).
+   *
+   * İstemci `onModuleInit`'te oluşur; başka bir provider'ın constructor'ında
+   * okunamaz (Nest constructor'ları önce çalıştırır). Erken okuma sessizce
+   * `undefined` dönmek yerine açık hata verir — çağıran taraf istemciyi
+   * yakalamamalı, her kullanımda `supabase.db` üzerinden almalıdır.
+   */
   get db(): SupabaseClient {
+    if (!this.client) {
+      throw new Error(
+        'SupabaseService henüz başlatılmadı: `db` constructor içinde okunamaz; ' +
+          'kullanım anında `this.supabase.db` üzerinden alınmalı.',
+      );
+    }
     return this.client;
   }
 

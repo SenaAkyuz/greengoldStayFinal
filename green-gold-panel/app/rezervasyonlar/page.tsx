@@ -1,7 +1,8 @@
 import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getReservations, type ReservationSummary } from '@/lib/api';
 import { formatMinorAmount } from '@/lib/money';
-import { AppShell } from '../components/AppShell';
+import { PageHeader, Notice } from '../components/ui';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { ComingSoon } from '../components/ComingSoon';
 
 const BOOKING_STATUS_LABEL: Record<string, string> = {
@@ -42,22 +43,19 @@ export default async function ReservationsPage() {
   const hasReservations = !!reservations && reservations.items.length > 0;
 
   return (
-    <AppShell hotelName={hotel?.hotel_name} city={hotel?.city} active="reservations" isDemo={hotel?.role === 'demo_viewer'}>
-      <main className="gg-page">
-        <div>
-          <div className="gg-kicker">Rezervasyon sistemi bağlantısı</div>
-          <h1 className="gg-title">
-            Rezervasyonlar
-          </h1>
-          <p className="gg-subtitle">
-            Rezervasyon sisteminizden (ör. HotelRunner) gelen rezervasyonlar · bu ay
-          </p>
-        </div>
+    <HotelPanelFrame hotelName={hotel?.hotel_name} city={hotel?.city} title="Rezervasyonlar" isDemo={hotel?.role === 'demo_viewer'}>
+      <div className="gg-page gg-page--framed">
+        <PageHeader
+          size="compact"
+          eyebrow="Rezervasyon sistemi bağlantısı"
+          title="Rezervasyonlar"
+          description={<>Rezervasyon sisteminizden (ör. HotelRunner) gelen rezervasyonlar · bu ay</>}
+        />
 
         {reservationsRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Notice tone="warning" className="mt-6">
             Rezervasyonlar yüklenemedi: {reservationsRes.error}
-          </div>
+          </Notice>
         )}
 
         {hasReservations ? (
@@ -79,8 +77,8 @@ export default async function ReservationsPage() {
             />
           )
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }
 

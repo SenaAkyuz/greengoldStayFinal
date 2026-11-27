@@ -33,7 +33,7 @@ import { createSampleSource } from './carbon-entry-source';
  */
 
 const inputClass =
-  'mt-1.5 w-full rounded-lg border border-[#d8e1da] bg-white px-3 py-2.5 text-sm text-[#17372d] focus:outline-none focus:ring-2 focus:ring-emerald-200';
+  'mt-1.5 w-full rounded-lg border border-[var(--ds-color-border)] bg-white px-3 py-2.5 text-sm text-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-emerald-200';
 
 type NumericField =
   | 'rooms'
@@ -145,7 +145,7 @@ export function CarbonProviderPanel({
         <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">
           Karbon ölçümü
         </span>
-        <h2 className="mt-2 text-xl font-semibold text-[#17372d]">
+        <h2 className="mt-2 text-xl font-semibold text-[var(--ds-color-heading)]">
           3pmetrics ölçümü
         </h2>
         <p className="mt-2 text-sm text-neutral-600">
@@ -157,8 +157,8 @@ export function CarbonProviderPanel({
 
       <div className="space-y-6 p-6">
         {!ready && (
-          <div className="rounded-xl border border-[#d8e1da] bg-[#f6f9f6] p-4">
-            <p className="text-sm font-semibold text-[#17372d]">
+          <div className="rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] p-4">
+            <p className="text-sm font-semibold text-[var(--ds-color-heading)]">
               3pmetrics bağlantısı hazırlanıyor
             </p>
             <p className="mt-2 text-sm text-neutral-600">
@@ -168,11 +168,11 @@ export function CarbonProviderPanel({
             </p>
             <p className="mt-2 text-sm text-neutral-600">
               O zamana kadar karbon hesabınızı{' '}
-              <strong className="font-medium text-[#17372d]">
+              <strong className="font-medium text-[var(--ds-color-heading)]">
                 Otele özgü hesap
               </strong>{' '}
               veya{' '}
-              <strong className="font-medium text-[#17372d]">
+              <strong className="font-medium text-[var(--ds-color-heading)]">
                 Bölgesel tahmin
               </strong>{' '}
               sekmesinden oluşturabilirsiniz; widget fiyatınız oradan güncellenir.
@@ -196,7 +196,7 @@ export function CarbonProviderPanel({
 
         {showSample && (
           <div>
-            <h3 className="text-sm font-semibold text-[#17372d]">
+            <h3 className="text-sm font-semibold text-[var(--ds-color-heading)]">
               Örnek: tüketim verisi girişi
             </h3>
             <p className="mt-1 mb-4 text-xs text-neutral-500">
@@ -215,7 +215,7 @@ export function CarbonProviderPanel({
         {status?.link && (
           <div className="rounded-xl border border-emerald-100 p-4 text-sm">
             <p className="text-xs text-neutral-500">Bağlı 3pmetrics hesabı</p>
-            <p className="mt-1 font-medium text-[#17372d]">
+            <p className="mt-1 font-medium text-[var(--ds-color-heading)]">
               {status.link.external_property_name ??
                 status.link.external_property_id}
             </p>
@@ -229,7 +229,7 @@ export function CarbonProviderPanel({
 
         {ready && !showSample && (
           <div>
-            <h3 className="text-sm font-semibold text-[#17372d]">
+            <h3 className="text-sm font-semibold text-[var(--ds-color-heading)]">
               1. Tüketim verilerinizi girin
             </h3>
             <p className="mt-1 mb-4 text-xs text-neutral-500">
@@ -250,7 +250,7 @@ export function CarbonProviderPanel({
         )}
 
         <div className={ready ? 'border-t border-neutral-100 pt-6' : ''}>
-          <h3 className="text-sm font-semibold text-[#17372d]">
+          <h3 className="text-sm font-semibold text-[var(--ds-color-heading)]">
             {ready ? '2. ' : ''}Ölçüm sonucunu al
           </h3>
           <p className="mt-1 text-xs text-neutral-500">
@@ -301,7 +301,7 @@ export function CarbonProviderPanel({
             type="button"
             onClick={fetchSummary}
             disabled={locked}
-            className="mt-4 rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            className="mt-4 rounded-lg bg-[var(--ds-palette-pine-700)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
           >
             {pending && !result ? 'Alınıyor…' : '3pmetrics sonucunu getir'}
           </button>
@@ -324,7 +324,7 @@ export function CarbonProviderPanel({
                   <span>{fmt(scope.total, 3)} tCO₂e</span>
                 </li>
               ))}
-              <li className="flex justify-between border-t border-neutral-100 pt-1 font-medium text-[#17372d]">
+              <li className="flex justify-between border-t border-neutral-100 pt-1 font-medium text-[var(--ds-color-heading)]">
                 <span>Toplam</span>
                 <span>{fmt(result.summary.totalEmissions, 3)} tCO₂e</span>
               </li>
@@ -333,7 +333,7 @@ export function CarbonProviderPanel({
               Konaklama payı %{fmt(result.pricing.room_share * 100, 1)} · Doluluk %
               {fmt(result.pricing.occupancy_percent, 1)}
             </p>
-            <p className="mt-1 text-sm font-medium text-[#17372d]">
+            <p className="mt-1 text-sm font-medium text-[var(--ds-color-heading)]">
               {fmt(result.pricing.coefficient_kg)} kgCO₂e / oda-gece · gecelik{' '}
               {fmt(result.pricing.amount_per_night)} {result.pricing.currency}
             </p>
@@ -351,7 +351,7 @@ export function CarbonProviderPanel({
               type="button"
               onClick={apply}
               disabled={disabled || pending || isDemo}
-              className="mt-4 rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="mt-4 rounded-lg bg-[var(--ds-palette-pine-700)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
               {pending ? 'Uygulanıyor…' : 'Widget fiyatına uygula'}
             </button>
@@ -363,7 +363,7 @@ export function CarbonProviderPanel({
             <p className="text-xs text-neutral-500">
               Widget fiyatını belirleyen ölçüm
             </p>
-            <p className="mt-1 text-sm font-medium text-[#17372d]">
+            <p className="mt-1 text-sm font-medium text-[var(--ds-color-heading)]">
               {status.active_measurement.period_start} —{' '}
               {status.active_measurement.period_end}
             </p>

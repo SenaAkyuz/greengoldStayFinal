@@ -2,19 +2,47 @@ import { render } from 'preact';
 import { Widget } from './widget';
 import { STYLES } from './styles';
 import { fetchConfig, fetchImpact, sendEvent } from './api';
+import { ensureFonts, fontBaseFrom } from './fonts';
 import type { Lang, WidgetConfig, WidgetEventType, WidgetImpact } from './types';
 
 const DEFAULT_API = 'http://localhost:3000';
 const TAG = 'green-gold-widget';
 
-function parseNights(raw: string | null): number {
+// Betiğin kendi adresi (IIFE yüklenirken bir kez okunur): DM Sans bu kökten
+// servis edilir (panel public/green-gold-widget-fonts). Bilinemezse sistem
+// yazı tipi kullanılır.
+const FONT_BASE = fontBaseFrom(
+  typeof document !== 'undefined'
+    ? (document.currentScript as HTMLScriptElement | null)?.src
+    : null,
+);
+
+// GreenGold Stay imza logosu: betiği servis eden panelin public/brand klasörü.
+const BRAND_LOGO = FONT_BASE
+  ? FONT_BASE.replace(/green-gold-widget-fonts\/$/, 'brand/greengold-logo.png')
+  : null;
+
+// API'nin olay doğrulamasıyla AYNI sınırlar (green-gold-api
+// src/widget/dto/create-widget-event.dto.ts: nights ≤ 365, rooms ≤ 1000).
+// Aralık dışı değer (ör. host sayfanın tarih farkını milisaniye vermesi)
+// geçersiz sayılır ve 1'e düşer: ekranda saçma toplam gösterilmez, olay da
+// API'de sessizce reddedilmez.
+const MAX_NIGHTS = 365;
+const MAX_ROOMS = 1000;
+
+function parseCount(raw: string | null, max: number): number {
   const n = Number(raw);
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+  if (!Number.isFinite(n) || n < 1) return 1;
+  const whole = Math.floor(n);
+  return whole <= max ? whole : 1;
+}
+
+function parseNights(raw: string | null): number {
+  return parseCount(raw, MAX_NIGHTS);
 }
 
 function parseRooms(raw: string | null): number {
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
+  return parseCount(raw, MAX_ROOMS);
 }
 
 function parseLang(raw: string | null): Lang {
@@ -62,7 +90,7 @@ function resolveJourneyId(attrValue: string | null): string {
 
 class GreenGoldWidget extends HTMLElement {
   static get observedAttributes(): string[] {
-    return ['data-nights', 'data-rooms', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source'];
+    return ['data-nights', 'data-rooms', 'data-lang', 'data-preview-amount', 'data-preview-co2', 'data-preview-currency', 'data-preview-source', 'data-preview-basis'];
   }
 
   private mount?: HTMLDivElement;
@@ -106,6 +134,9 @@ class GreenGoldWidget extends HTMLElement {
     // event'i yok — gizli bir element sahte görüntülenme/funnel verisi
     // üretmesin.
     if (this.trackerOnly) return;
+
+    // Görünen kart için yazı tipi (belgeye bir kez; hata → sistem yazı tipi).
+    ensureFonts(FONT_BASE);
 
     // Tek shadow root: remove+append'te attachShadow tekrar çağrılırsa patlar.
     // Yalnızca yoksa kur -> element güvenle yeniden bağlanabilir.
@@ -180,6 +211,9 @@ class GreenGoldWidget extends HTMLElement {
     const co2 = Number(this.getAttribute('data-preview-co2'));
     const currency = this.getAttribute('data-preview-currency');
     const source = this.getAttribute('data-preview-source') === 'regional' ? 'regional' : 'hotel';
+    // Önizleme fiyatı başka bir kaynaktan olabilir: ölçüm tabanı yalnız açıkça istenirse.
+    const basis =
+      this.getAttribute('data-preview-basis') === 'measured_scope_1_2' ? 'measured_scope_1_2' : undefined;
     if (!Number.isFinite(amount) || amount < 0 || !Number.isFinite(co2) || co2 <= 0 || !currency) return config;
     return {
       ...config,
@@ -188,6 +222,7 @@ class GreenGoldWidget extends HTMLElement {
       currency,
       carbon_pricing_demo: true,
       carbon_estimate_source: source,
+      carbon_estimate_basis: basis,
     };
   }
 
@@ -215,6 +250,7 @@ class GreenGoldWidget extends HTMLElement {
         onAdd={(amountTotal) => this.handleAdd(amountTotal)}
         preview={this.preview}
         impact={this.impact}
+        brandLogo={BRAND_LOGO}
       />,
       this.mount,
     );

@@ -27,11 +27,11 @@ import { liveSource, type CarbonEntrySource } from './carbon-entry-source';
  */
 
 const inputClass =
-  'mt-1.5 w-full rounded-lg border border-[#d8e1da] bg-white px-3 py-2.5 text-sm text-[#17372d] focus:outline-none focus:ring-2 focus:ring-emerald-200';
+  'mt-1.5 w-full rounded-lg border border-[var(--ds-color-border)] bg-white px-3 py-2.5 text-sm text-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-emerald-200';
 const buttonClass =
-  'rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50';
+  'rounded-lg bg-[var(--ds-palette-pine-700)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50';
 const secondaryButtonClass =
-  'rounded-lg border border-[#d8e1da] bg-white px-4 py-2 text-sm font-medium text-[#17372d] disabled:opacity-50';
+  'rounded-lg border border-[var(--ds-color-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--ds-color-heading)] disabled:opacity-50';
 
 const FLIGHT_MODE = 'flight-route-v1';
 const MAX_DOCUMENT_BYTES = 4 * 1024 * 1024;
@@ -253,7 +253,7 @@ function EntryRow({
     <li className="py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-medium text-[#17372d]">
+          <p className="text-sm font-medium text-[var(--ds-color-heading)]">
             {entry.resource_title ?? entry.resource_slug}
             {entry.ghg_scope ? (
               <span className="ml-2 text-xs font-normal text-neutral-500">
@@ -521,8 +521,8 @@ export function CarbonDataEntry({
       )}
 
       {units !== null && units.length === 0 && !error && (
-        <div className="rounded-xl border border-[#d8e1da] bg-[#f6f9f6] p-4 text-sm text-neutral-600">
-          <p className="font-semibold text-[#17372d]">
+        <div className="rounded-xl border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] p-4 text-sm text-neutral-600">
+          <p className="font-semibold text-[var(--ds-color-heading)]">
             3pmetrics hesabınızda henüz tesis tanımlı değil
           </p>
           <p className="mt-2">
@@ -584,8 +584,8 @@ export function CarbonDataEntry({
           </label>
 
           {resource && (
-            <div className="rounded-lg bg-[#f6f9f6] p-3 text-sm text-neutral-600 sm:col-span-2">
-              <p className="font-medium text-[#17372d]">
+            <div className="rounded-lg bg-[var(--ds-color-bg-soft)] p-3 text-sm text-neutral-600 sm:col-span-2">
+              <p className="font-medium text-[var(--ds-color-heading)]">
                 {resource.header ?? resource.title}
               </p>
               {resource.description && (
@@ -736,7 +736,7 @@ export function CarbonDataEntry({
 
       {review && resource && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-sm">
-          <p className="font-semibold text-[#17372d]">
+          <p className="font-semibold text-[var(--ds-color-heading)]">
             3pmetrics&apos;e gönderilecek kayıt
           </p>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-neutral-700">
@@ -850,7 +850,7 @@ export function CarbonDataEntry({
       )}
 
       <div className="border-t border-neutral-100 pt-4">
-        <h4 className="text-sm font-semibold text-[#17372d]">
+        <h4 className="text-sm font-semibold text-[var(--ds-color-heading)]">
           Gönderilen kayıtlar
         </h4>
         <p className="mt-1 text-xs text-neutral-500">

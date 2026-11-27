@@ -13,6 +13,25 @@ interface Strings {
   co2Note: string;
   previewBadge: string;
   impactLine: (co2: string, trees: string) => string;
+  /** Başlık şeridindeki ikinci satır (otel adının altında). */
+  brandLine: string;
+  /** Başlık üstü küçük etiket. */
+  eyebrow: string;
+  /** Kaydedildikten sonra toplam satırının etiketi. */
+  savedTotalLabel: string;
+  /** Alttaki marka imzası: "<lead> GreenGold Stay". */
+  signatureLead: string;
+  stayLabel: string;
+  stayValue: (nights: number, rooms: number) => string;
+  footprintLabel: string;
+  /** Fiyat kaynağı satırı (yalnız `carbon_pricing_demo` iken gösterilir). */
+  sourceNote: (
+    source: 'hotel' | 'regional' | undefined,
+    measured: boolean,
+    rooms: number,
+  ) => string;
+  /** Ölçüm tabanlı (Kapsam 1–2) tahminde ek dürüstlük notu. */
+  measuredNote: string;
 }
 
 // Dürüstlük notu: bu widget karbon kredisi SATMAZ, offset ÜRETMEZ, ödeme
@@ -35,10 +54,28 @@ export const I18N: Record<Lang, Strings> = {
     addButton: 'Tercihimi kaydet',
     confirmation:
       'Tercihinizi kaydettik. Rezervasyonunuza henüz herhangi bir ücret eklenmedi.',
-    co2Note: 'Rakamlar tahminidir, kesin ölçüm değildir.',
+    co2Note: 'Ayak izi tahminidir; kesin ölçüm değildir.',
     previewBadge: 'Önizleme',
-    impactLine: (co2, trees) =>
-      `Bu ay bu otelde tahmini ≈ ${co2} kg CO₂ (≈ ${trees} ağaç-yılı)`,
+    brandLine: 'Sürdürülebilir konaklama',
+    eyebrow: 'Gönüllü katkı',
+    savedTotalLabel: 'Seçtiğiniz katkı',
+    signatureLead: 'Destekleyen:',
+    stayLabel: 'Konaklamanız',
+    stayValue: (nights, rooms) =>
+      rooms > 1 ? `${nights} gece · ${rooms} oda` : `${nights} gece`,
+    footprintLabel: 'Tahmini ayak iziniz',
+    impactLine: (co2, _trees) =>
+      `Bu ay bu otelde seçilen konaklamaların tahmini emisyonu ≈ ${co2} kg CO₂e`,
+    sourceNote: (source, measured, rooms) =>
+      `${
+        measured
+          ? 'Ölçülen enerji tüketimine dayalı tahmin (Kapsam 1 ve 2)'
+          : source === 'hotel'
+            ? 'Otel verileriyle tahmin'
+            : 'Bölgesel tahmin'
+      } · Temsili fiyat · ${rooms} oda`,
+    // Karbon nötrlüğü uyarısı alt başlıkta (subheading) zaten var; tekrar edilmez.
+    measuredNote: 'Doğrulanmış bir emisyon beyanı değildir.',
   },
   en: {
     heading: 'Support a more sustainable stay',
@@ -55,10 +92,28 @@ export const I18N: Record<Lang, Strings> = {
     addButton: 'Save my preference',
     confirmation:
       'Your preference has been recorded. No charge has been added to your booking.',
-    co2Note: 'Figures are estimates, not exact measurements.',
+    co2Note: 'The footprint is an estimate, not an exact measurement.',
     previewBadge: 'Preview',
-    impactLine: (co2, trees) =>
-      `This month, estimated ≈ ${co2} kg CO₂ at this hotel (≈ ${trees} tree-years)`,
+    brandLine: 'Sustainable stay',
+    eyebrow: 'Voluntary contribution',
+    savedTotalLabel: 'Your selected contribution',
+    signatureLead: 'Powered by',
+    stayLabel: 'Your stay',
+    stayValue: (nights, rooms) =>
+      `${nights} night${nights === 1 ? '' : 's'}` +
+      (rooms > 1 ? ` · ${rooms} rooms` : ''),
+    footprintLabel: 'Your estimated footprint',
+    impactLine: (co2, _trees) =>
+      `This month, the estimated footprint of stays choosing this option ≈ ${co2} kg CO₂e`,
+    sourceNote: (source, measured, rooms) =>
+      `${
+        measured
+          ? 'Estimate based on measured energy use (Scope 1 and 2)'
+          : source === 'hotel'
+            ? 'Hotel-based estimate'
+            : 'Regional estimate'
+      } · Indicative price · ${rooms} room${rooms === 1 ? '' : 's'}`,
+    measuredNote: 'This is not a verified emissions statement.',
   },
 };
 

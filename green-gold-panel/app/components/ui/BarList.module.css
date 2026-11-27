@@ -1,0 +1,20 @@
+.legend { display: flex; flex-wrap: wrap; gap: var(--ds-space-4); margin-bottom: var(--ds-space-4); font-size: var(--ds-text-xs); color: var(--ds-color-text-muted); }
+.key { display: inline-flex; align-items: center; gap: var(--ds-space-2); }
+.swatch { width: 9px; height: 9px; }
+.s1 { background: var(--ds-color-data-1); }
+.s2 { background: var(--ds-color-data-2); }
+.list { display: flex; flex-direction: column; gap: 0.7rem; list-style: none; margin: 0; padding: 0; }
+.row { display: grid; grid-template-columns: minmax(96px, 1.1fr) minmax(0, 2.6fr) minmax(56px, auto); align-items: center; gap: var(--ds-space-3); font-size: var(--ds-text-xs); }
+.label { color: var(--ds-color-heading); line-height: 1.35; overflow-wrap: anywhere; }
+.track { display: flex; height: 12px; }
+.bar1 { background: var(--ds-color-data-1); }
+.bar2 { background: var(--ds-color-data-2); }
+.value { text-align: right; font-variant-numeric: tabular-nums; color: var(--ds-color-heading); }
+@media (max-width: 479px) { .row { grid-template-columns: 1fr auto; } .track { grid-column: 1 / -1; order: 3; } }
+
+/* Yığılı düzen: etiket + değer üstte, çubuk altta tam genişlik. */
+.stacked .row { grid-template-columns: minmax(0, 1fr) auto; row-gap: 6px; }
+.stacked .track { grid-column: 1 / -1; order: 3; height: 10px; background: var(--ds-color-data-2); }
+.stacked .label { font-size: var(--ds-text-sm); }
+.stacked .value { font-size: var(--ds-text-sm); font-weight: 600; }
+.stacked .list { gap: var(--ds-space-4); }

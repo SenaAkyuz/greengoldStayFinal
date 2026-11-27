@@ -1,0 +1,21 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-space-2);
+  width: fit-content;
+  max-width: 100%;
+  padding: 3px 10px;
+  border: 1px solid;
+  border-radius: var(--ds-radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+.neutral { color: var(--ds-tone-neutral-fg); background: var(--ds-tone-neutral-bg); border-color: var(--ds-tone-neutral-border); }
+.info { color: var(--ds-tone-info-fg); background: var(--ds-tone-info-bg); border-color: var(--ds-tone-info-border); }
+.success { color: var(--ds-tone-success-fg); background: var(--ds-tone-success-bg); border-color: var(--ds-tone-success-border); }
+.warning { color: var(--ds-tone-warning-fg); background: var(--ds-tone-warning-bg); border-color: var(--ds-tone-warning-border); }
+.danger { color: var(--ds-tone-danger-fg); background: var(--ds-tone-danger-bg); border-color: var(--ds-tone-danger-border); }
+.pending { color: var(--ds-tone-pending-fg); background: var(--ds-tone-pending-bg); border-color: var(--ds-tone-pending-border); }

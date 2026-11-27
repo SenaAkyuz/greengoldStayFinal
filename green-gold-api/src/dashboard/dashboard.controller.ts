@@ -114,6 +114,21 @@ export class DashboardController {
     });
   }
 
+  // GET /dashboard/daily?range=&from=&to= (auth'lı) — gün bazlı tekil oturum serisi
+  @Get('daily')
+  async daily(
+    @Req() req: AuthenticatedRequest,
+    @Query('range') range?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.dashboardService.getDailyInteraction(req.auth.hotelId, {
+      range,
+      from,
+      to,
+    });
+  }
+
   // GET /dashboard/export.csv?range=&from=&to= (auth'lı) — tenant-scoped CSV indirme.
   // @Res kullanıldığı için ortak zarf (interceptor) devreye girmez; ham CSV döner.
   @Get('export.csv')

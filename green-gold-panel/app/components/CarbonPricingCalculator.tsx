@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { CarbonOptions, HotelInfo } from '@/lib/api';
 
-const input = 'mt-2 w-full rounded-lg border border-[#d8e1da] bg-white px-3 py-2.5 text-sm';
+const input = 'mt-2 w-full rounded-lg border border-[var(--ds-color-border)] bg-white px-3 py-2.5 text-sm';
 const sorted = (values: string[]) => [...new Set(values)].sort((a, b) => a.localeCompare(b));
 const classLabel = (value: string) => value === 'All Hotels' ? 'Tüm otel sınıfları' : value.replace(' Star', ' yıldız');
 
@@ -41,7 +41,7 @@ export function CarbonPricingCalculator({ hotel, options, disabled }: { hotel: H
     {hotel.role === 'demo_viewer' && <DemoPreviewSync amount={valid ? amount : null} coefficient={valid ? coefficient : null} currency={hotel.currency} />}
     <div className="border-b border-emerald-100 bg-emerald-50/60 p-6">
       <span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Karbon ve katkı hesabı</span>
-      <h2 className="mt-2 text-xl font-semibold text-[#17372d]">Oteliniz için gecelik katkıyı hesaplayın</h2>
+      <h2 className="mt-2 text-xl font-semibold text-[var(--ds-color-heading)]">Oteliniz için gecelik katkıyı hesaplayın</h2>
       <p className="mt-2 text-sm text-neutral-600">Greenview bölgesel katsayısı.</p>
     </div>
     <fieldset disabled={disabled} className="space-y-6 p-6">
@@ -82,12 +82,12 @@ export function CarbonPricingCalculator({ hotel, options, disabled }: { hotel: H
       </div>
       {/* Doğruluk ibaresi KORUNUR: bu bir referans fiyattır, güncel karbon
           piyasası kotasyonu değildir. Dil profesyonelleştirildi. */}
-      <p className="rounded-lg border border-[#d8e1da] bg-[#f6f9f6] p-3 text-sm text-neutral-600">Hesaplamada kullanılan ton fiyatı: <strong className="font-medium text-[#17372d]">{money(options.demo_price_per_tonne)} / tCO₂e</strong>. Sabit referans fiyattır; güncel karbon piyasası kotasyonu değildir.</p>
+      <p className="rounded-lg border border-[var(--ds-color-border)] bg-[var(--ds-color-bg-soft)] p-3 text-sm text-neutral-600">Hesaplamada kullanılan ton fiyatı: <strong className="font-medium text-[var(--ds-color-heading)]">{money(options.demo_price_per_tonne)} / tCO₂e</strong>. Sabit referans fiyattır; güncel karbon piyasası kotasyonu değildir.</p>
       <div aria-live="polite">
         {valid && coefficient !== null && amount !== null ? <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-emerald-100 p-5"><p className="text-sm text-neutral-500">Tahmini ayak izi / oda-gece</p><p className="mt-2 text-2xl font-semibold text-[#075442]">{num(coefficient)} <span className="text-sm">kgCO₂e</span></p></div>
-            <div className="rounded-xl bg-[#075442] p-5 text-white"><p className="text-sm text-emerald-100">Hesaplanan katkı / oda-gece</p><p className="mt-2 text-2xl font-semibold">{money(amount)}</p></div>
+            <div className="rounded-xl border border-emerald-100 p-5"><p className="text-sm text-neutral-500">Tahmini ayak izi / oda-gece</p><p className="mt-2 text-2xl font-semibold text-[var(--ds-palette-pine-700)]">{num(coefficient)} <span className="text-sm">kgCO₂e</span></p></div>
+            <div className="rounded-xl bg-[var(--ds-palette-pine-700)] p-5 text-white"><p className="text-sm text-emerald-100">Hesaplanan katkı / oda-gece</p><p className="mt-2 text-2xl font-semibold">{money(amount)}</p></div>
           </div>
           <p className="mt-3 text-xs text-neutral-500">{num(coefficient)} ÷ 1.000 × {money(options.demo_price_per_tonne)}. </p>
           <p className="mt-2 text-xs text-neutral-500">Kaynak yöntemi: {[...new Set(matches.map(r => r.room_method ?? 'Belirtilmemiş'))].join(' / ')}.</p>

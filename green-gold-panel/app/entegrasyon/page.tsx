@@ -8,7 +8,10 @@ import {
   type HotelInfo,
   type IntegrationHealthItem,
 } from '@/lib/api';
-import { AppShell } from '../components/AppShell';
+import { Card, CardHeader, Notice, PageHeader, StatusPill, Stepper } from '../components/ui';
+import { isWidgetSrcValid, widgetSetupSteps } from '@/lib/panel/integration-setup';
+import styles from '../components/panel/panel.module.css';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { IntegrationCard } from '../components/IntegrationCard';
 
 export default async function IntegrationPage() {
@@ -16,23 +19,17 @@ export default async function IntegrationPage() {
 
   // Son 30 gün etkileşim sinyali — API'de tüm-zamanlar endpoint'i yok, bu
   // yüzden "ilk etkileşim" değil yalnızca "son 30 günde etkileşim" iddia
-  // ediyoruz. Üç durum: istek başarısızsa/veri yoksa 'unknown' (nötr,
-  // "etkileşim yok" VARSAYILMAZ); views===0 ise 'pending'; views>0 ise 'done'.
+  // ediyoruz. İstek başarısızsa durum "bilinmiyor" (etkileşim yok VARSAYILMAZ).
   const [hotelRes, summaryRes, integrationHealthRes] = await Promise.all([
     getHotel(token),
     getWidgetEventsSummary(token, '30d'),
     getIntegrationHealth(token),
   ]);
   const hotel = hotelRes.data;
-  const recentActivity: CheckState =
-    summaryRes.error || !summaryRes.data
-      ? 'unknown'
-      : summaryRes.data.views > 0
-        ? 'done'
-        : 'pending';
+  const recentViews = summaryRes.error || !summaryRes.data ? null : summaryRes.data.views > 0;
 
   const widgetSrc = getWidgetEmbedSrc();
-  const widgetSrcConfigured = !widgetSrc.includes('<panel-domain>');
+  const widgetSrcValid = isWidgetSrcValid(widgetSrc);
   const apiBaseUrl = getApiBaseUrl();
 
   const embedCode = hotel
@@ -40,52 +37,65 @@ export default async function IntegrationPage() {
 <green-gold-widget data-key="${hotel.public_widget_key}" data-rooms="1" data-nights="1" data-lang="tr"
     data-api="${apiBaseUrl}"></green-gold-widget>`
     : '';
+  const steps = hotel ? widgetSetupSteps({ hotel, widgetSrcValid, recentViews }) : [];
 
   return (
-    <AppShell
+    <HotelPanelFrame
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
-      active="integration"
+      title="Entegrasyon"
       isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="gg-page">
-        <div className="gg-page-header">
-          <div>
-            <div className="gg-kicker">Kurulum ve bağlantı</div>
-            <h1 className="gg-title">
-              Entegrasyon
-            </h1>
-            <p className="gg-subtitle">
-              Widget kodu, izinli domain&apos;ler ve rezervasyon sistemi bağlantısı
-            </p>
-          </div>
-          {hotel && <StatusBadge status={hotel.status} />}
-        </div>
+      <div className={`gg-page gg-page--framed ${styles.stack}`}>
+        <PageHeader
+          size="compact"
+          eyebrow="Kurulum ve bağlantı"
+          title="Entegrasyon"
+          description="Misafir ekranını sitenize ekleyin ya da rezervasyon motorunuzla bağlayın. İki yol birbirinden bağımsızdır."
+          actions={
+            hotel ? (
+              <StatusPill tone={hotel.status === 'active' ? 'success' : hotel.status === 'suspended' ? 'danger' : 'warning'}>
+                Otel durumu: {HOTEL_STATUS[hotel.status] ?? hotel.status}
+              </StatusPill>
+            ) : undefined
+          }
+        />
 
         {hotelRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Otel bilgileri yüklenemedi: {hotelRes.error}. API sunucusunun
-            çalıştığından emin olun.
-          </div>
+          <Notice tone="warning" title="Otel bilgileri yüklenemedi">
+            {hotelRes.error}. API sunucusunun çalıştığından emin olun.
+          </Notice>
         )}
 
         {hotel && (
           <>
-            <div className="mt-6">
-              <IntegrationCard
-                embedCode={embedCode}
-                allowedOrigins={hotel.allowed_origins}
-                widgetSrc={widgetSrc}
-                apiBaseUrl={apiBaseUrl}
-                publicKey={hotel.public_widget_key}
-                widgetSrcConfigured={widgetSrcConfigured}
+            <Card aria-labelledby="setup-title" as="section">
+              <CardHeader id="setup-title" title="Widget kurulum durumu" headingLevel={2} description="Yalnız doğrulanabilen adımlar işaretlenir." />
+              <Stepper
+                label="Widget kurulum adımları"
+                steps={steps.map((s, i) => ({
+                  key: s.key,
+                  label: s.label,
+                  status: s.status,
+                  state:
+                    s.state === 'done'
+                      ? 'done'
+                      : s.state === 'unknown'
+                        ? 'blocked'
+                        : steps.slice(0, i).every((p) => p.state === 'done')
+                          ? 'current'
+                          : 'upcoming',
+                }))}
               />
-            </div>
+            </Card>
 
-            <SetupChecklist
-              hotel={hotel}
-              widgetSrcConfigured={widgetSrcConfigured}
-              recentActivity={recentActivity}
+            <IntegrationCard
+              embedCode={embedCode}
+              allowedOrigins={hotel.allowed_origins}
+              widgetSrc={widgetSrc}
+              apiBaseUrl={apiBaseUrl}
+              publicKey={hotel.public_widget_key}
+              widgetSrcConfigured={widgetSrcValid}
             />
 
             <ReservationSystemConnection
@@ -95,10 +105,12 @@ export default async function IntegrationPage() {
             />
           </>
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }
+
+const HOTEL_STATUS: Record<string, string> = { active: 'Aktif', pending: 'Beklemede', suspended: 'Askıya alındı' };
 
 const PROVIDER_LABEL: Record<string, string> = {
   hotelrunner: 'HotelRunner',
@@ -106,10 +118,10 @@ const PROVIDER_LABEL: Record<string, string> = {
   generic_signed_webhook: 'İmzalı webhook',
 };
 
-const INTEGRATION_STATUS: Record<string, { label: string; cls: string }> = {
-  active: { label: 'Aktif', cls: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
-  pending: { label: 'Kurulum bekliyor', cls: 'border-amber-200 bg-amber-50 text-amber-800' },
-  suspended: { label: 'Durduruldu', cls: 'border-red-200 bg-red-50 text-red-800' },
+const INTEGRATION_STATUS: Record<string, string> = {
+  active: 'Aktif',
+  pending: 'Kurulum bekliyor',
+  suspended: 'Durduruldu',
 };
 
 const DELIVERY_STATUS_LABEL: Record<string, string> = {
@@ -136,221 +148,80 @@ function ReservationSystemConnection({
   integrations: IntegrationHealthItem[];
   loadFailed: boolean;
 }) {
-  const price = `${hotel.amount_per_night.toLocaleString('tr-TR', { maximumFractionDigits: 2 })} ${hotel.currency}`;
+  // HotelRunner'daki ekstra fiyatı misafir ekranıyla AYNI olmalı: kuruşlu, 2 hane.
+  const price = new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: hotel.currency || 'EUR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(hotel.amount_per_night);
+  const tz = hotel.timezone || 'Europe/Istanbul';
+  const changed = hotel.carbon_pricing?.calculated_at
+    ? new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: tz }).format(new Date(hotel.carbon_pricing.calculated_at))
+    : null;
 
   return (
-    <section className="gg-card mt-6 p-6">
-      <h2 className="text-sm font-semibold text-neutral-900">
-        Rezervasyon sistemi bağlantısı
-      </h2>
-      <p className="mt-1 text-sm text-neutral-500">
-        Rezervasyonlarınızı HotelRunner gibi bir rezervasyon motoru üzerinden
-        alıyorsanız Green Gold katkısı orada bir ekstra olarak sunulur;
-        rezervasyonlar bize otomatik gelir. Yukarıdaki widget kodu yalnızca kendi
-        ödeme sayfası olan siteler içindir.
-      </p>
+    <Card as="section" aria-labelledby="hr-title">
+      <CardHeader
+        id="hr-title"
+        title="HotelRunner · rezervasyon motoru"
+        headingLevel={2}
+        description="Rezervasyonu HotelRunner gibi bir motordan alıyorsanız katkı orada bir ekstra ürün olarak sunulur; rezervasyon bildirimleri Green Gold’a sunucudan sunucuya gelir."
+        actions={<StatusPill tone="neutral" dot={false}>Kurulum Green Gold ekibiyle</StatusPill>}
+      />
 
-      {loadFailed ? (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          Bağlantı durumu şu an alınamadı.
+      <div className={styles.priceAlert} role="note">
+        <div>
+          <strong>Fiyat otomatik güncellenmez.</strong> HotelRunner’daki <code>GREENGOLD</code> ekstrasının gecelik fiyatı misafir
+          ekranındaki katkıyla aynı olmalı. Karbon ölçümü yayına alındığında ya da katkı değiştiğinde HotelRunner’da elle güncelleyin.
+          {changed && <> Son değişiklik: {changed}.</>}
         </div>
-      ) : integrations.length === 0 ? (
-        <div className="mt-4 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-600">
-          Henüz bir rezervasyon sistemi bağlantısı kurulmadı.
+        <div>
+          <span className={styles.small}>Güncel gecelik katkı</span>
+          <br />
+          <strong className={styles.priceBig}>{price}</strong>
         </div>
-      ) : (
-        <ul className="mt-4 space-y-2.5 text-sm">
-          {integrations.map((integ) => {
-            const status = INTEGRATION_STATUS[integ.status] ?? {
-              label: integ.status,
-              cls: 'border-neutral-200 bg-neutral-50 text-neutral-600',
-            };
-            return (
-              <li
-                key={integ.id}
-                className="rounded-lg border border-neutral-200 px-4 py-3"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="font-medium text-neutral-800">
-                      {PROVIDER_LABEL[integ.provider] ?? integ.provider}
-                    </span>
-                    <span className="ml-2 text-xs text-neutral-500">
-                      {integ.environment === 'production' ? 'Canlı' : 'Test ortamı'}
-                      {' · '}Tesis kimliği {integ.external_property_id}
-                    </span>
-                  </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${status.cls}`}
-                  >
-                    {status.label}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-neutral-500">
-                  Son bildirim:{' '}
-                  {integ.last_delivery_status
-                    ? `${DELIVERY_STATUS_LABEL[integ.last_delivery_status] ?? integ.last_delivery_status} — ${new Date(integ.last_delivery_at!).toLocaleString('tr-TR')}`
-                    : 'henüz bildirim gelmedi'}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      <div className="mt-6 rounded-xl border border-[#d8e1da] bg-[#f6f9f6] p-5">
-        <h3 className="text-sm font-semibold text-[#17372d]">
-          HotelRunner ile kurulum
-        </h3>
-        <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-neutral-700">
-          <li>
-            HotelRunner panelinizde Green Gold için bir uygulama açın ve size
-            verilen <strong className="font-medium">otel kimliğini (HR_ID)</strong>{' '}
-            ve <strong className="font-medium">anahtarı (TOKEN)</strong> Green Gold
-            ekibine güvenli bir kanaldan iletin.
-          </li>
-          <li>
-            Rezervasyon motorunuzda bir ekstra ürün tanımlayın: kodu (kod alanı
-            yoksa adı) <code className="rounded bg-white px-1 font-mono text-xs">GREENGOLD</code>,
-            gecelik fiyatı <strong className="font-medium">{price}</strong>.
-          </li>
-          <li>
-            Green Gold ekibinin size ilettiği bildirim adresini HotelRunner&apos;da
-            rezervasyon bildirim adresi olarak girin.
-          </li>
-          <li>
-            Bağlantı etkinleştirildikten sonra rezervasyonlar{' '}
-            <strong className="font-medium">Rezervasyonlar</strong>, seçilen
-            katkılar <strong className="font-medium">Tahsilatlar</strong>{' '}
-            sayfasında görünür.
-          </li>
-        </ol>
-        <p className="mt-3 text-xs text-amber-800">
-          Gecelik katkı tutarınız değişirse (ör. yeni karbon ölçümünden sonra)
-          HotelRunner&apos;daki ekstra fiyatını da güncelleyin; bu fiyat
-          HotelRunner&apos;da otomatik değişmez.
-        </p>
       </div>
-    </section>
-  );
-}
 
-// Otel durumu — yalnızca API'nin döndürdüğü 3 gerçek değer.
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    active: {
-      label: 'Aktif',
-      cls: 'border-emerald-200 bg-emerald-50 text-emerald-800',
-    },
-    pending: {
-      label: 'Beklemede',
-      cls: 'border-amber-200 bg-amber-50 text-amber-800',
-    },
-    suspended: {
-      label: 'Askıya alındı',
-      cls: 'border-red-200 bg-red-50 text-red-800',
-    },
-  };
-  const s = map[status] ?? {
-    label: status,
-    cls: 'border-neutral-200 bg-neutral-50 text-neutral-600',
-  };
-  return (
-    <span
-      className={`inline-flex h-fit items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${s.cls}`}
-    >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
-      Otel durumu: {s.label}
-    </span>
-  );
-}
+      <div className={styles.gapTop}>
+        {loadFailed ? (
+          <Notice tone="warning">Bağlantı durumu şu an alınamadı.</Notice>
+        ) : integrations.length === 0 ? (
+          <p className={styles.small}>Henüz bir rezervasyon motoru bağlantısı kurulmadı.</p>
+        ) : (
+          <dl className={styles.facts}>
+            {integrations.map((integ) => (
+              <div key={integ.id}>
+                <dt>
+                  {PROVIDER_LABEL[integ.provider] ?? integ.provider} · {integ.environment === 'production' ? 'Canlı' : 'Test ortamı'} · tesis{' '}
+                  {integ.external_property_id}
+                  <span className={styles.recordNote}>
+                    Son bildirim:{' '}
+                    {integ.last_delivery_status && integ.last_delivery_at
+                      ? `${DELIVERY_STATUS_LABEL[integ.last_delivery_status] ?? integ.last_delivery_status} — ${new Date(integ.last_delivery_at).toLocaleString('tr-TR', { timeZone: tz })}`
+                      : 'henüz bildirim gelmedi'}
+                  </span>
+                </dt>
+                <dd>
+                  <StatusPill tone={integ.status === 'active' ? 'success' : integ.status === 'suspended' ? 'danger' : 'warning'}>
+                    {INTEGRATION_STATUS[integ.status] ?? integ.status}
+                  </StatusPill>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
 
-type CheckState = 'done' | 'pending' | 'unknown';
-
-// Sağlık göstergeleri + onboarding kontrol listesi tek bir listede
-// birleştirildi: ikisi de aynı gerçek sinyallere dayanıyor, ayrı ayrı
-// göstermek aynı bilgiyi tekrar eder (bkz. 14F "kalabalık kontrolü").
-// Ölçülemeyen madde (ör. "embed kodu kopyalandı") YOK — otomatik
-// tamamlanmış gösterilmiyor, listeye hiç eklenmiyor.
-function SetupChecklist({
-  hotel,
-  widgetSrcConfigured,
-  recentActivity,
-}: {
-  hotel: HotelInfo;
-  widgetSrcConfigured: boolean;
-  recentActivity: CheckState;
-}) {
-  const items: { state: CheckState; label: string }[] = [
-    {
-      state: widgetSrcConfigured ? 'done' : 'pending',
-      label: 'Widget script adresi yapılandırıldı',
-    },
-    {
-      state: hotel.public_widget_key ? 'done' : 'pending',
-      label: 'Widget anahtarı üretildi',
-    },
-    {
-      state: hotel.allowed_origins.length > 0 ? 'done' : 'pending',
-      label: 'İzinli domain eklendi',
-    },
-    {
-      state: hotel.status === 'active' ? 'done' : 'pending',
-      label: 'Otel aktifleştirildi',
-    },
-    {
-      state: recentActivity,
-      // 30 günlük veri "ilk" etkileşimi kanıtlamaz — yalnızca bu pencerede
-      // etkileşim olup olmadığını söyler.
-      label:
-        recentActivity === 'unknown'
-          ? 'Son 30 gün etkileşim durumu kontrol edilemedi'
-          : 'Son 30 günde etkileşim alındı',
-    },
-  ];
-
-  return (
-    <section className="gg-card mt-6 p-6">
-      <h2 className="text-sm font-semibold text-neutral-900">Kurulum durumu</h2>
-      <p className="mt-1 text-sm text-neutral-500">
-        Yalnızca gerçekten doğrulanabilen adımlar işaretlenir.
-      </p>
-      <ul className="mt-4 space-y-2.5 text-sm">
-        {items.map((it) => (
-          <ChecklistRow key={it.label} state={it.state} label={it.label} />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ChecklistRow({ state, label }: { state: CheckState; label: string }) {
-  const iconCls =
-    state === 'done'
-      ? 'bg-emerald-100 text-emerald-700'
-      : state === 'unknown'
-        ? 'border border-dashed border-neutral-300 text-neutral-400'
-        : 'border border-neutral-300 text-neutral-400';
-  const icon = state === 'done' ? '✓' : state === 'unknown' ? '?' : '';
-  const srSuffix =
-    state === 'done'
-      ? ' (tamamlandı)'
-      : state === 'unknown'
-        ? ' (kontrol edilemedi)'
-        : ' (bekleniyor)';
-
-  return (
-    <li className="flex items-center gap-2.5">
-      <span
-        aria-hidden="true"
-        className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${iconCls}`}
-      >
-        {icon}
-      </span>
-      <span className={state === 'done' ? 'text-neutral-700' : 'text-neutral-500'}>
-        {label}
-        <span className="sr-only">{srSuffix}</span>
-      </span>
-    </li>
+      <details className={`${styles.details} ${styles.gapTop}`}>
+        <summary>HotelRunner kurulum adımları</summary>
+        <ol className={styles.numSteps}>
+          <li>HotelRunner panelinizde Green Gold için bir uygulama açın; verilen otel kimliğini (HR_ID) ve anahtarı (TOKEN) Green Gold ekibine güvenli bir kanaldan iletin.</li>
+          <li>Rezervasyon motorunuzda bir ekstra ürün tanımlayın: kodu (kod alanı yoksa adı) <code>GREENGOLD</code>, gecelik fiyatı <strong>{price}</strong>.</li>
+          <li>Green Gold ekibinin ilettiği bildirim adresini HotelRunner’da rezervasyon bildirim adresi olarak girin.</li>
+          <li>Bağlantı etkinleşince bildirimler alınmaya başlar. Rezervasyonlar ve Tahsilatlar ekranları <strong>Faz 2</strong>’de açılacak; şu an “Yakında” olarak görünür.</li>
+        </ol>
+      </details>
+    </Card>
   );
 }

@@ -131,6 +131,34 @@ class FakeQueryBuilder implements PromiseLike<FakeResult<Row[]>> {
     return this;
   }
 
+  /**
+   * supabase .upsert(rows, { onConflict: 'a,b' }): çakışan satır (onConflict
+   * kolonlarının hepsi eşit) yerinde güncellenir, yoksa eklenir.
+   */
+  upsert(row: Row | Row[], opts: { onConflict?: string } = {}): this {
+    const rows: Row[] = Array.isArray(row) ? (row as Row[]) : [row];
+    const keys = (opts.onConflict ?? 'id').split(',').map((k) => k.trim());
+    const store = (this.store[this.table] ??= []);
+    const out: Row[] = [];
+    for (const r of rows) {
+      const hit = store.find((e) => keys.every((k) => e[k] === r[k]));
+      if (hit) {
+        Object.assign(hit, r);
+        out.push(hit);
+      } else {
+        const full: Row = {
+          id: nextId(),
+          created_at: new Date().toISOString(),
+          ...r,
+        };
+        store.push(full);
+        out.push(full);
+      }
+    }
+    this.insertedRows = out;
+    return this;
+  }
+
   private pendingUpdate: Row | null = null;
 
   update(patch: Row): this {

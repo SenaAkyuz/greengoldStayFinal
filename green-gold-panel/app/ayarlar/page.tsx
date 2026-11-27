@@ -1,6 +1,9 @@
 import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getCarbonOptions, getCarbonProviderStatus } from '@/lib/api';
-import { AppShell } from '../components/AppShell';
+import { connecthub, userMessage } from '@/lib/connecthub';
+import { PageHeader, Notice } from '../components/ui';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
+import { ConnectHubSettingsView } from '../components/panel/ConnectHubSettingsView';
 import { SettingsForm } from '../components/SettingsForm';
 
 export default async function SettingsPage() {
@@ -8,37 +11,49 @@ export default async function SettingsPage() {
 
   // providerStatus hatası ekranı BOZMAZ: sağlayıcı paneli null durumla
   // "bekleniyor" gösterir, mevcut hesaplayıcılar etkilenmez.
-  const [hotelRes, optionsRes, providerRes] = await Promise.all([
+  // ConnectHub durumu ve ölçüm geçmişi salt okumadır (yerel veri); hata
+  // verirse yalnız o kart uyarı gösterir, ayarlar formu etkilenmez.
+  const year = new Date().getUTCFullYear();
+  const [hotelRes, optionsRes, providerRes, chStatusRes, chPeriodsRes] = await Promise.all([
     getHotel(token),
     getCarbonOptions(token),
     getCarbonProviderStatus(token),
+    connecthub.status(token),
+    connecthub.periods(token, year),
   ]);
   const hotel = hotelRes.data;
 
   return (
-    <AppShell
+    <HotelPanelFrame
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
-      active="settings"
+      title="Ayarlar"
       isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="gg-page">
-        <div>
-          <div className="gg-kicker">Otel yapılandırması</div>
-          <h1 className="gg-title">
-            Ayarlar
-          </h1>
-          <p className="gg-subtitle">
-            Otel bilgileri, karbon tahmini ve oda-gece başına katkı hesabı
-          </p>
-        </div>
+      <div className="gg-page gg-page--framed">
+        <PageHeader
+          size="compact"
+          eyebrow="Otel yapılandırması"
+          title="Ayarlar"
+          description={<>Otel bilgileri, karbon tahmini ve oda-gece başına katkı hesabı</>}
+        />
 
         {hotelRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Notice tone="warning" className="mt-6">
             Ayarlar yüklenemedi: {hotelRes.error}. API sunucusunun çalıştığından
             emin olun.
-          </div>
+          </Notice>
         )}
+
+        <div className="mt-6">
+          <ConnectHubSettingsView
+            status={chStatusRes.data}
+            statusError={chStatusRes.error ? userMessage(chStatusRes) : null}
+            periods={chPeriodsRes.data}
+            year={year}
+            links={{ measurement: '/karbon-olcumu', profile: '/tesis-profili', period: (p) => `/karbon-olcumu/${p}` }}
+          />
+        </div>
 
         {hotel && (
           <SettingsForm
@@ -47,7 +62,7 @@ export default async function SettingsPage() {
             providerStatus={providerRes.data}
           />
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }

@@ -1,6 +1,7 @@
 import { requireAccessToken } from '@/lib/auth';
 import { getHotel, getApiBaseUrl } from '@/lib/api';
-import { AppShell } from '../components/AppShell';
+import { PageHeader, Notice } from '../components/ui';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
 import { GuestDemoWidget } from '../components/GuestDemoWidget';
 
 export default async function GuestPreviewPage() {
@@ -10,39 +11,38 @@ export default async function GuestPreviewPage() {
   const hotel = hotelRes.data;
 
   return (
-    <AppShell
+    <HotelPanelFrame
       hotelName={hotel?.hotel_name}
       city={hotel?.city}
-      active="guest-preview"
+      title="Misafir önizleme"
       isDemo={hotel?.role === 'demo_viewer'}
     >
-      <main className="gg-page">
-        <div className="gg-page-header">
-          <div>
-            <div className="gg-kicker">Misafir deneyimi</div>
-            <h1 className="gg-title">Misafir Önizleme</h1>
-            <p className="gg-subtitle">
-              Widget’ın misafire nasıl göründüğünün canlı önizlemesi
-            </p>
-          </div>
-          <span className="rounded-full border border-[#cfe2d4] bg-[#edf6ee] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#17614f]">
+      <div className="gg-page gg-page--framed">
+        <PageHeader
+          size="compact"
+          eyebrow="Misafir deneyimi"
+          title="Misafir önizleme"
+          description={<>Widget’ın misafire nasıl göründüğünün canlı önizlemesi</>}
+          actions={<>
+          <span className="rounded-full border border-[var(--ds-color-border)] bg-[var(--ds-palette-sage-50)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--ds-palette-pine-700)]">
             • Önizleme modu
           </span>
-        </div>
+          </>}
+        />
 
         <div className="gg-notice mt-7 flex items-center gap-3 px-5 py-4 text-sm">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#075442] font-semibold text-white">✓</span>
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--ds-palette-pine-700)] font-semibold text-white">✓</span>
           <div>
             <div className="font-semibold">Güvenli önizleme modu</div>
-            <div className="mt-0.5 text-xs text-[#5e776f]">Bu ekrandaki etkileşimler raporlara yansımaz ve ödeme alınmaz.</div>
+            <div className="mt-0.5 text-xs text-[var(--ds-color-text-muted)]">Bu ekrandaki etkileşimler raporlara yansımaz ve ödeme alınmaz.</div>
           </div>
         </div>
 
         {hotelRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Notice tone="warning" className="mt-6">
             Otel bilgileri yüklenemedi: {hotelRes.error}. API sunucusunun
             çalıştığından emin olun.
-          </div>
+          </Notice>
         )}
 
         {hotel && (
@@ -52,7 +52,7 @@ export default async function GuestPreviewPage() {
             allowStoredPreview={hotel.role === 'demo_viewer'}
           />
         )}
-      </main>
-    </AppShell>
+      </div>
+    </HotelPanelFrame>
   );
 }

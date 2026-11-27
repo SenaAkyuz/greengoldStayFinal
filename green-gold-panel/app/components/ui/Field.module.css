@@ -1,0 +1,32 @@
+.field { display: flex; flex-direction: column; gap: var(--ds-space-2); min-width: 0; }
+.label { font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-color-text); }
+.required { color: var(--ds-tone-danger-fg); margin-left: 2px; }
+.optional { font-weight: 400; color: var(--ds-color-text-muted); margin-left: var(--ds-space-1); }
+.hint { font-size: var(--ds-text-xs); line-height: 1.5; color: var(--ds-color-text-muted); }
+.error { font-size: var(--ds-text-xs); line-height: 1.5; font-weight: 600; color: var(--ds-tone-danger-fg); }
+
+.control {
+  width: 100%;
+  min-height: var(--ds-control-height-md);
+  padding: 0 var(--ds-space-4);
+  border: 1px solid var(--ds-color-border-strong);
+  border-radius: var(--ds-radius-sm);
+  background: var(--ds-color-surface);
+  color: var(--ds-color-text);
+  font-family: var(--ds-font-body);
+  font-size: var(--ds-text-md);
+  transition: border-color var(--ds-duration) var(--ds-ease), box-shadow var(--ds-duration) var(--ds-ease);
+}
+textarea.control { min-height: 96px; padding: var(--ds-space-3) var(--ds-space-4); resize: vertical; }
+select.control { padding-right: var(--ds-space-8); }
+.control::placeholder { color: var(--ds-color-text-muted); opacity: 0.8; }
+.control:hover:not(:disabled) { border-color: var(--ds-color-primary); }
+.control:focus-visible { outline: none; border-color: var(--ds-color-primary); box-shadow: 0 0 0 3px var(--ds-color-accent-soft); }
+.control:disabled { background: var(--ds-color-surface-sunken); color: var(--ds-color-text-muted); cursor: not-allowed; }
+.control[aria-invalid='true'] { border-color: var(--ds-tone-danger-fg); }
+.numeric { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* Değer + birim yan yana (ör. 1000 | kWh). */
+.group { display: flex; min-width: 0; }
+.group > .control:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; flex: 1 1 auto; min-width: 0; }
+.group > .control:last-child { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; flex: 0 0 8.5rem; width: 8.5rem; }

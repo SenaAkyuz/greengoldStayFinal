@@ -32,6 +32,12 @@ describe('session boundaries', () => {
     expect(result.cookies.get('sb-test-auth-token')?.value).toBe('renewed');
     expect(result.cookies.get('sb-test-auth-token')?.maxAge).toBeUndefined();
   });
+  it('product home "/" is public for anonymous visitors (KD-1); other protected pages still redirect', async () => {
+    const home = await updateSession(new NextRequest('https://panel.test/'));
+    expect(home.headers.get('location')).toBeNull();
+    const nested = await updateSession(new NextRequest('https://panel.test/raporlar'));
+    expect(nested.headers.get('location')).toBe('https://panel.test/login');
+  });
   it.each(['/demo', '/reset-password', '/set-password', '/auth/callback'])('preserves the public/recovery flow: %s', async (path) => {
     auth.user = { id: 'user' };
     const result = await updateSession(new NextRequest(`https://panel.test${path}`));

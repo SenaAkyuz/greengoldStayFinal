@@ -3,7 +3,7 @@ import { useState, useTransition } from 'react';
 import type { CarbonOptions, HotelInfo, HotelCarbonInput, HotelCarbonResult } from '@/lib/api';
 import { calculateAndApplyHotelCarbon, previewHotelCarbon } from '../ayarlar/actions';
 
-const inputClass = 'mt-1.5 w-full rounded-lg border border-[#d8e1da] bg-white px-3 py-2.5 text-sm text-[#17372d] focus:outline-none focus:ring-2 focus:ring-emerald-200';
+const inputClass = 'mt-1.5 w-full rounded-lg border border-[var(--ds-color-border)] bg-white px-3 py-2.5 text-sm text-[var(--ds-color-heading)] focus:outline-none focus:ring-2 focus:ring-emerald-200';
 const numeric = new Set(['rooms', 'occupied_room_nights', 'total_area_m2', 'guestrooms_area_m2', 'meeting_area_m2', 'electricity_kwh', 'gas_kwh', 'diesel_litres', 'other_emissions_kg', 'report_tonnes']);
 const wholeNumbers = new Set(['rooms', 'occupied_room_nights']);
 
@@ -56,7 +56,7 @@ export function HotelCarbonCalculator({ hotel, options, disabled }: { hotel: Hot
   const count = Number(nights);
 
   return <section className="gg-card overflow-hidden">
-    <header className="border-b border-emerald-100 bg-emerald-50/60 p-6"><span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Karbon hesabı</span><h2 className="mt-2 text-xl font-semibold text-[#17372d]">Otele özel hesap</h2></header>
+    <header className="border-b border-emerald-100 bg-emerald-50/60 p-6"><span className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Karbon hesabı</span><h2 className="mt-2 text-xl font-semibold text-[var(--ds-color-heading)]">Otele özel hesap</h2></header>
     <fieldset disabled={disabled || pending} className="space-y-6 p-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm font-medium">Veri kaynağı<select className={inputClass} value={values.mode} onChange={e => change('mode', e.target.value)}><option value="consumption">Tüketim bilgileri</option><option value="report">Mevcut emisyon raporu</option></select></label>
@@ -64,10 +64,10 @@ export function HotelCarbonCalculator({ hotel, options, disabled }: { hotel: Hot
         {field('period_start', 'Dönem başlangıcı', 'date')}{field('period_end', 'Dönem bitişi', 'date')}
       </div>
       <p className="text-xs text-neutral-500">Tüketimler ve dolu oda-gece aynı tarih aralığına ait olmalı. En sağlıklı sonuç için normal işleyişi temsil eden 12 aylık dönem kullanın.</p>
-      <div><h3 className="mb-3 text-sm font-semibold text-[#17372d]">Tesis ve doluluk</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div><h3 className="mb-3 text-sm font-semibold text-[var(--ds-color-heading)]">Tesis ve doluluk</h3><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {field('rooms', 'Oda sayısı')}{field('occupied_room_nights', 'Dolu oda-gece')}{field('total_area_m2', 'Toplam kapalı alan · m²')}{field('guestrooms_area_m2', 'Odalar ve koridorlar · m²')}{field('meeting_area_m2', 'Toplantı alanı · m²')}
       </div><p className="mt-2 text-xs text-neutral-500">Dolu oda-gece = kullanılan oda sayılarının gece toplamı. 15.330 veya 15330 şeklinde girebilirsiniz.</p></div>
-      {values.mode === 'consumption' ? <div><h3 className="mb-3 text-sm font-semibold text-[#17372d]">Dönem tüketimleri</h3><div className="grid gap-4 sm:grid-cols-2">
+      {values.mode === 'consumption' ? <div><h3 className="mb-3 text-sm font-semibold text-[var(--ds-color-heading)]">Dönem tüketimleri</h3><div className="grid gap-4 sm:grid-cols-2">
         {field('electricity_kwh', 'Şebeke elektriği · kWh')}
         <label className="text-sm font-medium">Elektrik bağlantısı<select className={inputClass} value={values.electricity_connection} onChange={e => change('electricity_connection', e.target.value)}><option value="distribution">Dağıtım şebekesi</option><option value="transmission">İletim şebekesi</option></select></label>
         {field('gas_kwh', 'Doğalgaz · kWh (üst ısıl değer)')}{field('diesel_litres', 'Motorin · litre')}
@@ -78,7 +78,7 @@ export function HotelCarbonCalculator({ hotel, options, disabled }: { hotel: Hot
         <label className="text-sm font-medium">Rapor kapsamı<select className={inputClass} value={values.report_basis} onChange={e => change('report_basis', e.target.value)}><option value="hotel_total">Otel toplamı</option><option value="guestrooms">Konaklamaya ayrılmış emisyon</option></select></label>
         {field('assessor', 'Hesabı yapan kurum', 'text')}{field('report_reference', 'Rapor numarası', 'text')}
       </div>}
-      <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={preview} disabled={pending} className="rounded-lg bg-[#075442] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? 'Hesaplanıyor…' : hotel.role === 'demo_viewer' ? 'Hesapla' : 'Hesapla ve widget’a uygula'}</button><span className="text-xs text-neutral-500">Hesaplama ton fiyatı: {money(25)} · piyasa fiyatı değildir</span></div>
+      <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={preview} disabled={pending} className="rounded-lg bg-[var(--ds-palette-pine-700)] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{pending ? 'Hesaplanıyor…' : hotel.role === 'demo_viewer' ? 'Hesapla' : 'Hesapla ve widget’a uygula'}</button><span className="text-xs text-neutral-500">Hesaplama ton fiyatı: {money(25)} · piyasa fiyatı değildir</span></div>
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       {result && <div aria-live="polite" className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-3"><Metric label="Emisyon / oda-gece" value={`${fmt(result.coefficient_kg)} kgCO₂e`} /><Metric label="Katkı / oda-gece" value={money(result.amount_per_night)} /><Metric label="Dönem doluluğu" value={`%${fmt(result.occupancy_percent)}`} /></div>
@@ -91,4 +91,4 @@ export function HotelCarbonCalculator({ hotel, options, disabled }: { hotel: Hot
   </section>;
 }
 
-function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-emerald-100 p-4"><p className="text-xs text-neutral-500">{label}</p><p className="mt-2 text-lg font-semibold text-[#075442]">{value}</p></div>; }
+function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-xl border border-emerald-100 p-4"><p className="text-xs text-neutral-500">{label}</p><p className="mt-2 text-lg font-semibold text-[var(--ds-palette-pine-700)]">{value}</p></div>; }

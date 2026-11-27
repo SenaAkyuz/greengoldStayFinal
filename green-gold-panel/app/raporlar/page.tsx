@@ -1,126 +1,50 @@
 import { requireAccessToken } from '@/lib/auth';
-import { getReport, getHotel } from '@/lib/api';
+import { getContributionsSummary, getDaily, getHotel, getReport, getReportBetween } from '@/lib/api';
 import { normalizeRange } from '@/lib/range';
-import { formatNumber, formatPercent } from '@/lib/format';
-import { AppShell } from '../components/AppShell';
-import { MetricCard } from '../components/MetricCard';
-import { RangePills } from '../components/RangePills';
+import { previousPeriod } from '@/lib/panel/report';
+import { HotelPanelFrame } from '../components/panel/HotelPanelFrame';
+import { ReportsView } from '../components/panel/ReportsView';
 
+/**
+ * Raporlar (UX-5.x): seçili dönem + önceki dönem karşılaştırması + günlük
+ * seri. Hepsi gerçek API verisi; karşılaştırma okunamazsa sessizce gizlenir.
+ */
 export default async function ReportsPage({
   searchParams,
 }: {
   searchParams: Promise<{ range?: string | string[] }>;
 }) {
   const token = await requireAccessToken();
-
   const sp = await searchParams;
   const range = normalizeRange(Array.isArray(sp.range) ? sp.range[0] : sp.range);
 
-  const [reportRes, hotelRes] = await Promise.all([
+  const [reportRes, hotelRes, dailyRes, contributionsRes] = await Promise.all([
     getReport(token, range),
     getHotel(token),
+    getDaily(token, range),
+    getContributionsSummary(token, range),
   ]);
-  const report = reportRes.data;
+  const prev = previousPeriod(range, reportRes.data?.period);
+  const prevRes = prev ? await getReportBetween(token, prev.from, prev.to) : null;
   const hotel = hotelRes.data;
 
-  const exportHref =
-    range === 'month' ? '/raporlar/export' : `/raporlar/export?range=${range}`;
-
-  const conversion =
-    report && report.summary.views > 0
-      ? formatPercent(report.summary.conversion_rate_pct)
-      : '—';
-
   return (
-    <AppShell
-      hotelName={hotel?.hotel_name}
-      city={hotel?.city}
-      active="reports"
-      isDemo={hotel?.role === 'demo_viewer'}
-    >
-      <main className="gg-page">
-        <div className="gg-page-header">
-          <div>
-            <div className="gg-kicker">Veri özeti</div>
-            <h1 className="gg-title">
-              Raporlar
-            </h1>
-            <p className="gg-subtitle">
-              Etkileşim, dönüşüm ve tahmini karbon özeti
-              {report?.period
-                ? ` · ${report.period.from} – ${report.period.to}`
-                : ''}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <RangePills active={range} basePath="/raporlar" />
-            <a
-              href={exportHref}
-              className="inline-flex min-h-[44px] items-center rounded-full bg-[#075442] px-4 text-sm font-semibold text-white transition hover:bg-[#043f34] focus:outline-none focus:ring-2 focus:ring-[#5c9f80]/40"
-            >
-              CSV indir
-            </a>
-          </div>
-        </div>
-
-        {reportRes.error && (
-          <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Rapor yüklenemedi: {reportRes.error}. API sunucusunun çalıştığından
-            emin olun.
-          </div>
-        )}
-
-        {report && (
-          <>
-            <section className="mt-6">
-              <h2 className="text-sm font-semibold text-neutral-700">
-                Etkileşim
-              </h2>
-              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <MetricCard label="Görüntülenme" value={formatNumber(report.summary.views)} />
-                <MetricCard label="Seçim" value={formatNumber(report.summary.selections)} />
-                <MetricCard
-                  label="Katkı butonu tıklaması"
-                  value={formatNumber(report.summary.add_clicks)}
-                />
-                <MetricCard
-                  label="Dönüşüm"
-                  value={conversion}
-                  hint="Seçim / Görüntülenme"
-                />
-              </div>
-            </section>
-
-            <section className="mt-8">
-              <h2 className="text-sm font-semibold text-neutral-700">
-                Tahmini karbon
-              </h2>
-              <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <MetricCard
-                  label="Tahmini CO₂"
-                  value={`≈ ${formatNumber(report.carbon.estimated_co2_kg)} kg`}
-                  hint="Tahmini"
-                />
-                <MetricCard
-                  label="Ağaç-yılı eşdeğeri"
-                  value={`≈ ${formatNumber(report.carbon.tree_equivalent)}`}
-                  hint="Tahmini"
-                />
-                <MetricCard
-                  label="Katkı niyeti"
-                  value={formatNumber(report.carbon.contributions_count)}
-                  hint="Tekil katkı butonu oturumu (ödeme değil)"
-                />
-              </div>
-            </section>
-
-            <p className="mt-6 text-xs text-neutral-400">
-              Veriler widget etkileşimlerine dayalıdır; ödeme/rezervasyon onayı
-              içermez. Karbon değerleri tahminidir.
-            </p>
-          </>
-        )}
-      </main>
-    </AppShell>
+    <HotelPanelFrame hotelName={hotel?.hotel_name} city={hotel?.city} title="Raporlar" isDemo={hotel?.role === 'demo_viewer'}>
+      <div className="gg-page gg-page--framed">
+      <ReportsView
+        range={range}
+        rangeHref={(r) => (r === 'month' ? '/raporlar' : `/raporlar?range=${r}`)}
+        exportHref={range === 'month' ? '/raporlar/export' : `/raporlar/export?range=${range}`}
+        links={{ integration: '/entegrasyon', carbon: '/karbon', payments: '/tahsilatlar' }}
+        data={{
+          report: reportRes.data,
+          previous: prevRes?.data ?? null,
+          daily: dailyRes.data,
+          contributions: contributionsRes.data,
+          error: reportRes.error,
+        }}
+      />
+      </div>
+    </HotelPanelFrame>
   );
 }

@@ -3,6 +3,8 @@ import { CarbonMeasurementController } from './carbon-measurement.controller';
 import { CarbonMeasurementService } from './carbon-measurement.service';
 import { CarbonDataEntryService } from './carbon-data-entry.service';
 import { CarbonProviderRegistryService } from './carbon-provider-registry';
+import { ConnectHubController } from './connecthub/connecthub.controller';
+import { ConnectHubService } from './connecthub/connecthub.service';
 
 /**
  * Harici karbon ölçüm sağlayıcısı modülü (Faz 1 + Faz 2).
@@ -13,11 +15,12 @@ import { CarbonProviderRegistryService } from './carbon-provider-registry';
  * DEĞİŞTİRİLMEDİ — sağlayıcı ölçümü üçüncü bir kaynak olarak yanlarına gelir.
  */
 @Module({
-  controllers: [CarbonMeasurementController],
+  controllers: [CarbonMeasurementController, ConnectHubController],
   providers: [
     CarbonMeasurementService,
     CarbonDataEntryService,
     CarbonProviderRegistryService,
+    ConnectHubService,
   ],
   exports: [CarbonMeasurementService, CarbonProviderRegistryService],
 })
